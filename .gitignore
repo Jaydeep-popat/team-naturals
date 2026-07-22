@@ -1,3 +1,5 @@
+# Replace .gitignore content
+@"
 # v0 sandbox internal files
 __v0_runtime_loader.js
 __v0_devtools.tsx
@@ -11,5 +13,12 @@ __v0_jsx-dev-runtime.ts
 
 # Common ignores
 node_modules
-.next/
 .DS_Store
+
+# Next.js build
+.next/
+
+# Allow standalone and static folders for deployment
+!.next/standalone/
+!.next/static/
+"@ | Out-File -FilePath .gitignore -Encoding UTF8
