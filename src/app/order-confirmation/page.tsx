@@ -46,7 +46,7 @@ export default function OrderConfirmationPage() {
 
         <h1 className="font-display text-4xl text-forest">Order placed!</h1>
         <p className="mt-3 text-[15px] text-muted leading-relaxed">
-          Thank you for choosing Team Naturals. We've received your order and are getting it ready.
+          Thank you for choosing Team Naturals. We&apos;ve received your order and are getting it ready.
         </p>
 
         {/* Order Details Card */}
