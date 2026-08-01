@@ -349,7 +349,7 @@ function Hero({ loading }: { loading?: boolean }) {
   return (
     <>
     <section
-      className="relative overflow-hidden bg-white pb-28 pt-10 sm:pb-32 sm:pt-14"
+      className="relative overflow-hidden bg-white pb-28 pt-28 sm:pb-32 sm:pt-32"
       aria-labelledby="hero-heading"
     >
       {/* Right organic blob background */}

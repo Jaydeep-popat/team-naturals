@@ -18,10 +18,11 @@ const navItems = [
 
 export function Header() {
   // TODO: Replace with real auth state once backend is connected
-  const user = null as { name: string } | null; // e.g. { name: 'Yugal' }
+  const user = { name: 'Yugal' } as { name: string } | null;
 
   const [scrolled, setScrolled] = React.useState(false);
   const [menuOpen, setMenuOpen] = React.useState(false);
+  const [isMobileSearchOpen, setIsMobileSearchOpen] = React.useState(false);
   const [query, setQuery] = React.useState('');
   const { itemCount, openDrawer, wishlist } = useCart();
   const router = useRouter();
@@ -58,7 +59,7 @@ export function Header() {
           transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
         >
           {/* Left: Mobile Menu + Logo */}
-          <div className="flex shrink-0 items-center gap-3">
+          <div className="flex shrink-0 items-center gap-1 sm:gap-3">
             <button
               type="button"
               onClick={() => setMenuOpen(true)}
@@ -67,8 +68,20 @@ export function Header() {
             >
               <MenuIcon size={22} strokeWidth={1.8} />
             </button>
-            <Link href="/" aria-label="Team Naturals home" className="flex-shrink-0">
-              <Logo compact={scrolled} useImage={true} />
+
+            {/* Mobile Search Toggle Button */}
+            {!isMobileSearchOpen && (
+              <button 
+                className="p-2 text-forest transition-colors hover:bg-forest/5 sm:hidden"
+                onClick={() => setIsMobileSearchOpen(true)}
+                aria-label="Open search"
+              >
+                <SearchIcon size={20} strokeWidth={2} />
+              </button>
+            )}
+
+            <Link href="/" aria-label="Team Naturals home" className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 lg:static lg:transform-none flex-shrink-0">
+              <Logo compact={scrolled} useImage={true} hideTextOnMobile={true} />
             </Link>
           </div>
 
@@ -102,17 +115,38 @@ export function Header() {
 
           {/* Right: Search + Icons */}
           <div className="flex shrink-0 items-center justify-end gap-2 sm:gap-6">
+
+
             {/* Inline Search Bar */}
-            <div className="relative">
-              <div className="flex items-center gap-1 sm:gap-2 rounded-full border border-terracotta/40 bg-white px-2.5 sm:px-4 py-1.5 sm:py-2.5 transition-all focus-within:border-terracotta focus-within:shadow-soft">
-                <SearchIcon size={18} className="text-muted" strokeWidth={2} />
+            <div 
+              className={
+                isMobileSearchOpen 
+                  ? "absolute left-0 right-0 top-[100%] z-40 flex items-center bg-white px-4 pb-3 shadow-soft sm:static sm:z-auto sm:block sm:bg-transparent sm:px-0 sm:pb-0 sm:shadow-none"
+                  : "hidden sm:block relative"
+              }
+            >
+              <div className="flex w-full items-center gap-1 sm:gap-2 rounded-full border border-terracotta/40 bg-white px-3 sm:px-4 py-1.5 sm:py-2.5 transition-all focus-within:border-terracotta focus-within:shadow-soft">
+                <SearchIcon size={18} className="text-muted shrink-0" strokeWidth={2} />
                 <input
+                  id="mobile-search-input"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Search..."
-                  className="w-20 sm:w-40 bg-transparent text-[14px] font-medium text-forest outline-none focus:outline-none focus:ring-0 placeholder:font-normal placeholder:text-muted/70 transition-all focus:w-32 sm:focus:w-56"
+                  placeholder="Search products..."
+                  className="w-full sm:w-40 bg-transparent text-[14px] font-medium text-forest outline-none focus:outline-none focus:ring-0 placeholder:font-normal placeholder:text-muted/70 transition-all sm:focus:w-56"
                   aria-label="Search products"
                 />
+                {isMobileSearchOpen && (
+                  <button 
+                    onClick={() => {
+                      setIsMobileSearchOpen(false);
+                      setQuery('');
+                    }} 
+                    className="shrink-0 p-1 text-muted sm:hidden"
+                    aria-label="Close search"
+                  >
+                    <XIcon size={18} />
+                  </button>
+                )}
               </div>
 
               {/* Search Results Dropdown */}
@@ -123,7 +157,7 @@ export function Header() {
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 10, scale: 0.98 }}
                     transition={{ duration: 0.2 }}
-                    className="absolute right-0 top-[calc(100%+8px)] w-80 overflow-hidden rounded-2xl border border-forest/10 bg-white p-2 shadow-lift"
+                    className="absolute left-4 right-4 sm:left-auto sm:right-0 top-[calc(100%+8px)] sm:w-80 overflow-hidden rounded-2xl border border-forest/10 bg-white p-2 shadow-lift"
                   >
                     {results.length > 0 ? (
                       <ul className="space-y-1">
@@ -155,11 +189,11 @@ export function Header() {
               </AnimatePresence>
             </div>
 
-            {/* Login / User Profile */}
+            {/* Login / User Profile (Hidden on mobile because it's in the bottom tab bar) */}
             {user ? (
               <Link
                 href="/account"
-                className="group flex items-center gap-2.5 rounded-full bg-forest p-1.5 sm:pr-4 text-cream transition-colors hover:bg-forest/90 shadow-soft"
+                className="group hidden sm:flex items-center gap-2.5 rounded-full bg-forest p-1.5 sm:pr-4 text-cream transition-colors hover:bg-forest/90 shadow-soft"
                 aria-label="Account"
               >
                 <div className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full bg-cream text-forest shadow-soft">
@@ -170,7 +204,7 @@ export function Header() {
             ) : (
               <Link
                 href="/login"
-                className="group flex items-center gap-2 sm:gap-3.5 rounded-full bg-forest px-3 sm:px-6 py-1.5 sm:py-2 text-cream shadow-soft transition-colors hover:bg-forest/90"
+                className="group hidden sm:flex items-center gap-2 sm:gap-3.5 rounded-full bg-forest px-3 sm:px-6 py-1.5 sm:py-2 text-cream shadow-soft transition-colors hover:bg-forest/90"
                 aria-label="Log In"
               >
                 <UserIcon size={16} strokeWidth={2} className="transition-transform group-hover:scale-110 sm:h-[18px] sm:w-[18px]" />

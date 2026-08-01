@@ -73,7 +73,7 @@ export function LogoMark({ className = 'h-8 w-8', animate = false, layoutId, use
   );
 }
 
-export function Logo({ compact = false, useImage = false, disableLayoutAnimation = false }: { compact?: boolean, useImage?: boolean, disableLayoutAnimation?: boolean }) {
+export function Logo({ compact = false, useImage = false, disableLayoutAnimation = false, hideTextOnMobile = false }: { compact?: boolean, useImage?: boolean, disableLayoutAnimation?: boolean, hideTextOnMobile?: boolean }) {
   return (
     <span className="flex items-center gap-3 text-forest">
       <LogoMark 
@@ -81,7 +81,7 @@ export function Logo({ compact = false, useImage = false, disableLayoutAnimation
         layoutId={disableLayoutAnimation ? undefined : "logo-mark"} 
         useImage={useImage} 
       />
-      <span className="leading-none">
+      <span className={`leading-none ${hideTextOnMobile ? 'hidden sm:block' : ''}`}>
         <motion.span layoutId={disableLayoutAnimation ? undefined : "logo-text"} className="block font-display text-[19px] font-medium tracking-tight text-forest">
           Team Naturals
         </motion.span>
