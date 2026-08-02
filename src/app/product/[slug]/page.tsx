@@ -12,6 +12,8 @@ import { StarRating } from "@/src/components/StarRating";
 import { QtyStepper } from "@/src/components/QtyStepper";
 import { PromiseBanner } from "@/src/components/PromiseBanner";
 import { ProductCard } from "@/src/components/ProductCard";
+import { AuthModal } from "@/src/components/AuthModal";
+import { useAuth } from "@/src/contexts/AuthContext";
 import { ProductDetailSkeleton } from "@/src/components/Skeletons";
 import { Reveal } from "@/src/components/Reveal";
 import { usePageLoad } from "@/src/hooks/usePageLoad";
@@ -27,6 +29,8 @@ export default function ProductDetailPage() {
   const [activeImage, setActiveImage] = useState(0);
   const [qty, setQty] = useState(1);
   const { addToCart, wishlist, toggleWishlist } = useCart();
+  const { isAuthenticated } = useAuth();
+  const [showAuthModal, setShowAuthModal] = useState(false);
 
   useEffect(() => {
     setActiveImage(0);
@@ -53,8 +57,20 @@ export default function ProductDetailPage() {
   const related = getRelated(product);
 
   const buyNow = () => {
+    if (!isAuthenticated) {
+      setShowAuthModal(true);
+      return;
+    }
     addToCart(product, qty);
     router.push('/checkout');
+  };
+
+  const handleAddToCart = () => {
+    if (!isAuthenticated) {
+      setShowAuthModal(true);
+      return;
+    }
+    addToCart(product, qty);
   };
 
   return (
@@ -160,7 +176,7 @@ export default function ProductDetailPage() {
             <motion.button
               type="button"
               whileTap={{ scale: 0.96 }}
-              onClick={() => addToCart(product, qty)}
+              onClick={handleAddToCart}
               className="flex-1 rounded-full bg-forest px-6 py-3.5 text-sm text-cream transition-colors hover:bg-forest-deep sm:flex-none sm:px-8"
             >
               Add to Cart
@@ -278,6 +294,9 @@ export default function ProductDetailPage() {
           ))}
         </div>
       </section>
+
+      {/* ── Auth gate modal ── */}
+      <AuthModal open={showAuthModal} onClose={() => setShowAuthModal(false)} />
     </div>
   );
 }

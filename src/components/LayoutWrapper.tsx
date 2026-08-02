@@ -11,7 +11,7 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   
   // Hide header/footer on auth pages
-  const hideChrome = pathname === '/login' || pathname === '/register';
+  const hideChrome = pathname === '/login' || pathname === '/register' || pathname === '/forgot-password';
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-white">

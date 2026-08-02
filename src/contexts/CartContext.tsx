@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
+import { useAuth } from './AuthContext';
 import type { CartLine, Product } from '../types/product';
 
 interface CartContextValue {
@@ -24,6 +25,16 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [lines, setLines] = useState<CartLine[]>([]);
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   const [wishlist, setWishlist] = useState<string[]>([]);
+  const { isAuthenticated } = useAuth();
+  const prevIsAuthenticated = React.useRef(isAuthenticated);
+
+  React.useEffect(() => {
+    if (prevIsAuthenticated.current && !isAuthenticated) {
+      // User just logged out, clear cart data for privacy
+      setLines([]);
+    }
+    prevIsAuthenticated.current = isAuthenticated;
+  }, [isAuthenticated]);
 
   const addToCart = useCallback((product: Product, quantity = 1) => {
     setLines((prev) => {

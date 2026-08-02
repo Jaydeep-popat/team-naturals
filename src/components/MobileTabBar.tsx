@@ -11,7 +11,7 @@ const tabs = [
   { label: 'Home', href: '/', icon: HomeIcon },
   { label: 'Shop', href: '/shop', icon: LeafIcon },
   { label: 'Cart', href: '/cart', icon: ShoppingBagIcon },
-  { label: 'Account', href: '/account', icon: UserIcon },
+  { label: 'Account', href: '/account/menu', icon: UserIcon },
 ];
 
 /** Quick-commerce style bottom nav for mobile. */

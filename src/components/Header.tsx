@@ -4,10 +4,11 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
-import { MenuIcon, SearchIcon, ShoppingBagIcon, UserIcon, XIcon, ArrowRightIcon, HeartIcon } from 'lucide-react';
+import { MenuIcon, SearchIcon, ShoppingBagIcon, UserIcon, XIcon, ArrowRightIcon, HeartIcon, MapPinIcon, BellIcon, LogOutIcon, ChevronDownIcon, PackageIcon } from 'lucide-react';
 import { Logo } from './Logo';
 import { useCart } from '../contexts/CartContext';
-import { products } from '../data/products';
+import { useAuth } from '../contexts/AuthContext';
+import { products, categories } from '../data/products';
 
 const navItems = [
   { label: 'Home', href: '/' },
@@ -17,8 +18,7 @@ const navItems = [
 ];
 
 export function Header() {
-  // TODO: Replace with real auth state once backend is connected
-  const user = { name: 'Yugal' } as { name: string } | null;
+  const { user, isLoading, logout } = useAuth();
 
   const [scrolled, setScrolled] = React.useState(false);
   const [menuOpen, setMenuOpen] = React.useState(false);
@@ -44,7 +44,9 @@ export function Header() {
   return (
     <>
       <motion.header
-        className="fixed top-0 left-0 right-0 z-50 w-full bg-white/95 backdrop-blur-md"
+        className={`fixed top-0 left-0 right-0 z-50 w-full transition-colors duration-300 ${
+          scrolled ? 'bg-white/95 backdrop-blur-md' : 'bg-transparent'
+        }`}
         animate={{
           borderBottomColor: scrolled ? 'rgba(31,61,43,0.08)' : 'rgba(31,61,43,0)',
           boxShadow: scrolled
@@ -55,7 +57,7 @@ export function Header() {
       >
         <motion.div
           className="relative mx-auto flex w-full max-w-[1600px] items-center justify-between px-4 lg:px-6"
-          animate={{ height: scrolled ? 68 : 88 }}
+          animate={{ height: scrolled ? 64 : 80 }}
           transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
         >
           {/* Left: Mobile Menu + Logo */}
@@ -81,7 +83,7 @@ export function Header() {
             )}
 
             <Link href="/" aria-label="Team Naturals home" className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 lg:static lg:transform-none flex-shrink-0">
-              <Logo compact={scrolled} useImage={true} hideTextOnMobile={true} />
+              <Logo compact={scrolled} useImage={true} hideTextOnMobile={true} isNavbar={true} />
             </Link>
           </div>
 
@@ -92,6 +94,51 @@ export function Header() {
                 item.href === '/'
                   ? pathname === '/'
                   : pathname.startsWith(item.href);
+
+              if (item.label === 'Shop') {
+                return (
+                  <div key={item.href} className="group relative py-2">
+                    <Link
+                      href={item.href}
+                      className={`relative flex items-center gap-1 text-[14px] font-semibold tracking-wide transition-colors ${
+                        isActive ? 'text-terracotta' : 'text-forest hover:text-terracotta/70'
+                      }`}
+                    >
+                      {item.label}
+                      <ChevronDownIcon size={14} className="transition-transform group-hover:rotate-180" />
+                      {isActive && (
+                        <motion.span
+                          layoutId="nav-underline"
+                          className="absolute -bottom-[2px] left-0 h-[2.5px] w-full rounded-t-full bg-terracotta"
+                          transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                        />
+                      )}
+                    </Link>
+                    {/* Dropdown Menu */}
+                    <div className="absolute left-1/2 top-full hidden -translate-x-1/2 pt-2 group-hover:block z-50">
+                      <div className="flex min-w-[160px] flex-col gap-1 rounded-2xl bg-white p-2 shadow-lg ring-1 ring-black/5">
+                        <Link href="/shop" className="block rounded-xl px-4 py-2 text-sm font-medium text-forest hover:bg-forest/5 hover:text-terracotta transition-colors">
+                          All Shop
+                        </Link>
+                        {categories.map(cat => (
+                          <Link 
+                            key={cat.slug} 
+                            href={cat.comingSoon ? '#' : `/shop/${cat.slug}`} 
+                            className={`block rounded-xl px-4 py-2 text-sm font-medium transition-colors ${
+                              cat.comingSoon 
+                                ? 'text-muted/60 cursor-not-allowed' 
+                                : 'text-forest hover:bg-forest/5 hover:text-terracotta'
+                            }`}
+                          >
+                            {cat.label} {cat.comingSoon && <span className="text-[10px] ml-1 opacity-70">(Soon)</span>}
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+
               return (
                 <Link
                   key={item.href}
@@ -190,17 +237,54 @@ export function Header() {
             </div>
 
             {/* Login / User Profile (Hidden on mobile because it's in the bottom tab bar) */}
-            {user ? (
-              <Link
-                href="/account"
-                className="group hidden sm:flex items-center gap-2.5 rounded-full bg-forest p-1.5 sm:pr-4 text-cream transition-colors hover:bg-forest/90 shadow-soft"
-                aria-label="Account"
-              >
-                <div className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full bg-cream text-forest shadow-soft">
-                  <UserIcon size={16} strokeWidth={2} />
+            {!isLoading && user ? (
+              <div className="group relative hidden sm:block">
+                <Link
+                  href="/account"
+                  className="flex items-center gap-1.5 px-2 py-1 text-forest transition-colors hover:text-forest/70"
+                  aria-label="Account"
+                >
+                  <UserIcon size={20} strokeWidth={1.5} />
+                  <span className="hidden sm:inline-block text-[14px] font-medium">{user.firstName}</span>
+                  <ChevronDownIcon size={16} strokeWidth={1.5} className="hidden sm:inline-block transition-transform group-hover:rotate-180" />
+                </Link>
+
+                {/* Dropdown Menu */}
+                <div className="absolute right-0 top-full pt-4 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                  <div className="w-64 rounded-xl bg-white shadow-[0_4px_24px_rgba(0,0,0,0.08)] overflow-hidden flex flex-col border border-forest/5">
+                    <div className="px-5 py-3.5 border-b border-forest/5 bg-[#FDFBF9]">
+                       <p className="text-[13px] font-bold text-forest">Your Account</p>
+                    </div>
+                    
+                    <div className="py-2 flex flex-col">
+                      <Link href="/account" className="px-5 py-2.5 text-[14px] text-forest/70 hover:bg-forest/5 hover:text-forest flex items-center gap-3.5 transition-colors">
+                        <UserIcon size={18} strokeWidth={1.5} /> My Profile
+                      </Link>
+                      <Link href="/account/orders" className="px-5 py-2.5 text-[14px] text-forest/70 hover:bg-forest/5 hover:text-forest flex items-center gap-3.5 transition-colors">
+                        <PackageIcon size={18} strokeWidth={1.5} /> Orders
+                      </Link>
+                      <Link href="/account/addresses" className="px-5 py-2.5 text-[14px] text-forest/70 hover:bg-forest/5 hover:text-forest flex items-center gap-3.5 transition-colors">
+                        <MapPinIcon size={18} strokeWidth={1.5} /> Saved Addresses
+                      </Link>
+                      <Link href="/wishlist" className="px-5 py-2.5 text-[14px] text-forest/70 hover:bg-forest/5 hover:text-forest flex items-center gap-3.5 transition-colors">
+                        <HeartIcon size={18} strokeWidth={1.5} /> Wishlist
+                      </Link>
+                      <Link href="/account/settings" className="px-5 py-2.5 text-[14px] text-forest/70 hover:bg-forest/5 hover:text-forest flex items-center gap-3.5 transition-colors">
+                        <BellIcon size={18} strokeWidth={1.5} /> Notifications
+                      </Link>
+                    </div>
+                    
+                    <div className="border-t border-forest/5 py-1.5">
+                      <button
+                        onClick={async () => { await logout(); router.push('/'); }}
+                        className="px-5 py-2.5 text-[14px] text-forest/70 hover:bg-forest/5 hover:text-forest text-left flex items-center gap-3.5 w-full transition-colors"
+                      >
+                        <LogOutIcon size={18} strokeWidth={1.5} /> Logout
+                      </button>
+                    </div>
+                  </div>
                 </div>
-                <span className="hidden sm:inline-block text-[13px] font-semibold">Hey {user?.name}</span>
-              </Link>
+              </div>
             ) : (
               <Link
                 href="/login"

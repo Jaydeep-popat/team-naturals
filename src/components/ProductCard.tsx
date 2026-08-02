@@ -2,18 +2,29 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { HeartIcon, ShoppingBagIcon, ZapIcon } from 'lucide-react';
 import type { Product } from '../types/product';
 import { useCart } from '../contexts/CartContext';
+import { useAuth } from '../contexts/AuthContext';
 import { StarRating } from './StarRating';
+import { AuthModal } from './AuthModal';
+
 
 export function ProductCard({ product }: { product: Product }) {
   const { addToCart, wishlist, toggleWishlist } = useCart();
+  const { isAuthenticated } = useAuth();
+  const pathname = usePathname();
   const wished = wishlist.includes(product.id);
   const [added, setAdded] = React.useState(false);
+  const [showAuthModal, setShowAuthModal] = React.useState(false);
 
   function handleAddToCart() {
+    if (!isAuthenticated) {
+      setShowAuthModal(true);
+      return;
+    }
     addToCart(product);
     setAdded(true);
     setTimeout(() => setAdded(false), 1800);
@@ -22,10 +33,11 @@ export function ProductCard({ product }: { product: Product }) {
   const categoryLabel = product.category === 'face-wash' ? 'Face Wash' : 'Soap';
 
   return (
-    <motion.article
-      whileHover={{ y: -8 }}
-      transition={{ type: 'spring', stiffness: 280, damping: 22 }}
-      className="group relative flex flex-col overflow-hidden rounded-[28px] border border-forest/8 bg-white shadow-soft transition-shadow duration-300 hover:shadow-lift"
+    <>
+      <motion.article
+        whileHover={{ y: -8 }}
+        transition={{ type: 'spring', stiffness: 280, damping: 22 }}
+        className="group relative flex flex-col overflow-hidden rounded-[28px] border border-forest/8 bg-white shadow-soft transition-shadow duration-300 hover:shadow-lift"
     >
       {/* ── Image area ── */}
       <Link
@@ -157,5 +169,9 @@ export function ProductCard({ product }: { product: Product }) {
         </div>
       </div>
     </motion.article>
+
+    {/* ── Auth gate modal ── */}
+    <AuthModal open={showAuthModal} onClose={() => setShowAuthModal(false)} />
+  </>
   );
 }

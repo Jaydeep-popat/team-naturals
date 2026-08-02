@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { CartProvider } from '@/src/contexts/CartContext';
+import { AuthProvider } from '@/src/contexts/AuthContext';
 import { MobileTabBar } from '@/src/components/MobileTabBar';
 import { Preloader } from '@/src/components/Preloader';
 import { LayoutWrapper } from '@/src/components/LayoutWrapper';
@@ -41,6 +42,11 @@ export const metadata: Metadata = {
     follow: true,
     googleBot: { index: true, follow: true },
   },
+  icons: {
+    icon: '/favicon-trimmed.png',
+    shortcut: '/favicon-trimmed.png',
+    apple: '/favicon-trimmed.png',
+  },
 };
 
 export default function RootLayout({
@@ -51,12 +57,14 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <CartProvider>
-          <Preloader />
-          <LayoutWrapper>
-            {children}
-          </LayoutWrapper>
-        </CartProvider>
+        <AuthProvider>
+          <CartProvider>
+            <Preloader />
+            <LayoutWrapper>
+              {children}
+            </LayoutWrapper>
+          </CartProvider>
+        </AuthProvider>
       </body>
     </html>
   );

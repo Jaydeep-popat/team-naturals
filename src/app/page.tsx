@@ -16,12 +16,12 @@ import { SectionHeading } from '@/src/components/SectionHeading';
 import { TrustBadges } from '@/src/components/TrustBadges';
 import { TestimonialsCarousel } from "@/src/components/TestimonialsCarousel";
 import { WhyChooseUs } from "@/src/components/WhyChooseUs";
+import { OrderProcess } from "@/src/components/OrderProcess";
 import { InstagramFeed } from "@/src/components/InstagramFeed";
 import { CatalogCTA } from "@/src/components/CatalogCTA";
 import { FAQAccordion } from "@/src/components/FAQAccordion";
 import { Reveal, staggerContainer, staggerItem } from "@/src/components/Reveal";
 import { ProductGridSkeleton } from "@/src/components/Skeletons";
-import { usePageLoad } from "@/src/hooks/usePageLoad";
 
 // JSON-LD structured data for best sellers
 function ProductJsonLd() {
@@ -63,13 +63,12 @@ function ProductJsonLd() {
 }
 
 export default function HomePage() {
-  const loading = usePageLoad(1800);
   const bestSellers = products.filter((p) => p.bestSeller).slice(0, 6);
 
   return (
     <div className="w-full bg-white">
       <ProductJsonLd />
-      <Hero loading={loading} />
+      <Hero />
 
 
 
@@ -79,9 +78,9 @@ export default function HomePage() {
         aria-labelledby="categories-heading"
       >
         <Reveal className="text-center">
-          <p className="text-[10px] uppercase tracking-[0.28em] text-muted">Browse our range</p>
+          <p className="text-[10px] uppercase tracking-[0.28em] text-muted">Explore Our Collection</p>
           <h2 id="categories-heading" className="mt-2 font-display text-2xl text-forest sm:text-3xl">
-            Shop by Category
+            Shop Natural Skincare by Category
           </h2>
         </Reveal>
 
@@ -161,9 +160,9 @@ export default function HomePage() {
       >
         <Reveal className="flex items-end justify-between gap-4 px-5 lg:px-10">
           <div>
-            <p className="text-[10px] uppercase tracking-[0.28em] text-muted">Loved most</p>
+            <p className="text-[10px] uppercase tracking-[0.28em] text-muted">Customer Favorites</p>
             <SectionHeading className="mt-2" id="best-heading">
-              Our Core Products
+              Our Best-Selling Skincare
             </SectionHeading>
           </div>
           <Link
@@ -174,7 +173,7 @@ export default function HomePage() {
           </Link>
         </Reveal>
 
-        <BestSellersCarousel loading={loading} bestSellers={bestSellers} />
+        <BestSellersCarousel loading={false} bestSellers={bestSellers} />
       </section>
 
       {/* Discount Poster */}
@@ -198,6 +197,11 @@ export default function HomePage() {
       <section className="mx-auto max-w-7xl px-5 pt-20 lg:px-10">
         <WhyChooseUs />
       </section>
+
+      {/* Order Process */}
+      <div className="mt-20">
+        <OrderProcess />
+      </div>
 
       {/* Our Promise */}
       <section className="mx-auto max-w-7xl px-5 pt-20 lg:px-10">
@@ -291,10 +295,10 @@ function BestSellersCarousel({
         onClick={() => scroll('prev')}
         animate={{ opacity: canPrev ? 1 : 0, scale: canPrev ? 1 : 0.8 }}
         transition={{ duration: 0.2 }}
-        className="absolute -left-5 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-forest/12 bg-white shadow-lift text-forest transition-colors hover:bg-forest hover:text-cream lg:-left-6"
+        className="absolute -left-2 top-1/2 z-10 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-forest/12 bg-white text-forest shadow-lift transition-colors hover:bg-forest hover:text-cream sm:-left-5 sm:h-11 sm:w-11 lg:-left-6"
         style={{ pointerEvents: canPrev ? 'auto' : 'none' }}
       >
-        <ChevronLeftIcon size={20} strokeWidth={1.8} />
+        <ChevronLeftIcon className="h-4 w-4 sm:h-5 sm:w-5" strokeWidth={1.8} />
       </motion.button>
 
       {/* Next arrow */}
@@ -304,10 +308,10 @@ function BestSellersCarousel({
         onClick={() => scroll('next')}
         animate={{ opacity: canNext ? 1 : 0, scale: canNext ? 1 : 0.8 }}
         transition={{ duration: 0.2 }}
-        className="absolute -right-5 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-forest/12 bg-white shadow-lift text-forest transition-colors hover:bg-forest hover:text-cream lg:-right-6"
+        className="absolute -right-2 top-1/2 z-10 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-forest/12 bg-white text-forest shadow-lift transition-colors hover:bg-forest hover:text-cream sm:-right-5 sm:h-11 sm:w-11 lg:-right-6"
         style={{ pointerEvents: canNext ? 'auto' : 'none' }}
       >
-        <ChevronRightIcon size={20} strokeWidth={1.8} />
+        <ChevronRightIcon className="h-4 w-4 sm:h-5 sm:w-5" strokeWidth={1.8} />
       </motion.button>
 
       {/* Scrollable track */}
@@ -320,7 +324,7 @@ function BestSellersCarousel({
           ? Array.from({ length: 6 }).map((_, i) => (
               <div
                 key={i}
-                className="skeleton w-[260px] flex-none snap-start rounded-[28px] sm:w-[300px] lg:w-[calc((100%-48px)/3)]"
+                className="skeleton w-[220px] flex-none snap-start rounded-[28px] sm:w-[260px] lg:w-[calc((100%-48px)/4)]"
                 style={{ aspectRatio: '4/6' }}
               />
             ))
@@ -331,7 +335,7 @@ function BestSellersCarousel({
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: i * 0.07, ease: [0.22, 1, 0.36, 1] }}
-                className="w-[260px] flex-none snap-start sm:w-[300px] lg:w-[calc((100%-48px)/3)]"
+                className="w-[220px] flex-none snap-start sm:w-[260px] lg:w-[calc((100%-48px)/4)]"
               >
                 <ProductCard product={p} />
               </motion.div>
@@ -345,35 +349,35 @@ function BestSellersCarousel({
   );
 }
 
-function Hero({ loading }: { loading?: boolean }) {
+function Hero() {
   return (
     <>
     <section
-      className="relative overflow-hidden bg-white pb-28 pt-28 sm:pb-32 sm:pt-32"
+      className="relative overflow-hidden bg-white pb-12 pt-24 sm:pb-16 sm:pt-28"
       aria-labelledby="hero-heading"
     >
       {/* Right organic blob background */}
       <motion.div
         initial={{ opacity: 0 }}
-        animate={loading ? { opacity: 0 } : { opacity: 1 }}
+        animate={{ opacity: 1 }}
         transition={{ duration: 1.5 }}
         aria-hidden="true"
         className="pointer-events-none absolute -right-24 top-0 h-[560px] w-[560px] rounded-[46%_54%_38%_62%/56%_44%_56%_44%] bg-forest-mist/70 sm:-right-16 lg:right-4"
       />
-      {/* Left organic blob background */}
+      {/* Left cream circle background */}
       <motion.div
         initial={{ opacity: 0 }}
-        animate={loading ? { opacity: 0 } : { opacity: 1 }}
+        animate={{ opacity: 1 }}
         transition={{ duration: 1.5 }}
         aria-hidden="true"
-        className="pointer-events-none absolute -left-30 -top-16 h-[480px] w-[480px] rounded-[60%_40%_50%_50%/40%_50%_60%_50%] bg-cream/80 sm:-left-16 lg:left-0"
+        className="pointer-events-none absolute -left-[240px] bottom-0 h-[480px] w-[480px] rounded-full bg-cream/80"
       />
 
       <div className="relative mx-auto grid max-w-7xl items-center gap-10 px-5 lg:grid-cols-2 lg:px-10">
         <motion.div
           variants={staggerContainer}
           initial="hidden"
-          animate={loading ? 'hidden' : 'visible'}
+          animate="visible"
           className="order-2 lg:order-1 relative"
         >
           {/* Decorative organic shape behind text */}
@@ -403,36 +407,35 @@ function Hero({ loading }: { loading?: boolean }) {
           <motion.h1
             variants={staggerItem}
             id="hero-heading"
-            className="mt-5 font-display text-[52px] font-bold leading-[1.02] text-forest sm:text-[66px] lg:text-[76px]"
+            className="mt-4 font-display text-[48px] font-extrabold leading-[1.02] text-forest sm:text-[60px] lg:text-[68px]"
           >
-            Rooted in Nature.
+            Handmade Natural
             <br />
-            <span className="text-forest-soft">Made with Care.</span>
+            <span className="text-forest-soft font-extrabold">Skincare & Soaps.</span>
           </motion.h1>
 
-          <motion.p variants={staggerItem} className="mt-5 max-w-md text-[15px] leading-relaxed text-muted">
-            Cold-processed soaps and a clay face wash, built from ingredients you can actually
-            pronounce.
+          <motion.p variants={staggerItem} className="mt-4 max-w-md text-[16px] font-medium leading-relaxed text-forest/90">
+            Experience the purest cold-processed neem soaps and multani mitti clay face wash. 100% natural, cruelty-free ingredients your skin will love.
           </motion.p>
 
-          <motion.div variants={staggerItem} className="mt-7 flex flex-wrap items-center gap-3">
+          <motion.div variants={staggerItem} className="mt-5 flex flex-wrap items-center gap-3">
             <motion.div whileTap={{ scale: 0.96 }}>
               <Link
                 href="/shop"
-                className="inline-flex items-center gap-2 rounded-full bg-forest px-7 py-3.5 text-sm font-medium text-cream transition-colors hover:bg-forest-deep"
+                className="inline-flex items-center gap-2 rounded-full bg-forest px-6 py-3 text-sm font-medium text-cream transition-colors hover:bg-forest-deep"
               >
                 Shop the Collection <ArrowRightIcon size={16} strokeWidth={1.8} />
               </Link>
             </motion.div>
             <Link
               href="/about"
-              className="rounded-full border border-forest/15 px-6 py-3.5 text-sm text-forest transition-colors hover:bg-cream"
+              className="rounded-full border border-forest/15 px-6 py-3 text-sm text-forest transition-colors hover:bg-cream"
             >
               Our story
             </Link>
           </motion.div>
 
-          <motion.ul variants={staggerItem} className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3 text-xs font-medium text-muted">
+          <motion.ul variants={staggerItem} className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-3 text-xs font-medium text-muted">
             <li className="flex items-center gap-1.5">
               <LeafIcon size={15} strokeWidth={1.5} className="text-forest-soft" /> 100% Natural
             </li>
@@ -447,27 +450,36 @@ function Hero({ loading }: { loading?: boolean }) {
         </motion.div>
 
         {/* Hero image — eager load for LCP */}
+        {/* Hero image composition */}
         <motion.div
           initial={{ opacity: 0, scale: 0.94 }}
-          animate={loading ? { opacity: 0, scale: 0.94 } : { opacity: 1, scale: 1 }}
+          animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.9, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
-          className="relative order-1 mx-auto w-full max-w-[440px] lg:order-2"
+          className="relative order-1 mx-auto w-full max-w-[360px] lg:order-2"
         >
-          <div className="relative aspect-square overflow-hidden rounded-full border border-forest/8 shadow-lift">
+          {/* Main large image (Arch shape) */}
+          <div className="relative ml-auto w-[85%] overflow-hidden rounded-t-[140px] rounded-b-[40px] border-[6px] border-white shadow-xl">
             <img
-              src={heroImage}
-              alt="Team Naturals handmade face wash and neem soap bar on a natural stone tray"
-              width={880}
-              height={880}
-              className="h-full w-full object-cover"
+              src="/facewash/wash_1.png"
+              alt="Team Naturals facewash styled"
+              className="aspect-[3/4] w-full object-cover transition-transform duration-700 hover:scale-105"
+            />
+          </div>
+          
+          {/* Secondary overlapping image (Circle) */}
+          <div className="absolute -bottom-6 left-0 w-[45%] overflow-hidden rounded-full border-[6px] border-white shadow-2xl">
+            <img
+              src="/facewash/wash_2.png"
+              alt="Team Naturals facewash alternate styling"
+              className="aspect-square w-full object-cover transition-transform duration-700 hover:scale-105"
             />
           </div>
           {/* Premium floating glass card */}
           <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={loading ? { opacity: 0, x: 20 } : { opacity: 1, x: 0 }}
-            transition={{ duration: 0.8, delay: 0.7, ease: [0.22, 1, 0.36, 1] }}
-            className="absolute -right-4 top-10 z-10 sm:-right-8 sm:top-16"
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 1, ease: 'easeOut' }}
+            className="absolute -right-2 top-8 z-10 sm:-right-6 sm:top-12 scale-90 sm:scale-100 origin-right"
           >
             <motion.div
               animate={{ y: [0, -8, 0] }}
