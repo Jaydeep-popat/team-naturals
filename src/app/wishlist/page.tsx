@@ -4,18 +4,34 @@ import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { HeartOffIcon } from 'lucide-react';
 import Link from 'next/link';
-import { products } from "@/src/data/products";
+import { products as productsApi } from "@/src/lib/api";
 import { ProductCard } from "@/src/components/ProductCard";
 import { Breadcrumb } from "@/src/components/Breadcrumb";
 import { staggerContainer, staggerItem } from "@/src/components/Reveal";
 import { useCart } from "@/src/contexts/CartContext";
+import { ProductGridSkeleton } from "@/src/components/Skeletons";
 
 export default function WishlistPage() {
   const { wishlist } = useCart();
+  const [savedProducts, setSavedProducts] = React.useState<any[]>([]);
+  const [loading, setLoading] = React.useState(true);
 
-  // Find all actual product objects that match the IDs saved in the wishlist
-  const savedProducts = useMemo(() => {
-    return products.filter((p) => wishlist.includes(p.id));
+  React.useEffect(() => {
+    if (wishlist.length === 0) {
+      setSavedProducts([]);
+      setLoading(false);
+      return;
+    }
+    
+    setLoading(true);
+    productsApi.list({ limit: '100' })
+      .then(res => {
+        const stringWishlist = wishlist.map(String);
+        const filtered = res.data.products.filter((p: any) => stringWishlist.includes(String(p.productId || p.id)));
+        setSavedProducts(filtered);
+      })
+      .catch(console.error)
+      .finally(() => setLoading(false));
   }, [wishlist]);
 
   return (
@@ -39,7 +55,9 @@ export default function WishlistPage() {
 
       {/* Main Content Area */}
       <div className="mx-auto max-w-7xl px-4 py-12 lg:px-8">
-        {savedProducts.length === 0 ? (
+        {loading ? (
+          <ProductGridSkeleton count={4} />
+        ) : savedProducts.length === 0 ? (
           <EmptyWishlistState />
         ) : (
           <div className="min-w-0 flex-1">
@@ -57,7 +75,7 @@ export default function WishlistPage() {
               className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4 xl:gap-6"
             >
               {savedProducts.map((p) => (
-                <motion.div key={p.id} variants={staggerItem}>
+                <motion.div key={p.productId || p.id} variants={staggerItem}>
                   <ProductCard product={p} />
                 </motion.div>
               ))}

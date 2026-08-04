@@ -16,7 +16,8 @@ export function ProductCard({ product }: { product: Product }) {
   const { addToCart, wishlist, toggleWishlist } = useCart();
   const { isAuthenticated } = useAuth();
   const pathname = usePathname();
-  const wished = wishlist.includes(product.id);
+  const productId = (product as any).productId || product.id;
+  const wished = wishlist.includes(String(productId));
   const [added, setAdded] = React.useState(false);
   const [showAuthModal, setShowAuthModal] = React.useState(false);
 
@@ -30,7 +31,9 @@ export function ProductCard({ product }: { product: Product }) {
     setTimeout(() => setAdded(false), 1800);
   }
 
-  const categoryLabel = product.category === 'face-wash' ? 'Face Wash' : 'Soap';
+  const categoryLabel = typeof product.category === 'object' && product.category !== null 
+    ? (product.category as any).name 
+    : (product.category === 'face-wash' ? 'Face Wash' : 'Soap');
 
   return (
     <>
@@ -47,7 +50,7 @@ export function ProductCard({ product }: { product: Product }) {
         tabIndex={0}
       >
         <img
-          src={product.images[0]}
+          src={typeof product.images?.[0] === 'string' ? product.images[0] : ((product.images?.[0] as any)?.url || '/placeholder.png')}
           alt={`${product.name} — handmade natural ${categoryLabel.toLowerCase()} by Team Naturals`}
           loading="lazy"
           className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-108"
@@ -70,7 +73,7 @@ export function ProductCard({ product }: { product: Product }) {
         </div>
 
         {/* Quick-view concern tags — slide up on hover */}
-        {product.concerns.length > 0 && (
+        {product.concerns && product.concerns.length > 0 && (
           <div className="absolute bottom-0 inset-x-0 translate-y-full transition-transform duration-400 ease-out group-hover:translate-y-0">
             <div className="flex flex-wrap gap-1.5 p-3">
               {product.concerns.slice(0, 3).map((c) => (
@@ -89,7 +92,7 @@ export function ProductCard({ product }: { product: Product }) {
       {/* ── Wishlist button ── */}
       <motion.button
         type="button"
-        onClick={() => toggleWishlist(product.id)}
+        onClick={() => toggleWishlist(String(productId))}
         aria-label={wished ? `Remove ${product.name} from wishlist` : `Save ${product.name} to wishlist`}
         aria-pressed={wished}
         whileTap={{ scale: 0.85 }}
@@ -115,21 +118,21 @@ export function ProductCard({ product }: { product: Product }) {
 
         {/* Short description */}
         <p className="mt-1.5 line-clamp-2 text-[12px] leading-relaxed text-muted">
-          {product.shortDescription}
+          {product.shortDescription || (product as any).description || ''}
         </p>
 
         {/* Rating row */}
         <div className="mt-2.5 flex items-center gap-2">
-          <StarRating rating={product.rating} size={12} />
-          <span className="text-[11px] font-medium text-forest">{product.rating}</span>
-          <span className="text-[11px] text-muted/70">({product.reviewCount})</span>
+          <StarRating rating={product.rating || 5} size={12} />
+          <span className="text-[11px] font-medium text-forest">{product.rating || 5}</span>
+          <span className="text-[11px] text-muted/70">({product.reviewCount || 0})</span>
         </div>
 
         {/* Price + CTA */}
         <div className="mt-4 flex items-center justify-between gap-2">
           <div className="flex items-baseline gap-1">
             <span className="text-[18px] font-semibold text-forest">₹{product.price}</span>
-            <span className="text-[11px] text-muted">/ {product.weight}</span>
+            <span className="text-[11px] text-muted">/ {product.weight || (product as any).size || '100g'}</span>
           </div>
         </div>
 

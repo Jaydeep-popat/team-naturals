@@ -10,8 +10,8 @@ import { CartFloatingPill } from './CartFloatingPill';
 export function LayoutWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   
-  // Hide header/footer on auth pages
-  const hideChrome = pathname === '/login' || pathname === '/register' || pathname === '/forgot-password';
+  // Hide header/footer on auth pages and admin pages
+  const hideChrome = pathname === '/login' || pathname === '/register' || pathname === '/forgot-password' || pathname.startsWith('/admin');
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-white">

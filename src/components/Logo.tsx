@@ -77,7 +77,7 @@ export function Logo({ compact = false, useImage = false, disableLayoutAnimation
   return (
     <span className="flex items-center gap-3 text-forest">
       <LogoMark 
-        className={compact ? 'w-40 sm:w-52 h-auto' : 'w-52 sm:w-64 h-auto'} 
+        className={compact ? 'w-40 sm:w-52 h-auto transition-all duration-300 ease-out' : 'w-52 sm:w-64 h-auto transition-all duration-300 ease-out'} 
         layoutId={disableLayoutAnimation ? undefined : "logo-mark"} 
         useImage={useImage} 
       />

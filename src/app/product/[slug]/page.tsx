@@ -4,8 +4,9 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
-import { LeafIcon, LockIcon, HeartIcon, ChevronLeftIcon, ChevronRightIcon } from 'lucide-react';
-import { getProductBySlug, getRelated } from "@/src/data/products";
+import { LeafIcon, LockIcon, HeartIcon, ChevronLeftIcon, ChevronRightIcon, PackageX } from 'lucide-react';
+import { getRelated } from "@/src/data/products";
+import { products as productsApi } from "@/src/lib/api";
 import { useCart } from "@/src/contexts/CartContext";
 import { Breadcrumb } from "@/src/components/Breadcrumb";
 import { StarRating } from "@/src/components/StarRating";
@@ -14,7 +15,7 @@ import { PromiseBanner } from "@/src/components/PromiseBanner";
 import { ProductCard } from "@/src/components/ProductCard";
 import { AuthModal } from "@/src/components/AuthModal";
 import { useAuth } from "@/src/contexts/AuthContext";
-import { ProductDetailSkeleton } from "@/src/components/Skeletons";
+import { ProductDetailSkeleton, ProductCardSkeleton } from "@/src/components/Skeletons";
 import { Reveal } from "@/src/components/Reveal";
 import { usePageLoad } from "@/src/hooks/usePageLoad";
 import type { Product } from '@/src/types/product';
@@ -24,20 +25,44 @@ export default function ProductDetailPage() {
   const slug = params?.slug as string;
   const router = useRouter();
   const loading = usePageLoad(750);
-  const product = slug ? getProductBySlug(slug) : undefined;
-
+  const [product, setProduct] = useState<any>(null);
+  const [loadingProduct, setLoadingProduct] = useState(true);
   const [activeImage, setActiveImage] = useState(0);
   const [qty, setQty] = useState(1);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
+  const [loadingRelated, setLoadingRelated] = useState(true);
+
   const { addToCart, wishlist, toggleWishlist } = useCart();
   const { isAuthenticated } = useAuth();
-  const [showAuthModal, setShowAuthModal] = useState(false);
+
+  useEffect(() => {
+    if (slug) {
+      productsApi.getBySlug(slug)
+        .then(res => {
+          setProduct(res.data.product);
+          // Fetch related products
+          productsApi.list({ limit: '6' })
+            .then(relRes => {
+              const filtered = relRes.data.products
+                .filter((p: any) => p.productId !== res.data.product.productId)
+                .slice(0, 4);
+              setRelatedProducts(filtered);
+            })
+            .catch(console.error)
+            .finally(() => setLoadingRelated(false));
+        })
+        .catch(console.error)
+        .finally(() => setLoadingProduct(false));
+    }
+  }, [slug]);
 
   useEffect(() => {
     setActiveImage(0);
     setQty(1);
   }, [slug]);
 
-  if (loading) return <ProductDetailSkeleton />;
+  if (loading || loadingProduct) return <ProductDetailSkeleton />;
 
   if (!product) {
     return (
@@ -53,8 +78,16 @@ export default function ProductDetailPage() {
     );
   }
 
-  const wished = wishlist.includes(product.id);
-  const related = getRelated(product);
+  const wished = wishlist.includes(product.productId || product.id);
+
+  const images = (product.images || []).map((img: any) => typeof img === 'string' ? img : (img.url || '/placeholder.png'));
+  const displayImages = images.length > 0 ? images : ['/placeholder.png'];
+  const categoryLabel = typeof product.category === 'object' && product.category !== null 
+    ? product.category.name 
+    : (product.category === 'face-wash' ? 'Face Wash' : 'Soap');
+  const categoryUrl = typeof product.category === 'object' && product.category !== null 
+    ? product.category.slug 
+    : product.category;
 
   const buyNow = () => {
     if (!isAuthenticated) {
@@ -82,8 +115,8 @@ export default function ProductDetailPage() {
               { label: 'Home', to: '/' },
               { label: 'Shop', to: '/shop' },
               {
-                label: product.category === 'face-wash' ? 'Face Wash' : 'Soaps',
-                to: `/shop/${product.category}`,
+                label: categoryLabel,
+                to: `/shop/${categoryUrl}`,
               },
               { label: product.name },
             ]}
@@ -98,7 +131,7 @@ export default function ProductDetailPage() {
             <AnimatePresence mode="wait">
               <motion.img
                 key={activeImage}
-                src={product.images[activeImage]}
+                src={displayImages[activeImage]}
                 alt={`${product.name} — view ${activeImage + 1}`}
                 initial={{ opacity: 0, scale: 1.02 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -110,7 +143,7 @@ export default function ProductDetailPage() {
             <button
               type="button"
               onClick={() =>
-                setActiveImage((i) => (i - 1 + product.images.length) % product.images.length)
+                setActiveImage((i) => (i - 1 + displayImages.length) % displayImages.length)
               }
               aria-label="Previous image"
               className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-2.5 text-forest shadow-soft backdrop-blur hover:bg-white"
@@ -119,7 +152,7 @@ export default function ProductDetailPage() {
             </button>
             <button
               type="button"
-              onClick={() => setActiveImage((i) => (i + 1) % product.images.length)}
+              onClick={() => setActiveImage((i) => (i + 1) % displayImages.length)}
               aria-label="Next image"
               className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-2.5 text-forest shadow-soft backdrop-blur hover:bg-white"
             >
@@ -128,7 +161,7 @@ export default function ProductDetailPage() {
           </div>
 
           <div className="mt-4 flex gap-3">
-            {product.images.map((img, i) => (
+            {displayImages.map((img: string, i: number) => (
               <button
                 key={img + i}
                 type="button"
@@ -148,7 +181,7 @@ export default function ProductDetailPage() {
         {/* Info */}
         <div>
           <p className="text-[10px] uppercase tracking-[0.24em] text-muted">
-            {product.category === 'face-wash' ? 'Face Wash' : 'Soap'}
+            {categoryLabel}
           </p>
           <div className="mt-2 flex items-start justify-between gap-4">
             <h1 className="font-display text-3xl leading-tight text-forest sm:text-4xl">
@@ -160,16 +193,16 @@ export default function ProductDetailPage() {
           </div>
 
           <div className="mt-3 flex items-center gap-2">
-            <StarRating rating={product.rating} size={15} />
+            <StarRating rating={product.rating || 5} size={15} />
             <span className="text-sm text-muted">
-              {product.rating} ({product.reviewCount} reviews)
+              {product.rating || 5} ({product.reviewCount || 0} reviews)
             </span>
           </div>
 
           <p className="mt-5 font-display text-3xl text-forest">₹{product.price}</p>
-          <p className="mt-1 text-xs text-muted">MRP incl. of all taxes · {product.weight}</p>
+          <p className="mt-1 text-xs text-muted">MRP incl. of all taxes · {product.weight || product.size || '100g'}</p>
 
-          <p className="mt-5 text-[15px] leading-relaxed text-muted">{product.shortDescription}</p>
+          <p className="mt-5 text-[15px] leading-relaxed text-muted">{product.shortDescription || product.description || ''}</p>
 
           <div className="mt-7 flex flex-wrap items-center gap-3">
             <QtyStepper value={qty} onChange={(q) => setQty(Math.max(1, q))} label={product.name} />
@@ -209,7 +242,7 @@ export default function ProductDetailPage() {
           </p>
 
           <div className="mt-7 flex flex-wrap gap-2">
-            {product.tags.map((t) => (
+            {(product.tags || []).map((t: string) => (
               <span
                 key={t}
                 className="rounded-full border border-forest/12 px-3 py-1.5 text-[11px] text-forest"
@@ -232,7 +265,7 @@ export default function ProductDetailPage() {
             Key ingredients
           </h2>
           <ul className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {product.ingredients.map((ing) => (
+            {(product.ingredients || []).map((ing: any) => (
               <li key={ing.name} className="flex gap-3 rounded-2xl border border-forest/8 bg-cream-soft p-4">
                 <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-white text-forest-soft">
                   <LeafIcon size={17} strokeWidth={1.4} />
@@ -257,11 +290,11 @@ export default function ProductDetailPage() {
             <table className="w-full text-left text-sm">
               <tbody className="divide-y divide-forest/8">
                 <Row label="Name" value={product.name} />
-                <Row label="Weight" value={product.weight} />
+                <Row label="Weight" value={product.weight || product.size || '100g'} />
                 <Row label="Price" value={`₹${product.price} (MRP incl. of all taxes)`} />
                 <Row
                   label="Category"
-                  value={product.category === 'face-wash' ? 'Face Wash' : 'Soap'}
+                  value={categoryLabel}
                 />
               </tbody>
             </table>
@@ -287,11 +320,27 @@ export default function ProductDetailPage() {
           </h2>
         </Reveal>
         <div className="scrollbar-none mt-6 flex gap-4 overflow-x-auto pb-4">
-          {related.map((p) => (
-            <div key={p.id} className="w-[240px] flex-shrink-0 sm:w-[260px]">
-              <ProductCard product={p} />
+          {loadingRelated ? (
+            Array.from({ length: 4 }).map((_, i) => (
+              <div key={`skel-${i}`} className="w-[240px] flex-shrink-0 sm:w-[260px]">
+                <ProductCardSkeleton />
+              </div>
+            ))
+          ) : relatedProducts.length > 0 ? (
+            relatedProducts.map((p) => (
+              <div key={p.productId || p.id} className="w-[240px] flex-shrink-0 sm:w-[260px]">
+                <ProductCard product={p} />
+              </div>
+            ))
+          ) : (
+            <div className="flex w-full flex-col items-center justify-center rounded-2xl border border-dashed border-forest/20 bg-cream-soft py-14 text-center text-forest/70">
+              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-forest/5 mb-4 border border-forest/10">
+                <PackageX size={28} className="text-forest/40" />
+              </div>
+              <p className="font-display font-semibold text-forest text-lg">No related products found</p>
+              <p className="text-sm mt-1 max-w-sm">We couldn&apos;t find any additional products in this category at this time. Please check back later.</p>
             </div>
-          ))}
+          )}
         </div>
       </section>
 
@@ -312,12 +361,13 @@ function Row({ label, value }: { label: string; value: string }) {
   );
 }
 
-function Reviews({ product }: { product: Product }) {
+function Reviews({ product }: { product: any }) {
+  const reviews = product.reviews || [];
   const distribution = [5, 4, 3, 2, 1].map((star) => ({
     star,
-    count: product.reviews.filter((r) => r.rating === star).length,
+    count: reviews.filter((r: any) => r.rating === star).length,
   }));
-  const total = product.reviews.length || 1;
+  const total = reviews.length || 1;
 
   return (
     <section className="mx-auto max-w-6xl px-5 pt-16 lg:px-8" aria-labelledby="reviews-heading">
@@ -331,12 +381,12 @@ function Reviews({ product }: { product: Product }) {
 
         <div className="mt-6 grid gap-8 rounded-3xl border border-forest/8 bg-cream-soft p-6 sm:grid-cols-[180px_1fr] sm:p-8">
           <div className="text-center sm:text-left">
-            <p className="font-display text-5xl text-forest">{product.rating}</p>
+            <p className="font-display text-5xl text-forest">{product.rating || 5}</p>
             <p className="mt-1 text-xs text-muted">out of 5</p>
             <div className="mt-2 flex justify-center sm:justify-start">
-              <StarRating rating={product.rating} size={16} />
+              <StarRating rating={product.rating || 5} size={16} />
             </div>
-            <p className="mt-2 text-xs text-muted">({product.reviewCount} reviews)</p>
+            <p className="mt-2 text-xs text-muted">({product.reviewCount || 0} reviews)</p>
           </div>
           <ul className="space-y-2">
             {distribution.map(({ star, count }) => (
@@ -358,7 +408,7 @@ function Reviews({ product }: { product: Product }) {
         </div>
 
         <ul className="mt-6 space-y-3">
-          {product.reviews.map((r) => (
+          {reviews.map((r: any) => (
             <li key={r.id} className="rounded-2xl border border-forest/8 p-5">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3">

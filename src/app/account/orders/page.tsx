@@ -1,219 +1,263 @@
 'use client';
-import React, { useState } from 'react';
-import { PackageIcon, CheckCircle2Icon, ClockIcon, ArrowRightIcon } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { SearchIcon, FilterIcon, XIcon } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useRouter } from 'next/navigation';
+import { OrderCard, type OrderItem } from '@/src/components/account/OrderCard';
+import Image from 'next/image';
+
+const mockOrderItems: OrderItem[] = [
+  {
+    id: 'item-1',
+    orderId: '#TN-1249',
+    name: 'Neem & Aloe Face Wash',
+    variant: '100ml',
+    price: 350,
+    image: '/images/products/neem-aloe-facewash.png', // Assuming realistic paths, we fallback if missing in OrderCard
+    status: 'Delivered',
+    date: 'Feb 02, 2026',
+    dateObj: new Date('2026-02-02'),
+  },
+  {
+    id: 'item-2',
+    orderId: '#TN-1249',
+    name: 'Charcoal Soap Bar',
+    variant: 'Set of 3',
+    price: 550,
+    image: null,
+    status: 'Delivered',
+    date: 'Jan 20, 2026',
+    dateObj: new Date('2026-01-20'),
+  },
+  {
+    id: 'item-3',
+    orderId: '#TN-1022',
+    name: 'Rose Water Toner',
+    variant: '200ml',
+    price: 890,
+    image: null,
+    status: 'On the way',
+    date: 'Aug 15, 2026',
+    dateObj: new Date('2026-08-15'),
+  },
+  {
+    id: 'item-4',
+    orderId: '#TN-0988',
+    name: 'Multani Mitti Clay Mask',
+    variant: '50g',
+    price: 250,
+    image: null,
+    status: 'Cancelled',
+    date: 'Jan 15, 2024',
+    dateObj: new Date('2024-01-15'),
+  },
+  {
+    id: 'item-5',
+    orderId: '#TN-0750',
+    name: 'Almond & Saffron Moisturizer',
+    variant: '50ml',
+    price: 1200,
+    image: null,
+    status: 'Returned',
+    date: 'Dec 05, 2023',
+    dateObj: new Date('2023-12-05'),
+  },
+];
 
 export default function OrdersPage() {
-  const [selectedOrder, setSelectedOrder] = useState<any>(null);
-  const [showCancelModal, setShowCancelModal] = useState(false);
+  const router = useRouter();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilters, setStatusFilters] = useState<string[]>([]);
+  const [timeFilters, setTimeFilters] = useState<string[]>([]);
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
 
-  const mockOrders = [
-    { 
-      id: '#TN-1249', 
-      date: 'Oct 12, 2026', 
-      total: '₹1,450', 
-      status: 'Delivered', 
-      canCancel: false,
-      items: [
-        { name: 'Neem & Aloe Face Wash', variant: '100ml', qty: 1, price: '₹350', image: '/22f656cd-e070-47f1-ad50-e243752d0d8e.jpg' },
-        { name: 'Charcoal Soap Bar', variant: 'Set of 3', qty: 2, price: '₹550', image: '/25dcd76f-37d7-4036-b396-20449c8e4796.jpg' }
-      ],
-      tracking: [
-        { step: 'Order Placed', date: 'Oct 12, 10:00 AM', completed: true },
-        { step: 'Processing', date: 'Oct 13, 09:30 AM', completed: true },
-        { step: 'Shipped', date: 'Oct 14, 11:15 AM', completed: true },
-        { step: 'Delivered', date: 'Oct 15, 02:45 PM', completed: true },
-      ],
-      shippingAddress: "123 Nature Valley Road, Suite A, Mumbai, MH 400001",
-      paymentMethod: "Credit Card ending in 4242"
-    },
-    { 
-      id: '#TN-1022', 
-      date: 'Sep 05, 2026', 
-      total: '₹890', 
-      status: 'Processing',
-      canCancel: true, 
-      items: [
-        { name: 'Rose Water Toner', variant: '200ml', qty: 1, price: '₹890', image: '/4d43f26a-b03f-405e-985f-c84f473e0793.jpg' }
-      ],
-      tracking: [
-        { step: 'Order Placed', date: 'Sep 05, 04:20 PM', completed: true },
-        { step: 'Processing', date: 'Sep 06, 10:10 AM', completed: true },
-        { step: 'Shipped', date: 'Pending', completed: false },
-        { step: 'Delivered', date: 'Pending', completed: false },
-      ],
-      shippingAddress: "123 Nature Valley Road, Suite A, Mumbai, MH 400001",
-      paymentMethod: "UPI (Google Pay)"
-    },
-  ];
+  const filteredItems = useMemo(() => {
+    return mockOrderItems.filter((item) => {
+      if (searchQuery.trim() && !item.name.toLowerCase().includes(searchQuery.toLowerCase()) && !item.orderId.toLowerCase().includes(searchQuery.toLowerCase())) {
+        return false;
+      }
+      if (statusFilters.length > 0 && !statusFilters.includes(item.status)) {
+        return false;
+      }
+      if (timeFilters.length > 0) {
+        const now = new Date('2026-08-03');
+        const itemDate = item.dateObj;
+        const daysDiff = (now.getTime() - itemDate.getTime()) / (1000 * 3600 * 24);
+        const itemYear = itemDate.getFullYear();
 
-  if (selectedOrder) {
-    return (
-      <div className="space-y-6 animate-in fade-in slide-in-from-right-2 duration-300 pb-10">
-        {/* Header */}
-        <div className="flex items-center gap-4 border-b border-forest/10 pb-4">
-          <button 
-            onClick={() => { setSelectedOrder(null); setShowCancelModal(false); }}
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-forest/5 text-forest hover:bg-forest/10 transition-colors"
-          >
-            ←
-          </button>
-          <div>
-            <h2 className="font-display text-xl font-bold text-forest">Order Details</h2>
-            <p className="text-[12px] text-muted font-medium mt-0.5">ID: {selectedOrder.id} &nbsp;|&nbsp; Placed on {selectedOrder.date}</p>
-          </div>
+        let matchesTime = false;
+        if (timeFilters.includes('Last 30 days') && daysDiff <= 30 && daysDiff >= 0) matchesTime = true;
+        if (timeFilters.includes('2024') && itemYear === 2024) matchesTime = true;
+        if (timeFilters.includes('2023') && itemYear === 2023) matchesTime = true;
+        if (timeFilters.includes('Older') && itemYear < 2023) matchesTime = true;
+
+        if (!matchesTime) return false;
+      }
+      return true;
+    });
+  }, [searchQuery, statusFilters, timeFilters]);
+
+  const handleStatusToggle = (status: string) => {
+    setStatusFilters(prev => prev.includes(status) ? prev.filter(s => s !== status) : [...prev, status]);
+  };
+
+  const handleTimeToggle = (time: string) => {
+    setTimeFilters(prev => prev.includes(time) ? prev.filter(t => t !== time) : [...prev, time]);
+  };
+
+  const clearFilters = () => {
+    setStatusFilters([]);
+    setTimeFilters([]);
+  };
+
+  const hasActiveFilters = statusFilters.length > 0 || timeFilters.length > 0;
+
+  const SidebarContent = () => (
+    <div className="space-y-8">
+      {hasActiveFilters && (
+        <div className="flex items-center justify-between">
+          <span className="text-[13px] font-bold text-forest">Active Filters</span>
+          <button onClick={clearFilters} className="text-[12px] text-terracotta hover:underline font-semibold">Clear All</button>
         </div>
+      )}
 
-        {/* Top Info Cards */}
-        <div className="grid sm:grid-cols-2 gap-4">
-          <div className="rounded-xl border border-forest/10 p-5 bg-white shadow-sm flex flex-col justify-between">
-            <div>
-              <h3 className="text-sm font-bold text-forest mb-3 uppercase tracking-wide">Delivery Address</h3>
-              <p className="text-sm font-semibold text-forest mb-1">Yugal Doe</p>
-              <p className="text-[13px] text-muted leading-relaxed max-w-[200px]">
-                {selectedOrder.shippingAddress}
-              </p>
-              <p className="text-[13px] font-semibold text-forest mt-3">Phone: +91 98765 43210</p>
-            </div>
-          </div>
-          
-          <div className="rounded-xl border border-forest/10 p-5 bg-white shadow-sm flex flex-col justify-between">
-             <div>
-               <h3 className="text-sm font-bold text-forest mb-3 uppercase tracking-wide">Order Summary</h3>
-               <div className="text-[13px] text-muted flex justify-between mb-1.5"><p>Item(s) Subtotal:</p><p className="font-semibold text-forest">{selectedOrder.total}</p></div>
-               <div className="text-[13px] text-muted flex justify-between mb-3"><p>Shipping:</p><p className="font-semibold text-forest">Free</p></div>
-               <div className="text-[14px] font-bold text-forest flex justify-between border-t border-forest/5 pt-3"><p>Grand Total:</p><p>{selectedOrder.total}</p></div>
-             </div>
-             
-             <button className="mt-4 w-full rounded-lg border border-forest/20 py-2.5 text-xs font-bold text-forest hover:bg-forest/5 transition-colors">
-               Download Invoice
-             </button>
-          </div>
-        </div>
-
-        {/* Items & Tracking */}
-        <div className="space-y-6 pt-2">
-          {selectedOrder.items.map((item: any, i: number) => (
-            <div key={i} className="rounded-2xl border border-forest/10 bg-white shadow-sm overflow-hidden flex flex-col transition-all hover:shadow-md">
-              
-              {/* Product Info Section */}
-              <div className="p-5 flex flex-col sm:flex-row gap-6 items-start sm:items-center">
-                <div className="h-28 w-28 shrink-0 rounded-lg border border-forest/5 bg-cream/20 relative overflow-hidden">
-                   {item.image ? (
-                     <img src={item.image} alt={item.name} className="object-cover w-full h-full" />
-                   ) : (
-                     <PackageIcon size={32} className="text-forest/30 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
-                   )}
-                </div>
-                
-                <div className="flex-1 flex flex-col h-full justify-center">
-                  <h3 className="font-display font-bold text-forest text-lg">{item.name}</h3>
-                  <p className="text-[13px] text-muted mt-1 font-medium">Variant: {item.variant} &nbsp;|&nbsp; Seller: Team Naturals</p>
-                  <p className="font-display font-bold text-forest text-xl mt-3">{item.price}</p>
-                </div>
-                
-                {/* Actions */}
-                <div className="w-full sm:w-40 flex flex-col gap-2 shrink-0">
-                  {selectedOrder.canCancel ? (
-                    <button 
-                      onClick={() => setShowCancelModal(true)}
-                      className="w-full rounded-lg bg-terracotta text-white py-2.5 text-[13px] font-bold hover:bg-terracotta/90 transition-colors shadow-sm"
-                    >
-                      Cancel Order
-                    </button>
-                  ) : (
-                    <button className="w-full rounded-lg border-2 border-forest/20 text-forest py-2 text-[13px] font-bold hover:bg-forest hover:text-white transition-colors">
-                      Return Item
-                    </button>
-                  )}
-                  <button className="w-full rounded-lg border-2 border-forest/20 text-forest py-2 text-[13px] font-bold hover:bg-forest hover:text-white transition-colors">
-                    Need Help?
-                  </button>
-                </div>
+      <div>
+        <h3 className="font-display font-bold text-forest mb-4 text-[13px] tracking-wide uppercase">Order Status</h3>
+        <div className="space-y-3">
+          {['On the way', 'Delivered', 'Cancelled', 'Returned'].map((status) => (
+            <label key={status} className="flex items-center gap-3 cursor-pointer group">
+              <div 
+                className={`w-[18px] h-[18px] rounded flex items-center justify-center transition-colors border ${statusFilters.includes(status) ? 'bg-forest border-forest text-white' : 'border-forest/20 group-hover:border-forest/50 bg-white'}`}
+              >
+                {statusFilters.includes(status) && <svg viewBox="0 0 14 14" fill="none" className="w-3.5 h-3.5"><path d="M3 7.5L5.5 10L11 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
               </div>
-
-              {/* Cancel Confirmation Banner */}
-              {showCancelModal && selectedOrder.canCancel && (
-                <div className="border-t border-terracotta/20 bg-terracotta/5 px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-in slide-in-from-top-2">
-                   <p className="text-sm font-bold text-terracotta">Are you sure you want to cancel this item?</p>
-                   <div className="flex gap-2">
-                     <button onClick={() => setShowCancelModal(false)} className="px-4 py-2 text-xs font-bold text-forest bg-white rounded-lg border border-forest/10 hover:bg-forest/5">Don&apos;t Cancel</button>
-                     <button onClick={() => setShowCancelModal(false)} className="px-4 py-2 rounded-lg bg-terracotta text-white text-xs font-bold hover:bg-terracotta/90">Confirm Cancel</button>
-                   </div>
-                </div>
-              )}
-
-              {/* Integrated Tracking Timeline */}
-              <div className="border-t border-forest/5 bg-forest/5 p-6 sm:px-10">
-                <div className="relative flex justify-between max-w-2xl mx-auto">
-                  <div className="absolute top-3 left-[12.5%] right-[12.5%] h-1 bg-forest/10 rounded-full" />
-                  <div 
-                    className="absolute top-3 left-[12.5%] h-1 bg-forest rounded-full transition-all duration-1000" 
-                    style={{ width: selectedOrder.status === 'Delivered' ? '75%' : '25%' }} 
-                  />
-                  {selectedOrder.tracking.map((track: any, idx: number) => (
-                    <div key={idx} className="relative flex flex-col items-center gap-3 z-10 w-1/4">
-                      <div className={`h-7 w-7 rounded-full flex items-center justify-center border-4 border-[#F3F4F1] ${track.completed ? 'bg-forest text-white shadow-sm' : 'bg-cream text-forest/40'}`}>
-                        {track.completed ? <CheckCircle2Icon size={12} /> : <div className="h-2 w-2 rounded-full bg-forest/20" />}
-                      </div>
-                      <div className="text-center">
-                        <p className={`text-[10px] font-bold uppercase tracking-wider ${track.completed ? 'text-forest' : 'text-forest/40'}`}>{track.step}</p>
-                        <p className="text-[10px] text-muted mt-0.5">{track.date}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-            </div>
+              <span className="text-[14px] text-forest/80 font-medium select-none">
+                {status}
+              </span>
+              <input type="checkbox" className="sr-only" checked={statusFilters.includes(status)} onChange={() => handleStatusToggle(status)} />
+            </label>
           ))}
         </div>
       </div>
-    );
-  }
+
+      <div className="w-full h-px bg-forest/5" />
+
+      <div>
+        <h3 className="font-display font-bold text-forest mb-4 text-[13px] tracking-wide uppercase">Order Time</h3>
+        <div className="space-y-3">
+          {['Last 30 days', '2024', '2023', 'Older'].map((time) => (
+            <label key={time} className="flex items-center gap-3 cursor-pointer group">
+              <div 
+                className={`w-[18px] h-[18px] rounded flex items-center justify-center transition-colors border ${timeFilters.includes(time) ? 'bg-forest border-forest text-white' : 'border-forest/20 group-hover:border-forest/50 bg-white'}`}
+              >
+                {timeFilters.includes(time) && <svg viewBox="0 0 14 14" fill="none" className="w-3.5 h-3.5"><path d="M3 7.5L5.5 10L11 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+              </div>
+              <span className="text-[14px] text-forest/80 font-medium select-none">
+                {time}
+              </span>
+              <input type="checkbox" className="sr-only" checked={timeFilters.includes(time)} onChange={() => handleTimeToggle(time)} />
+            </label>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+    <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start w-full animate-in fade-in duration-300">
+      
+      {/* Desktop Sidebar */}
+      <aside className="hidden lg:block w-[240px] shrink-0 sticky top-24 bg-white rounded-2xl border border-forest/10 p-6 shadow-sm">
+        <h2 className="font-display text-2xl font-bold text-forest mb-6 border-b border-forest/5 pb-4">Filters</h2>
+        <SidebarContent />
+      </aside>
 
+      {/* Mobile Filters Overlay */}
+      <AnimatePresence>
+        {showMobileFilters && (
+          <React.Fragment key="mobile-filters">
+            <motion.div 
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-forest/30 backdrop-blur-sm z-40 lg:hidden"
+              onClick={() => setShowMobileFilters(false)}
+            />
+            <motion.div
+              initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-3xl p-6 shadow-2xl lg:hidden max-h-[85vh] overflow-y-auto"
+            >
+              <div className="flex items-center justify-between mb-6 border-b border-forest/5 pb-4">
+                <h2 className="font-display text-xl font-bold text-forest">Filters</h2>
+                <button onClick={() => setShowMobileFilters(false)} className="p-2 bg-cream rounded-full text-forest">
+                  <XIcon size={18} />
+                </button>
+              </div>
+              <SidebarContent />
+              <button 
+                onClick={() => setShowMobileFilters(false)}
+                className="w-full mt-8 bg-forest text-white font-bold py-3.5 rounded-full"
+              >
+                Apply Filters
+              </button>
+            </motion.div>
+          </React.Fragment>
+        )}
+      </AnimatePresence>
 
-      <div className="space-y-4">
-        {mockOrders.map((order) => (
-          <div 
-            key={order.id} 
-            onClick={() => setSelectedOrder(order)}
-            className="flex flex-col sm:flex-row sm:items-center justify-between rounded-xl border border-forest/10 bg-white p-5 transition-all hover:border-forest/20 hover:shadow-md cursor-pointer group"
-          >
-            <div className="flex items-center gap-5">
-              <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-lg bg-[#FDFBF9] border border-forest/5 overflow-hidden">
-                {order.items[0].image ? (
-                  <img src={order.items[0].image} alt="product" className="object-cover w-full h-full mix-blend-multiply opacity-90" />
-                ) : (
-                  <PackageIcon size={24} className="text-forest/30" />
-                )}
-              </div>
-              <div>
-                <h3 className="font-bold text-forest text-[16px] mb-1.5 group-hover:text-forest transition-colors">
-                  {order.items[0].name} {order.items.length > 1 && <span className="text-forest/60 text-sm font-medium ml-1">+{order.items.length - 1} more</span>}
-                </h3>
-                <div className="flex flex-wrap items-center gap-3">
-                  <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${
-                    order.status === 'Delivered' ? 'bg-[#E8F3EB] text-[#1B4D2E]' : 'bg-[#FFF0E5] text-[#A64322]'
-                  }`}>
-                    {order.status === 'Delivered' ? <CheckCircle2Icon size={12} /> : <ClockIcon size={12} />}
-                    {order.status}
-                  </span>
-                  <span className="text-[13px] font-medium text-muted">• Placed on {order.date}</span>
-                </div>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-6 mt-4 sm:mt-0 self-end sm:self-auto">
-              <p className="font-display font-bold text-forest text-xl">{order.total}</p>
-              <div className="hidden sm:flex h-8 w-8 items-center justify-center rounded-full bg-forest/5 text-forest group-hover:bg-forest group-hover:text-white transition-colors">
-                <ArrowRightIcon size={16} />
-              </div>
-            </div>
+      {/* Main Content */}
+      <div className="flex-1 w-full flex flex-col gap-6 min-w-0">
+        
+        {/* Search Bar & Mobile Filter Toggle */}
+        <div className="flex items-center gap-3 w-full">
+          <div className="relative flex-1 flex items-center bg-white border border-forest/15 rounded-[16px] shadow-sm overflow-hidden focus-within:border-forest/40 transition-colors">
+            <SearchIcon size={18} className="absolute left-4 text-forest/40" />
+            <input 
+              type="text" 
+              placeholder="Search your orders..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-transparent py-4 pl-12 pr-4 outline-none text-forest text-[15px] font-medium placeholder:text-muted/60"
+            />
           </div>
-        ))}
+          <button 
+            onClick={() => setShowMobileFilters(true)}
+            className="lg:hidden shrink-0 h-[54px] w-[54px] flex items-center justify-center bg-white border border-forest/15 rounded-[16px] text-forest shadow-sm"
+          >
+            <FilterIcon size={20} />
+          </button>
+        </div>
+
+        {/* List */}
+        <div className="space-y-4">
+          {filteredItems.length === 0 ? (
+            <div className="bg-white border border-forest/10 rounded-[20px] p-12 text-center shadow-sm">
+              <div className="h-24 w-24 mx-auto mb-6 bg-forest/5 rounded-full flex items-center justify-center">
+                <SearchIcon size={32} className="text-forest/30" />
+              </div>
+              <h3 className="font-display text-xl text-forest font-bold mb-2">No orders found</h3>
+              <p className="text-sm text-muted">Try adjusting your filters or search for something else.</p>
+              {hasActiveFilters && (
+                <button onClick={clearFilters} className="mt-6 rounded-full bg-forest/5 px-6 py-2.5 text-sm font-bold text-forest hover:bg-forest hover:text-white transition-colors">
+                  Clear all filters
+                </button>
+              )}
+            </div>
+          ) : (
+            filteredItems.map((item, index) => (
+              <motion.div
+                key={item.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.05 }}
+              >
+                <OrderCard 
+                  item={item} 
+                  onClick={() => router.push(`/account/orders/${item.orderId.replace('#TN-', '')}`)} 
+                />
+              </motion.div>
+            ))
+          )}
+        </div>
       </div>
     </div>
   );

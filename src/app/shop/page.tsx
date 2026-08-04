@@ -4,7 +4,8 @@ import React, { useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 import { SearchXIcon, SlidersHorizontalIcon, XIcon } from 'lucide-react';
-import { categories, products, skinConcerns } from "@/src/data/products";
+import { categories, skinConcerns } from "@/src/data/products";
+import { products as productsApi } from "@/src/lib/api";
 import type { Product, Category } from '@/src/types/product';
 import { ProductCard } from "@/src/components/ProductCard";
 import { Breadcrumb } from "@/src/components/Breadcrumb";
@@ -31,11 +32,21 @@ export default function ShopPage() {
   const [sort, setSort] = useState<SortKey>('popularity');
   const [filtersOpen, setFiltersOpen] = useState(false);
 
+  const [liveProducts, setLiveProducts] = useState<any[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState(true);
+
+  React.useEffect(() => {
+    productsApi.list()
+      .then(res => setLiveProducts(res.data.products))
+      .catch(console.error)
+      .finally(() => setLoadingProducts(false));
+  }, []);
+
   const activeCategory = categories.find((c) => c.slug === category);
 
   const results = useMemo(() => {
-    let list = products.filter((p) => (category ? p.category === category : true));
-    if (selectedCategories.length) list = list.filter((p) => selectedCategories.includes(p.category));
+    let list = liveProducts.filter((p) => (category ? (typeof p.category === 'object' && p.category !== null ? p.category.slug === category : p.category === category) : true));
+    if (selectedCategories.length) list = list.filter((p) => selectedCategories.includes(typeof p.category === 'object' && p.category !== null ? p.category.slug : p.category));
     if (selectedBands.length) {
       list = list.filter((p) =>
         selectedBands.some((label) => {
@@ -45,14 +56,14 @@ export default function ShopPage() {
       );
     }
     if (selectedConcerns.length) {
-      list = list.filter((p) => p.concerns.some((c) => selectedConcerns.includes(c)));
+      list = list.filter((p) => (p.concerns || []).some((c: string) => selectedConcerns.includes(c)));
     }
     const sorted = [...list];
     if (sort === 'price-asc') sorted.sort((a, b) => a.price - b.price);
     if (sort === 'price-desc') sorted.sort((a, b) => b.price - a.price);
-    if (sort === 'popularity') sorted.sort((a, b) => b.reviewCount - a.reviewCount);
+    if (sort === 'popularity') sorted.sort((a, b) => (b.reviewCount || 0) - (a.reviewCount || 0));
     return sorted;
-  }, [category, selectedCategories, selectedBands, selectedConcerns, sort]);
+  }, [category, selectedCategories, selectedBands, selectedConcerns, sort, liveProducts]);
 
   const clearAll = () => {
     setSelectedCategories([]);
@@ -137,7 +148,7 @@ export default function ShopPage() {
             </div>
           </div>
 
-          {loading ? (
+          {loading || loadingProducts ? (
             <ProductGridSkeleton count={6} />
           ) : results.length === 0 ? (
             <EmptyState onClear={clearAll} />
@@ -149,11 +160,13 @@ export default function ShopPage() {
               animate="visible"
               className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:gap-6"
             >
-              {results.map((p) => (
-                <motion.div key={p.id} variants={staggerItem}>
+              {results.map((p) => {
+                const productId = (p as any).productId || p.id;
+                return (
+                <motion.div key={productId} variants={staggerItem}>
                   <ProductCard product={p} />
                 </motion.div>
-              ))}
+              )})}
             </motion.div>
           )}
         </div>

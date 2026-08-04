@@ -70,9 +70,11 @@ export default function CartPage() {
         <div className="mx-auto grid max-w-6xl gap-8 px-5 py-10 lg:grid-cols-[1fr_360px] lg:px-8">
           <ul className="space-y-3">
             <AnimatePresence initial={false}>
-              {lines.map((line) => (
+              {lines.map((line) => {
+                const productId = (line.product as any).productId || line.product.id;
+                return (
                 <motion.li
-                  key={line.product.id}
+                  key={productId}
                   layout
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -83,7 +85,7 @@ export default function CartPage() {
                   <Link href={`/product/${line.product.slug}`} className="flex-shrink-0 group/img">
                     <div className="overflow-hidden rounded-2xl bg-cream">
                       <img
-                        src={line.product.images[0]}
+                        src={typeof line.product.images?.[0] === 'string' ? line.product.images[0] : ((line.product.images?.[0] as any)?.url || '/placeholder.png')}
                         alt={line.product.name}
                         className="h-24 w-24 sm:h-32 sm:w-32 object-cover transition-transform duration-500 ease-out group-hover/img:scale-105"
                       />
@@ -103,7 +105,7 @@ export default function CartPage() {
                       </div>
                       <button
                         type="button"
-                        onClick={() => removeFromCart(line.product.id)}
+                        onClick={() => removeFromCart(String(productId))}
                         aria-label={`Remove ${line.product.name}`}
                         className="flex-shrink-0 rounded-full p-1.5 sm:p-2 text-muted transition-colors hover:bg-forest/5 hover:text-terracotta"
                       >
@@ -113,7 +115,7 @@ export default function CartPage() {
                     <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
                       <QtyStepper
                         value={line.quantity}
-                        onChange={(q) => setQuantity(line.product.id, q)}
+                        onChange={(q) => setQuantity(String(productId), q)}
                         label={line.product.name}
                       />
                       <span className="font-display text-[15px] sm:text-lg text-forest">
@@ -122,7 +124,7 @@ export default function CartPage() {
                     </div>
                   </div>
                 </motion.li>
-              ))}
+              )})}
             </AnimatePresence>
           </ul>
 

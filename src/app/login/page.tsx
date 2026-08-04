@@ -12,7 +12,7 @@ import { isNotEmpty } from '@/src/utils/validation';
 import { useEffect } from 'react';
 
 function LoginForm() {
-  const { login, isAuthenticated, isLoading } = useAuth();
+  const { login, isAuthenticated, isLoading, user } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -26,11 +26,17 @@ function LoginForm() {
   const successMessage = searchParams.get('message');
 
   useEffect(() => {
-    if (!isLoading && isAuthenticated) {
+    if (!isLoading && isAuthenticated && user) {
       const redirect = searchParams.get('redirect');
-      router.replace(redirect && redirect.startsWith('/') ? redirect : '/');
+      if (redirect && redirect.startsWith('/')) {
+        router.replace(redirect);
+      } else if (user.role === 'admin') {
+        router.replace('/admin');
+      } else {
+        router.replace('/');
+      }
     }
-  }, [isLoading, isAuthenticated, router, searchParams]);
+  }, [isLoading, isAuthenticated, user, router, searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -39,9 +39,9 @@ export function CartFloatingPill() {
                     style={{ zIndex: 2 - idx }}
                   >
                     <img
-                      src={line.product.images[0]}
+                      src={typeof line.product.images?.[0] === 'string' ? line.product.images[0] : ((line.product.images?.[0] as any)?.url || '/placeholder.png')}
                       alt={line.product.name}
-                      className="h-[80%] w-[80%] object-contain"
+                      className="h-full w-full object-cover"
                     />
                   </div>
                 ))}
@@ -61,9 +61,9 @@ export function CartFloatingPill() {
                     style={{ zIndex: 3 - idx }}
                   >
                     <img
-                      src={line.product.images[0]}
+                      src={typeof line.product.images?.[0] === 'string' ? line.product.images[0] : ((line.product.images?.[0] as any)?.url || '/placeholder.png')}
                       alt={line.product.name}
-                      className="h-[80%] w-[80%] object-contain"
+                      className="h-full w-full object-cover"
                     />
                   </div>
                 ))}

@@ -16,8 +16,9 @@ export function Preloader() {
     <AnimatePresence>
       {!done && (
         <motion.div
+          key="preloader"
           className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-cream"
-          exit={{ opacity: 0, filter: 'blur(6px)' }}
+          exit={{ opacity: 0, filter: 'blur(6px)', pointerEvents: 'none' }}
           transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
           role="status"
           aria-label="Loading Team Naturals"

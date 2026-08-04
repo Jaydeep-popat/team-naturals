@@ -8,7 +8,9 @@ import { MenuIcon, SearchIcon, ShoppingBagIcon, UserIcon, XIcon, ArrowRightIcon,
 import { Logo } from './Logo';
 import { useCart } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
-import { products, categories } from '../data/products';
+import { products as productsApi, categories as categoriesApi } from '../lib/api';
+import { Product } from '../types/product';
+import { ProfileIdentityBlock } from './account/ProfileIdentityBlock';
 
 const navItems = [
   { label: 'Home', href: '/' },
@@ -20,26 +22,86 @@ const navItems = [
 export function Header() {
   const { user, isLoading, logout } = useAuth();
 
+  const pathname = usePathname();
   const [scrolled, setScrolled] = React.useState(false);
+  const [prevPath, setPrevPath] = React.useState(pathname);
+
+  if (pathname !== prevPath) {
+    setPrevPath(pathname);
+    setScrolled(false);
+  }
+  
   const [menuOpen, setMenuOpen] = React.useState(false);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = React.useState(false);
   const [query, setQuery] = React.useState('');
+  const [searchResults, setSearchResults] = React.useState<Product[]>([]);
+  const [isSearching, setIsSearching] = React.useState(false);
+  const [selectedIndex, setSelectedIndex] = React.useState(-1);
+  const [isProfileOpen, setIsProfileOpen] = React.useState(false);
+  const profileRef = React.useRef<HTMLDivElement>(null);
   const { itemCount, openDrawer, wishlist } = useCart();
   const router = useRouter();
-  const pathname = usePathname();
+  const [categories, setCategories] = React.useState<any[]>([]);
+
+  React.useEffect(() => {
+    categoriesApi.list().then(res => setCategories(res.data.categories)).catch(() => {});
+  }, []);
+
+  React.useEffect(() => {
+    setSelectedIndex(-1);
+    if (!query.trim()) {
+      setSearchResults([]);
+      setIsSearching(false);
+      return;
+    }
+
+    setIsSearching(true);
+    const timeoutId = setTimeout(async () => {
+      try {
+        const res = await productsApi.list({ search: query.trim(), limit: '5' });
+        setSearchResults(res.data.products);
+      } catch (err) {
+        console.error('Search failed', err);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [query]);
+
+  React.useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
+        setIsProfileOpen(false);
+      }
+    }
+    function handleEscape(e: KeyboardEvent) {
+      if (e.key === 'Escape') setIsProfileOpen(false);
+    }
+    if (isProfileOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('keydown', handleEscape);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+        document.removeEventListener('keydown', handleEscape);
+      };
+    }
+  }, [isProfileOpen]);
 
   React.useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 50);
     onScroll();
+    setTimeout(onScroll, 50); // Ensure it checks after Next.js scroll restoration
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
-  }, []);
+  }, [pathname]);
 
-  const results = query.trim()
-    ? products
-        .filter((p) => p.name.toLowerCase().includes(query.trim().toLowerCase()))
-        .slice(0, 5)
+  // Combine categories and products for unified search
+  const matchedCategories = query.trim() 
+    ? categories.filter(c => c.name.toLowerCase().includes(query.toLowerCase())).map(c => ({ ...c, type: 'category' })) 
     : [];
+  const results = [...matchedCategories, ...searchResults.map(p => ({ ...p, type: 'product' }))];
 
   return (
     <>
@@ -83,7 +145,7 @@ export function Header() {
             )}
 
             <Link href="/" aria-label="Team Naturals home" className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 lg:static lg:transform-none flex-shrink-0">
-              <Logo compact={scrolled} useImage={true} hideTextOnMobile={true} isNavbar={true} />
+              <Logo compact={scrolled} useImage={true} hideTextOnMobile={true} isNavbar={true} disableLayoutAnimation={true} />
             </Link>
           </div>
 
@@ -123,14 +185,10 @@ export function Header() {
                         {categories.map(cat => (
                           <Link 
                             key={cat.slug} 
-                            href={cat.comingSoon ? '#' : `/shop/${cat.slug}`} 
-                            className={`block rounded-xl px-4 py-2 text-sm font-medium transition-colors ${
-                              cat.comingSoon 
-                                ? 'text-muted/60 cursor-not-allowed' 
-                                : 'text-forest hover:bg-forest/5 hover:text-terracotta'
-                            }`}
+                            href={`/shop/${cat.slug}`} 
+                            className={`block rounded-xl px-4 py-2 text-sm font-medium transition-colors text-forest hover:bg-forest/5 hover:text-terracotta`}
                           >
-                            {cat.label} {cat.comingSoon && <span className="text-[10px] ml-1 opacity-70">(Soon)</span>}
+                            {cat.name}
                           </Link>
                         ))}
                       </div>
@@ -178,7 +236,25 @@ export function Header() {
                   id="mobile-search-input"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Search products..."
+                  onKeyDown={(e) => {
+                    if (e.key === 'ArrowDown') {
+                      e.preventDefault();
+                      setSelectedIndex(prev => Math.min(prev + 1, results.length - 1));
+                    } else if (e.key === 'ArrowUp') {
+                      e.preventDefault();
+                      setSelectedIndex(prev => Math.max(prev - 1, 0));
+                    } else if (e.key === 'Enter') {
+                      e.preventDefault();
+                      const activeItem = selectedIndex >= 0 ? results[selectedIndex] : (results.length > 0 ? results[0] : null);
+                      if (activeItem) {
+                        const href = activeItem.type === 'category' ? `/shop/${activeItem.slug}` : `/product/${activeItem.slug}`;
+                        router.push(href);
+                        setQuery('');
+                        setIsMobileSearchOpen(false);
+                      }
+                    }
+                  }}
+                  placeholder="Search products & categories..."
                   className="w-full sm:w-40 bg-transparent text-[14px] font-medium text-forest outline-none focus:outline-none focus:ring-0 placeholder:font-normal placeholder:text-muted/70 transition-all sm:focus:w-56"
                   aria-label="Search products"
                 />
@@ -200,36 +276,55 @@ export function Header() {
               <AnimatePresence>
                 {query.trim() && (
                   <motion.div
+                    key="search-results"
                     initial={{ opacity: 0, y: 10, scale: 0.98 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 10, scale: 0.98 }}
+                    exit={{ opacity: 0, y: 10, scale: 0.98, pointerEvents: 'none' }}
                     transition={{ duration: 0.2 }}
                     className="absolute left-4 right-4 sm:left-auto sm:right-0 top-[calc(100%+8px)] sm:w-80 overflow-hidden rounded-2xl border border-forest/10 bg-white p-2 shadow-lift"
                   >
                     {results.length > 0 ? (
                       <ul className="space-y-1">
-                        {results.map((p) => (
-                          <li key={p.id}>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                router.push(`/product/${p.slug}`);
-                                setQuery('');
-                              }}
-                              className="group flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left transition-colors hover:bg-cream-soft"
-                            >
-                              <img src={p.images[0]} alt="" className="h-12 w-12 rounded-lg object-cover" />
-                              <div className="flex-1 min-w-0">
-                                <span className="block truncate text-sm font-semibold text-forest group-hover:text-terracotta">{p.name}</span>
-                                <span className="block text-[12px] text-muted">₹{p.price}</span>
-                              </div>
-                              <ArrowRightIcon size={14} className="text-muted opacity-0 transition-all group-hover:opacity-100 group-hover:translate-x-1" />
-                            </button>
-                          </li>
-                        ))}
+                        {results.map((item, idx) => {
+                          const isCategory = item.type === 'category';
+                          const href = isCategory ? `/shop/${item.slug}` : `/product/${item.slug}`;
+                          const isSelected = selectedIndex === idx;
+                          return (
+                            <li key={`${item.type}-${item.slug || item.id}`}>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  router.push(href);
+                                  setQuery('');
+                                  setIsMobileSearchOpen(false);
+                                }}
+                                className={`group flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left transition-colors hover:bg-cream-soft ${isSelected ? 'bg-cream-soft ring-1 ring-terracotta/30' : ''}`}
+                              >
+                                {isCategory ? (
+                                  <div className="h-12 w-12 flex shrink-0 items-center justify-center rounded-lg bg-forest/5 text-forest/50">
+                                    <PackageIcon size={20} />
+                                  </div>
+                                ) : (
+                                  <img src={typeof item.images?.[0] === 'string' ? item.images[0] : ((item.images?.[0] as any)?.url || '/placeholder.png')} alt="" className="h-12 w-12 shrink-0 rounded-lg object-cover" />
+                                )}
+                                <div className="flex-1 min-w-0">
+                                  <span className="block truncate text-sm font-semibold text-forest group-hover:text-terracotta">{item.name}</span>
+                                  {isCategory ? (
+                                    <span className="block text-[12px] uppercase tracking-wide text-muted">Category</span>
+                                  ) : (
+                                    <span className="block text-[12px] text-muted">₹{item.price}</span>
+                                  )}
+                                </div>
+                                <ArrowRightIcon size={14} className={`text-muted transition-all group-hover:opacity-100 group-hover:translate-x-1 ${isSelected ? 'opacity-100 translate-x-1' : 'opacity-0'}`} />
+                              </button>
+                            </li>
+                          );
+                        })}
                       </ul>
+                    ) : isSearching ? (
+                      <div className="px-4 py-6 text-center text-sm text-muted">Searching...</div>
                     ) : (
-                      <p className="px-3 py-4 text-center text-sm text-muted">No products match &ldquo;{query}&rdquo;.</p>
+                      <div className="px-4 py-6 text-center text-sm text-muted">No products found</div>
                     )}
                   </motion.div>
                 )}
@@ -238,52 +333,74 @@ export function Header() {
 
             {/* Login / User Profile (Hidden on mobile because it's in the bottom tab bar) */}
             {!isLoading && user ? (
-              <div className="group relative hidden sm:block">
-                <Link
-                  href="/account"
+              <div className="relative hidden sm:block" ref={profileRef}>
+                <button
+                  onClick={() => setIsProfileOpen(!isProfileOpen)}
                   className="flex items-center gap-1.5 px-2 py-1 text-forest transition-colors hover:text-forest/70"
-                  aria-label="Account"
+                  aria-label="Account menu"
+                  aria-expanded={isProfileOpen}
                 >
                   <UserIcon size={20} strokeWidth={1.5} />
                   <span className="hidden sm:inline-block text-[14px] font-medium">{user.firstName}</span>
-                  <ChevronDownIcon size={16} strokeWidth={1.5} className="hidden sm:inline-block transition-transform group-hover:rotate-180" />
-                </Link>
+                  <ChevronDownIcon size={16} strokeWidth={1.5} className={`hidden sm:inline-block transition-transform duration-200 ${isProfileOpen ? 'rotate-180' : ''}`} />
+                </button>
 
                 {/* Dropdown Menu */}
-                <div className="absolute right-0 top-full pt-4 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-                  <div className="w-64 rounded-xl bg-white shadow-[0_4px_24px_rgba(0,0,0,0.08)] overflow-hidden flex flex-col border border-forest/5">
-                    <div className="px-5 py-3.5 border-b border-forest/5 bg-[#FDFBF9]">
-                       <p className="text-[13px] font-bold text-forest">Your Account</p>
-                    </div>
-                    
-                    <div className="py-2 flex flex-col">
-                      <Link href="/account" className="px-5 py-2.5 text-[14px] text-forest/70 hover:bg-forest/5 hover:text-forest flex items-center gap-3.5 transition-colors">
-                        <UserIcon size={18} strokeWidth={1.5} /> My Profile
-                      </Link>
-                      <Link href="/account/orders" className="px-5 py-2.5 text-[14px] text-forest/70 hover:bg-forest/5 hover:text-forest flex items-center gap-3.5 transition-colors">
-                        <PackageIcon size={18} strokeWidth={1.5} /> Orders
-                      </Link>
-                      <Link href="/account/addresses" className="px-5 py-2.5 text-[14px] text-forest/70 hover:bg-forest/5 hover:text-forest flex items-center gap-3.5 transition-colors">
-                        <MapPinIcon size={18} strokeWidth={1.5} /> Saved Addresses
-                      </Link>
-                      <Link href="/wishlist" className="px-5 py-2.5 text-[14px] text-forest/70 hover:bg-forest/5 hover:text-forest flex items-center gap-3.5 transition-colors">
-                        <HeartIcon size={18} strokeWidth={1.5} /> Wishlist
-                      </Link>
-                      <Link href="/account/settings" className="px-5 py-2.5 text-[14px] text-forest/70 hover:bg-forest/5 hover:text-forest flex items-center gap-3.5 transition-colors">
-                        <BellIcon size={18} strokeWidth={1.5} /> Notifications
-                      </Link>
-                    </div>
-                    
-                    <div className="border-t border-forest/5 py-1.5">
-                      <button
-                        onClick={async () => { await logout(); router.push('/'); }}
-                        className="px-5 py-2.5 text-[14px] text-forest/70 hover:bg-forest/5 hover:text-forest text-left flex items-center gap-3.5 w-full transition-colors"
-                      >
-                        <LogOutIcon size={18} strokeWidth={1.5} /> Logout
-                      </button>
-                    </div>
-                  </div>
-                </div>
+                <AnimatePresence>
+                  {isProfileOpen && (
+                    <motion.div 
+                      initial={{ opacity: 0, scale: 0.98, y: -6 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.98, y: -6 }}
+                      transition={{ duration: 0.15, ease: 'easeOut' }}
+                      className="absolute right-0 top-full mt-4 z-50"
+                    >
+                      <div className="w-72 rounded-2xl bg-white shadow-[0_8px_30px_rgba(0,0,0,0.12)] overflow-hidden flex flex-col border border-forest/10">
+                        
+                        <div className="bg-[#FDFBF9]">
+                          <ProfileIdentityBlock />
+                        </div>
+                        
+                        <div className="h-px bg-forest/5 w-full" />
+                        
+                        <div className="py-2 flex flex-col">
+                          <Link href="/account" onClick={() => setIsProfileOpen(false)} className="px-5 py-2.5 text-[14px] text-forest/80 hover:bg-forest/5 hover:text-forest flex items-center gap-3 transition-colors font-medium">
+                            <UserIcon size={18} strokeWidth={1.8} className="text-forest/60" /> My Profile
+                          </Link>
+                          <Link href="/account/orders" onClick={() => setIsProfileOpen(false)} className="px-5 py-2.5 text-[14px] text-forest/80 hover:bg-forest/5 hover:text-forest flex items-center justify-between transition-colors font-medium">
+                            <div className="flex items-center gap-3">
+                              <PackageIcon size={18} strokeWidth={1.8} className="text-forest/60" /> Orders
+                            </div>
+                            {/* Mock active order badge */}
+                            <span className="h-1.5 w-1.5 rounded-full bg-[#D99A3D]" aria-label="Order in progress" />
+                          </Link>
+                          <Link href="/account/addresses" onClick={() => setIsProfileOpen(false)} className="px-5 py-2.5 text-[14px] text-forest/80 hover:bg-forest/5 hover:text-forest flex items-center gap-3 transition-colors font-medium">
+                            <MapPinIcon size={18} strokeWidth={1.8} className="text-forest/60" /> Saved Addresses
+                          </Link>
+                          <Link href="/wishlist" onClick={() => setIsProfileOpen(false)} className="px-5 py-2.5 text-[14px] text-forest/80 hover:bg-forest/5 hover:text-forest flex items-center gap-3 transition-colors font-medium">
+                            <HeartIcon size={18} strokeWidth={1.8} className="text-forest/60" /> Wishlist
+                          </Link>
+                          <Link href="/account/settings" onClick={() => setIsProfileOpen(false)} className="px-5 py-2.5 text-[14px] text-forest/80 hover:bg-forest/5 hover:text-forest flex items-center justify-between transition-colors font-medium">
+                            <div className="flex items-center gap-3">
+                              <BellIcon size={18} strokeWidth={1.8} className="text-forest/60" /> Notifications
+                            </div>
+                            {/* Mock unread notifications badge */}
+                            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-terracotta text-[10px] font-bold text-white">2</span>
+                          </Link>
+                        </div>
+                        
+                        <div className="border-t border-forest/5 py-1.5">
+                          <button
+                            onClick={async () => { setIsProfileOpen(false); await logout(); router.push('/'); }}
+                            className="px-5 py-2.5 text-[14px] text-forest/80 hover:bg-terracotta/5 hover:text-terracotta text-left flex items-center gap-3 w-full transition-colors font-medium"
+                          >
+                            <LogOutIcon size={18} strokeWidth={1.8} className="text-forest/60 group-hover:text-terracotta/70" /> Logout
+                          </button>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             ) : (
               <Link
@@ -308,6 +425,7 @@ export function Header() {
               <AnimatePresence>
                 {wishlist.length > 0 && (
                   <motion.span
+                    key={wishlist.length}
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
                     exit={{ scale: 0 }}
@@ -363,19 +481,21 @@ function MobileMenu({
   return (
     <AnimatePresence>
       {open && (
-        <>
+        <React.Fragment key="mobile-menu-wrapper">
           <motion.div
+            key="mobile-overlay"
             className="fixed inset-0 z-[60] bg-forest/30 backdrop-blur-sm lg:hidden"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            exit={{ opacity: 0, pointerEvents: 'none' }}
             onClick={onClose}
           />
           <motion.nav
+            key="mobile-nav"
             className="fixed inset-y-0 left-0 z-[61] flex w-[85%] max-w-sm flex-col bg-cream-soft p-6 shadow-lift lg:hidden"
             initial={{ x: '-100%' }}
             animate={{ x: 0 }}
-            exit={{ x: '-100%' }}
+            exit={{ x: '-100%', pointerEvents: 'none' }}
             transition={{ type: 'spring', stiffness: 340, damping: 34 }}
             aria-label="Mobile navigation"
           >
@@ -426,7 +546,7 @@ function MobileMenu({
               </p>
             </div>
           </motion.nav>
-        </>
+        </React.Fragment>
       )}
     </AnimatePresence>
   );

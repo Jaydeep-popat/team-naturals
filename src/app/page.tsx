@@ -4,8 +4,9 @@ import React from 'react';
 import Link from 'next/link';
 import Script from 'next/script';
 import { motion } from 'framer-motion';
-import { ArrowRightIcon, ChevronLeftIcon, ChevronRightIcon, ClockIcon, LeafIcon, RabbitIcon, SparklesIcon } from 'lucide-react';
-import { categories, heroImage, products, storyImage } from "@/src/data/products";
+import { ArrowRightIcon, ChevronLeftIcon, ChevronRightIcon, ClockIcon, LeafIcon, RabbitIcon, SparklesIcon, PackageX } from 'lucide-react';
+import { categories as staticCategories, heroImage, storyImage } from "@/src/data/products";
+import { products as productsApi, categories as categoriesApi } from "@/src/lib/api";
 import { ProductCard } from "@/src/components/ProductCard";
 
 import { PromiseBanner } from "@/src/components/PromiseBanner";
@@ -21,53 +22,37 @@ import { InstagramFeed } from "@/src/components/InstagramFeed";
 import { CatalogCTA } from "@/src/components/CatalogCTA";
 import { FAQAccordion } from "@/src/components/FAQAccordion";
 import { Reveal, staggerContainer, staggerItem } from "@/src/components/Reveal";
-import { ProductGridSkeleton } from "@/src/components/Skeletons";
+import { ProductGridSkeleton, ProductCardSkeleton } from "@/src/components/Skeletons";
+import { FirstTimeLoginPrompt } from "@/src/components/FirstTimeLoginPrompt";
 
-// JSON-LD structured data for best sellers
+// JSON-LD structured data for best sellers (disabled temporarily for live data)
 function ProductJsonLd() {
-  const bestSellers = products.filter((p) => p.bestSeller);
-  const itemList = {
-    '@context': 'https://schema.org',
-    '@type': 'ItemList',
-    name: 'Team Naturals Best Sellers',
-    itemListElement: bestSellers.map((p, i) => ({
-      '@type': 'ListItem',
-      position: i + 1,
-      item: {
-        '@type': 'Product',
-        name: p.name,
-        description: p.shortDescription,
-        image: `https://teamnaturals.in${p.images[0]}`,
-        url: `https://teamnaturals.in/product/${p.slug}`,
-        offers: {
-          '@type': 'Offer',
-          priceCurrency: 'INR',
-          price: p.price,
-          availability: 'https://schema.org/InStock',
-        },
-        aggregateRating: {
-          '@type': 'AggregateRating',
-          ratingValue: p.rating,
-          reviewCount: p.reviewCount,
-        },
-      },
-    })),
-  };
-  return (
-    <Script
-      id="product-jsonld"
-      type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(itemList) }}
-    />
-  );
+  return null;
 }
 
 export default function HomePage() {
-  const bestSellers = products.filter((p) => p.bestSeller).slice(0, 6);
+  const [liveProducts, setLiveProducts] = React.useState<any[]>([]);
+  const [liveCategories, setLiveCategories] = React.useState<any[]>([]);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    productsApi.list({ limit: '6' })
+      .then(res => setLiveProducts(res.data.products))
+      .catch(console.error)
+      .finally(() => setLoading(false));
+
+    categoriesApi.list()
+      .then(res => setLiveCategories(res.data.categories))
+      .catch(console.error);
+  }, []);
+
+  const bestSellers = liveProducts;
+  const categoriesToDisplay = liveCategories.length > 0 ? liveCategories : staticCategories;
 
   return (
     <div className="w-full bg-white">
       <ProductJsonLd />
+      <FirstTimeLoginPrompt />
       <Hero />
 
 
@@ -91,8 +76,21 @@ export default function HomePage() {
           viewport={{ once: true, margin: '-60px' }}
           className="mt-10 flex items-start justify-center gap-6 sm:gap-10 lg:gap-16"
         >
-          {categories.map((cat) => {
+          {loading ? (
+            Array.from({ length: 4 }).map((_, i) => (
+              <motion.li key={`cat-skel-${i}`} variants={staggerItem} className="flex flex-col items-center gap-3">
+                <div className="relative h-28 w-28 sm:h-36 sm:w-36 lg:h-44 lg:w-44">
+                  <div className="h-full w-full animate-pulse rounded-full bg-forest/10" />
+                </div>
+                <div className="mt-1 h-5 w-24 animate-pulse rounded bg-forest/10" />
+                <div className="mt-1 h-3 w-16 animate-pulse rounded bg-forest/10" />
+              </motion.li>
+            ))
+          ) : categoriesToDisplay.map((cat) => {
             const isComingSoon = (cat as typeof cat & { comingSoon?: boolean }).comingSoon;
+            const catLabel = cat.name || cat.label;
+            const catImage = cat.imageUrl || cat.image || '/placeholder.png';
+            
             return (
               <motion.li key={cat.slug} variants={staggerItem} className="flex flex-col items-center">
                 {isComingSoon ? (
@@ -100,7 +98,7 @@ export default function HomePage() {
                     <div className="relative h-28 w-28 sm:h-36 sm:w-36 lg:h-44 lg:w-44">
                       <div className="h-full w-full overflow-hidden rounded-full border-2 border-dashed border-forest/20 bg-cream-soft">
                         <img
-                          src={cat.image}
+                          src={catImage}
                           alt=""
                           aria-hidden="true"
                           className="h-full w-full object-cover grayscale"
@@ -108,7 +106,7 @@ export default function HomePage() {
                       </div>
                     </div>
                     <div className="text-center">
-                      <p className="font-display text-[15px] font-semibold text-forest/60 sm:text-base">{cat.label}</p>
+                      <p className="font-display text-[15px] font-semibold text-forest/60 sm:text-base">{catLabel}</p>
                       <span className="mt-1 inline-flex items-center gap-1 text-[11px] text-muted/60">
                         <ClockIcon size={10} strokeWidth={1.6} /> Coming Soon
                       </span>
@@ -118,7 +116,7 @@ export default function HomePage() {
                   <Link
                     href={`/shop/${cat.slug}`}
                     className="group flex flex-col items-center gap-3"
-                    aria-label={`Shop ${cat.label} — ${cat.description}`}
+                    aria-label={`Shop ${catLabel} — ${cat.description || ''}`}
                   >
                     {/* Circle image */}
                     <motion.div
@@ -128,8 +126,8 @@ export default function HomePage() {
                     >
                       <div className="h-full w-full overflow-hidden rounded-full border-2 border-forest/10 bg-cream shadow-soft transition-shadow duration-300 group-hover:border-forest/30 group-hover:shadow-lift">
                         <img
-                          src={cat.image}
-                          alt={`${cat.label} category — handmade natural skincare`}
+                          src={catImage}
+                          alt={`${catLabel} category — handmade natural skincare`}
                           loading="lazy"
                           className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
                         />
@@ -139,7 +137,7 @@ export default function HomePage() {
                     </motion.div>
                     {/* Label */}
                     <div className="text-center">
-                      <p className="font-display text-[15px] font-semibold text-forest sm:text-[17px]">{cat.label}</p>
+                      <p className="font-display text-[15px] font-semibold text-forest sm:text-[17px]">{catLabel}</p>
                       <p className="mt-0.5 flex items-center justify-center gap-1 text-[12px] font-medium text-terracotta transition-gap duration-200 group-hover:gap-1.5">
                         Shop Now
                         <ArrowRightIcon size={11} strokeWidth={2.2} className="transition-transform duration-200 group-hover:translate-x-0.5" />
@@ -173,7 +171,7 @@ export default function HomePage() {
           </Link>
         </Reveal>
 
-        <BestSellersCarousel loading={false} bestSellers={bestSellers} />
+        <BestSellersCarousel loading={loading} bestSellers={bestSellers} />
       </section>
 
       {/* Discount Poster */}
@@ -266,7 +264,7 @@ function BestSellersCarousel({
   bestSellers,
 }: {
   loading: boolean;
-  bestSellers: ReturnType<typeof products.filter>;
+  bestSellers: any[];
 }) {
   const trackRef = React.useRef<HTMLDivElement>(null);
   const [canPrev, setCanPrev] = React.useState(false);
@@ -323,14 +321,23 @@ function BestSellersCarousel({
         {loading
           ? Array.from({ length: 6 }).map((_, i) => (
               <div
-                key={i}
-                className="skeleton w-[220px] flex-none snap-start rounded-[28px] sm:w-[260px] lg:w-[calc((100%-48px)/4)]"
-                style={{ aspectRatio: '4/6' }}
-              />
+                key={`skel-${i}`}
+                className="w-[220px] flex-none snap-start sm:w-[260px] lg:w-[calc((100%-48px)/4)]"
+              >
+                <ProductCardSkeleton />
+              </div>
             ))
-          : bestSellers.map((p, i) => (
+          : bestSellers.length === 0 ? (
+              <div className="flex w-full flex-col items-center justify-center py-12 text-forest/40">
+                <PackageX size={48} className="mb-4 opacity-50" />
+                <p className="font-medium">No products available at the moment.</p>
+              </div>
+            )
+          : bestSellers.map((p, i) => {
+              const productId = (p as any).productId || p.id;
+              return (
               <motion.div
-                key={p.id}
+                key={productId}
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
@@ -339,7 +346,7 @@ function BestSellersCarousel({
               >
                 <ProductCard product={p} />
               </motion.div>
-            ))}
+            )})}
       </div>
 
       {/* Fade edge hints */}

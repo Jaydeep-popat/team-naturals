@@ -9,6 +9,7 @@ export interface User {
   profilePic: string | null;
   dateOfBirth: string | null;
   role: 'user' | 'admin';
+  adminRole?: 'super_admin' | 'order_manager' | 'product_manager' | 'support';
   userStatus: 'active' | 'suspended' | 'deactivated';
   createdAt: string;
   updatedAt: string;

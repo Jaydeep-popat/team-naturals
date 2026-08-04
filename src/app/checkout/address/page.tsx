@@ -1,17 +1,44 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { useCart } from "@/src/contexts/CartContext";
 import { CheckoutStepper } from "@/src/components/CheckoutStepper";
 import { CheckoutSummary } from "@/src/components/CheckoutSummary";
-import { ArrowLeftIcon } from 'lucide-react';
+import { ArrowLeftIcon, MapPin, Plus, CheckCircle2 } from 'lucide-react';
+import { addresses } from '@/src/lib/api';
+import { Address } from '@/src/types/auth';
 
 export default function AddressPage() {
   const { lines, subtotal } = useCart();
   const router = useRouter();
+
+  const [savedAddresses, setSavedAddresses] = useState<Address[]>([]);
+  const [isLoadingAddresses, setIsLoadingAddresses] = useState(true);
+  const [selectedAddressId, setSelectedAddressId] = useState<number | null>(null);
+  const [showNewAddressForm, setShowNewAddressForm] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    addresses.list().then(res => {
+      if (isMounted) {
+        if (res.data?.addresses && res.data.addresses.length > 0) {
+          setSavedAddresses(res.data.addresses);
+          setSelectedAddressId(res.data.addresses[0].addressId);
+        } else {
+          setShowNewAddressForm(true);
+        }
+      }
+    }).catch(err => {
+      console.error("Failed to fetch addresses:", err);
+      if (isMounted) setShowNewAddressForm(true);
+    }).finally(() => {
+      if (isMounted) setIsLoadingAddresses(false);
+    });
+    return () => { isMounted = false; };
+  }, []);
 
   const [form, setForm] = useState({
     name: '',
@@ -41,10 +68,32 @@ export default function AddressPage() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleProceedWithSelected = () => {
+    if (selectedAddressId) {
+      router.push(`/checkout/payment?addressId=${selectedAddressId}`);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (validate()) {
-      router.push('/checkout/payment');
+      try {
+        const res = await addresses.create({
+          fullName: form.name,
+          phoneNo: form.phone,
+          line1: form.address1,
+          line2: form.address2,
+          city: form.city,
+          state: form.state,
+          postalCode: form.pin,
+          country: 'India',
+        });
+        const addressId = res.data.address.addressId;
+        router.push(`/checkout/payment?addressId=${addressId}`);
+      } catch (error) {
+        console.error('Failed to create address', error);
+        alert('Failed to save address. Please make sure you are logged in.');
+      }
     }
   };
 
@@ -66,15 +115,71 @@ export default function AddressPage() {
           <div>
             <div className="mb-6 flex items-center justify-between">
               <h1 className="font-display text-3xl text-forest">Delivery details</h1>
-              <span className="text-[13px] text-muted hidden sm:block">
-                Have an account?{' '}
-                <Link href="/login" className="text-terracotta underline font-medium hover:text-terracotta/80">
-                  Sign in
-                </Link>
-              </span>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-8">
+            {isLoadingAddresses ? (
+              <div className="animate-pulse space-y-4">
+                <div className="h-32 bg-forest/5 rounded-2xl w-full"></div>
+                <div className="h-32 bg-forest/5 rounded-2xl w-full"></div>
+              </div>
+            ) : (
+              <>
+                {savedAddresses.length > 0 && !showNewAddressForm && (
+                  <div className="space-y-6">
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      {savedAddresses.map((addr) => (
+                        <div
+                          key={addr.addressId}
+                          onClick={() => setSelectedAddressId(addr.addressId)}
+                          className={`relative cursor-pointer rounded-[20px] border p-5 transition-all ${
+                            selectedAddressId === addr.addressId
+                              ? 'border-forest bg-forest/5 shadow-sm'
+                              : 'border-forest/10 bg-white hover:border-forest/30 hover:bg-forest/5'
+                          }`}
+                        >
+                          {selectedAddressId === addr.addressId && (
+                            <div className="absolute top-4 right-4 text-forest">
+                              <CheckCircle2 size={20} className="fill-forest/10" />
+                            </div>
+                          )}
+                          <div className="flex items-start gap-3 mb-2">
+                            <MapPin size={18} className="text-forest mt-0.5" />
+                            <div>
+                              <h3 className="font-semibold text-forest">{addr.fullName}</h3>
+                              <p className="text-sm text-forest/70">{addr.phoneNo}</p>
+                            </div>
+                          </div>
+                          <p className="text-sm text-forest/80 ml-7 line-clamp-2">
+                            {addr.line1}{addr.line2 ? `, ${addr.line2}` : ''}, {addr.city}, {addr.state}, {addr.postalCode}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                    
+                    <button
+                      onClick={() => setShowNewAddressForm(true)}
+                      className="flex items-center gap-2 text-forest font-medium hover:text-terracotta transition-colors"
+                    >
+                      <Plus size={18} /> Add a new address
+                    </button>
+
+                    <div className="flex items-center justify-between pt-6 border-t border-forest/10 mt-6">
+                      <Link href="/cart" className="flex items-center gap-2 text-sm font-medium text-forest hover:text-terracotta transition-colors">
+                        <ArrowLeftIcon size={16} /> Return to cart
+                      </Link>
+                      <motion.button
+                        whileTap={{ scale: 0.98 }}
+                        onClick={handleProceedWithSelected}
+                        className="rounded-full bg-forest px-8 py-4 text-[15px] font-medium text-cream shadow-soft transition-all hover:bg-forest-deep hover:shadow-lift"
+                      >
+                        Deliver to this address
+                      </motion.button>
+                    </div>
+                  </div>
+                )}
+
+                {showNewAddressForm && (
+                  <form onSubmit={handleSubmit} className="space-y-8">
               <div className="rounded-[24px] border border-forest/8 p-6 lg:p-8 bg-white shadow-sm space-y-6">
                 
                 <div className="grid gap-5 sm:grid-cols-2">
@@ -108,15 +213,29 @@ export default function AddressPage() {
                 <Link href="/cart" className="flex items-center gap-2 text-sm font-medium text-forest hover:text-terracotta transition-colors">
                   <ArrowLeftIcon size={16} /> Return to cart
                 </Link>
-                <motion.button
-                  type="submit"
-                  whileTap={{ scale: 0.98 }}
-                  className="rounded-full bg-forest px-8 py-4 text-[15px] font-medium text-cream shadow-soft transition-all hover:bg-forest-deep hover:shadow-lift"
-                >
-                  Continue to Payment
-                </motion.button>
+                <div className="flex gap-4">
+                  {savedAddresses.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setShowNewAddressForm(false)}
+                      className="rounded-full border border-forest/20 px-6 py-4 text-[15px] font-medium text-forest transition-all hover:bg-forest/5"
+                    >
+                      Cancel
+                    </button>
+                  )}
+                  <motion.button
+                    type="submit"
+                    whileTap={{ scale: 0.98 }}
+                    className="rounded-full bg-forest px-8 py-4 text-[15px] font-medium text-cream shadow-soft transition-all hover:bg-forest-deep hover:shadow-lift"
+                  >
+                    Continue to Payment
+                  </motion.button>
+                </div>
               </div>
             </form>
+            )}
+            </>
+            )}
           </div>
 
           <CheckoutSummary lines={lines} subtotal={subtotal} />

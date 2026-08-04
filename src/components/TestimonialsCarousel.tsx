@@ -284,13 +284,7 @@ export function TestimonialsCarousel() {
                   </span>
                 </div>
               </div>
-              {/* Active left border accent */}
-              {i === index && (
-                <motion.div
-                  layoutId="mini-card-accent"
-                  className={`absolute left-0 top-0 h-full w-1 rounded-l-2xl ${item.accentBar}`}
-                />
-              )}
+
             </motion.button>
           ))}
         </div>

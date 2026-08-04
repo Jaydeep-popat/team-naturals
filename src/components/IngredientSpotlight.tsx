@@ -138,13 +138,7 @@ export function IngredientSpotlight() {
                   : 'border-forest/6 bg-white hover:border-forest/12 hover:bg-cream-soft/60'
               }`}
             >
-              {/* Active indicator bar */}
-              {active === i && (
-                <motion.span
-                  layoutId="ingredient-bar"
-                  className={`absolute left-0 top-0 h-full w-1 rounded-l-2xl ${item.bar}`}
-                />
-              )}
+
               <span
                 className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-xl transition-colors ${
                   active === i ? item.iconBg : 'bg-forest-mist/60'
