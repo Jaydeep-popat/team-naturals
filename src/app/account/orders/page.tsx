@@ -1,68 +1,21 @@
 'use client';
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { SearchIcon, FilterIcon, XIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { OrderCard, type OrderItem } from '@/src/components/account/OrderCard';
-import Image from 'next/image';
+import { ReviewModal } from '@/src/components/account/ReviewModal';
+import { Loader2 } from 'lucide-react';
+import { orders as ordersApi } from '@/src/lib/api';
 
-const mockOrderItems: OrderItem[] = [
-  {
-    id: 'item-1',
-    orderId: '#TN-1249',
-    name: 'Neem & Aloe Face Wash',
-    variant: '100ml',
-    price: 350,
-    image: '/images/products/neem-aloe-facewash.png', // Assuming realistic paths, we fallback if missing in OrderCard
-    status: 'Delivered',
-    date: 'Feb 02, 2026',
-    dateObj: new Date('2026-02-02'),
-  },
-  {
-    id: 'item-2',
-    orderId: '#TN-1249',
-    name: 'Charcoal Soap Bar',
-    variant: 'Set of 3',
-    price: 550,
-    image: null,
-    status: 'Delivered',
-    date: 'Jan 20, 2026',
-    dateObj: new Date('2026-01-20'),
-  },
-  {
-    id: 'item-3',
-    orderId: '#TN-1022',
-    name: 'Rose Water Toner',
-    variant: '200ml',
-    price: 890,
-    image: null,
-    status: 'On the way',
-    date: 'Aug 15, 2026',
-    dateObj: new Date('2026-08-15'),
-  },
-  {
-    id: 'item-4',
-    orderId: '#TN-0988',
-    name: 'Multani Mitti Clay Mask',
-    variant: '50g',
-    price: 250,
-    image: null,
-    status: 'Cancelled',
-    date: 'Jan 15, 2024',
-    dateObj: new Date('2024-01-15'),
-  },
-  {
-    id: 'item-5',
-    orderId: '#TN-0750',
-    name: 'Almond & Saffron Moisturizer',
-    variant: '50ml',
-    price: 1200,
-    image: null,
-    status: 'Returned',
-    date: 'Dec 05, 2023',
-    dateObj: new Date('2023-12-05'),
-  },
-];
+type BackendOrder = {
+  orderId: number;
+  orderNumber: string;
+  status: 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled';
+  totalAmount: string | number;
+  createdAt: string;
+  items: Array<{ productId: number; productName: string; productSku: string; productImage: string | null; quantity: number; hasReviewed?: boolean }>;
+};
 
 export default function OrdersPage() {
   const router = useRouter();
@@ -70,9 +23,55 @@ export default function OrdersPage() {
   const [statusFilters, setStatusFilters] = useState<string[]>([]);
   const [timeFilters, setTimeFilters] = useState<string[]>([]);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
+  const [orders, setOrders] = useState<BackendOrder[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [reviewingProduct, setReviewingProduct] = useState<{ id: number; name: string } | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadOrders = async () => {
+      try {
+        const res = await ordersApi.list({ limit: '100' });
+        if (!mounted) return;
+        setOrders((res.data?.orders || []) as BackendOrder[]);
+      } catch (error) {
+        console.error('Failed to fetch orders:', error);
+      } finally {
+        if (mounted) setIsLoading(false);
+      }
+    };
+
+    loadOrders();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const orderItems: OrderItem[] = useMemo(() => {
+    return orders.map((order) => {
+      const firstItem = order.items[0];
+      const createdAt = new Date(order.createdAt);
+
+      return {
+        id: String(order.orderId),
+        orderId: `#${order.orderNumber}`,
+        name: firstItem?.productName || `Order ${order.orderNumber}`,
+        variant: order.items.length > 1 ? `${order.items.length} items` : (firstItem?.productSku || 'Item'),
+        price: Number(order.totalAmount),
+        image: firstItem?.productImage || null,
+        status: order.status,
+        date: createdAt.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+        dateObj: createdAt,
+        productId: (firstItem as any)?.productId || undefined,
+        hasReviewed: !!(firstItem as any)?.hasReviewed,
+      };
+    });
+  }, [orders]);
 
   const filteredItems = useMemo(() => {
-    return mockOrderItems.filter((item) => {
+    return orderItems.filter((item) => {
       if (searchQuery.trim() && !item.name.toLowerCase().includes(searchQuery.toLowerCase()) && !item.orderId.toLowerCase().includes(searchQuery.toLowerCase())) {
         return false;
       }
@@ -80,7 +79,7 @@ export default function OrdersPage() {
         return false;
       }
       if (timeFilters.length > 0) {
-        const now = new Date('2026-08-03');
+        const now = new Date();
         const itemDate = item.dateObj;
         const daysDiff = (now.getTime() - itemDate.getTime()) / (1000 * 3600 * 24);
         const itemYear = itemDate.getFullYear();
@@ -95,7 +94,7 @@ export default function OrdersPage() {
       }
       return true;
     });
-  }, [searchQuery, statusFilters, timeFilters]);
+  }, [searchQuery, statusFilters, timeFilters, orderItems]);
 
   const handleStatusToggle = (status: string) => {
     setStatusFilters(prev => prev.includes(status) ? prev.filter(s => s !== status) : [...prev, status]);
@@ -124,7 +123,7 @@ export default function OrdersPage() {
       <div>
         <h3 className="font-display font-bold text-forest mb-4 text-[13px] tracking-wide uppercase">Order Status</h3>
         <div className="space-y-3">
-          {['On the way', 'Delivered', 'Cancelled', 'Returned'].map((status) => (
+          {['pending', 'confirmed', 'shipped', 'delivered', 'cancelled'].map((status) => (
             <label key={status} className="flex items-center gap-3 cursor-pointer group">
               <div 
                 className={`w-[18px] h-[18px] rounded flex items-center justify-center transition-colors border ${statusFilters.includes(status) ? 'bg-forest border-forest text-white' : 'border-forest/20 group-hover:border-forest/50 bg-white'}`}
@@ -132,7 +131,7 @@ export default function OrdersPage() {
                 {statusFilters.includes(status) && <svg viewBox="0 0 14 14" fill="none" className="w-3.5 h-3.5"><path d="M3 7.5L5.5 10L11 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
               </div>
               <span className="text-[14px] text-forest/80 font-medium select-none">
-                {status}
+                {status === 'shipped' ? 'Shipped' : status.charAt(0).toUpperCase() + status.slice(1)}
               </span>
               <input type="checkbox" className="sr-only" checked={statusFilters.includes(status)} onChange={() => handleStatusToggle(status)} />
             </label>
@@ -229,7 +228,11 @@ export default function OrdersPage() {
 
         {/* List */}
         <div className="space-y-4">
-          {filteredItems.length === 0 ? (
+          {isLoading ? (
+            <div className="bg-white border border-forest/10 rounded-[20px] p-12 text-center shadow-sm flex items-center justify-center">
+              <Loader2 size={28} className="animate-spin text-forest" />
+            </div>
+          ) : filteredItems.length === 0 ? (
             <div className="bg-white border border-forest/10 rounded-[20px] p-12 text-center shadow-sm">
               <div className="h-24 w-24 mx-auto mb-6 bg-forest/5 rounded-full flex items-center justify-center">
                 <SearchIcon size={32} className="text-forest/30" />
@@ -252,13 +255,26 @@ export default function OrdersPage() {
               >
                 <OrderCard 
                   item={item} 
-                  onClick={() => router.push(`/account/orders/${item.orderId.replace('#TN-', '')}`)} 
+                  onClick={() => router.push(`/account/orders/${item.id}`)} 
+                  onReview={(e, productId, productName) => {
+                    e.stopPropagation();
+                    setReviewingProduct({ id: productId, name: productName });
+                  }}
                 />
               </motion.div>
             ))
           )}
         </div>
       </div>
+      
+      {reviewingProduct && (
+        <ReviewModal
+          isOpen={!!reviewingProduct}
+          onClose={() => setReviewingProduct(null)}
+          productId={reviewingProduct.id}
+          productName={reviewingProduct.name}
+        />
+      )}
     </div>
   );
 }

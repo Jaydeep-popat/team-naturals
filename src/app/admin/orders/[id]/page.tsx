@@ -4,35 +4,22 @@ import React, { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Printer, CheckCircle2, Clock, Package, Truck, Home, XCircle, RotateCcw, ChevronRight } from 'lucide-react';
 import { ConfirmDialog } from '@/src/components/admin/ConfirmDialog';
+import { orders as ordersApi } from '@/src/lib/api';
+import toast from 'react-hot-toast';
 
-type OrderStatus = 'pending' | 'confirmed' | 'shipped' | 'out_for_delivery' | 'delivered' | 'cancelled' | 'returned';
+type OrderStatus = 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled';
 
-const STATUS_FLOW: OrderStatus[] = ['pending', 'confirmed', 'shipped', 'out_for_delivery', 'delivered'];
+const STATUS_FLOW: OrderStatus[] = ['pending', 'confirmed', 'shipped', 'delivered'];
 
 const STATUS_META: Record<OrderStatus, { label: string; icon: React.ElementType; color: string }> = {
   pending:          { label: 'Pending',          icon: Clock,        color: 'text-[#7A5E1A]' },
   confirmed:        { label: 'Confirmed',         icon: CheckCircle2, color: 'text-forest' },
   shipped:          { label: 'Shipped',           icon: Package,      color: 'text-blue-600' },
-  out_for_delivery: { label: 'Out for Delivery',  icon: Truck,        color: 'text-purple-600' },
   delivered:        { label: 'Delivered',         icon: Home,         color: 'text-[#3F7D4C]' },
   cancelled:        { label: 'Cancelled',         icon: XCircle,      color: 'text-terracotta' },
-  returned:         { label: 'Returned',          icon: RotateCcw,    color: 'text-[#6B7268]' },
 };
 
-// Mock order — in production fetch from /api/admin/orders/:id
-const MOCK_ORDER = {
-  id: '1', number: 'ORD-20260803-0011',
-  status: 'confirmed' as OrderStatus,
-  createdAt: '03 Aug 2026, 10:21 AM',
-  customer: { name: 'Priya Sharma', email: 'priya@email.com', phone: '+91 98765 43210' },
-  shippingAddress: { line1: '12, Rose Garden Apts', line2: 'Near City Mall', city: 'Pune', state: 'Maharashtra', postalCode: '411001', country: 'India' },
-  items: [
-    { id: '1', name: 'Neem & Tulsi Face Wash 100ml', sku: 'FW-NT-100', qty: 1, unitPrice: '₹349', lineTotal: '₹349', image: null },
-    { id: '2', name: 'Charcoal Detox Soap 75g', sku: 'SP-CH-75', qty: 2, unitPrice: '₹199', lineTotal: '₹398', image: null },
-  ],
-  subtotal: '₹747', shippingFee: '₹49', discount: '₹0', total: '₹796',
-  paymentStatus: 'paid', paymentMethod: 'Razorpay',
-};
+// Mock data removed in favor of real API
 
 function StatusBadge({ status }: { status: OrderStatus }) {
   const meta = STATUS_META[status];
@@ -47,10 +34,77 @@ function StatusBadge({ status }: { status: OrderStatus }) {
 export default function AdminOrderDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const [order, setOrder] = useState(MOCK_ORDER);
+  const [order, setOrder] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [pendingStatus, setPendingStatus] = useState<OrderStatus | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
   const [note, setNote] = useState('');
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  React.useEffect(() => {
+    const fetchOrder = async () => {
+      try {
+        const res = await ordersApi.adminGet(params.id as string);
+        const data = res.data.order;
+        
+        // Map backend order structure
+        const mapped = {
+          id: data.orderId,
+          number: data.orderNumber,
+          status: data.status as OrderStatus,
+          createdAt: new Date(data.createdAt).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+          customer: {
+            name: data.user ? `${data.user.firstName || ''} ${data.user.lastName || ''}`.trim() || data.user.username : 'Guest',
+            email: data.user?.email || 'N/A',
+            phone: data.shipping?.phone || 'N/A'
+          },
+          shippingAddress: data.shipping ? {
+            line1: data.shipping.line1,
+            line2: data.shipping.line2 || '',
+            city: data.shipping.city,
+            state: data.shipping.state,
+            postalCode: data.shipping.postalCode,
+            country: data.shipping.country
+          } : null,
+          items: data.items.map((item: any) => ({
+            id: item.productId,
+            name: item.productName,
+            sku: item.productSku,
+            qty: item.quantity,
+            unitPrice: `₹${item.unitPrice}`,
+            lineTotal: `₹${item.lineTotal}`,
+            image: item.productImage
+          })),
+          subtotal: `₹${data.subtotal}`,
+          shippingFee: `₹${data.shippingFee}`,
+          discount: `₹${data.discount}`,
+          discountCode: data.discountCode,
+          total: `₹${data.totalAmount}`,
+          paymentStatus: data.payment?.status || 'pending',
+          paymentMethod: data.payment?.provider || 'Prepaid',
+        };
+        setOrder(mapped);
+      } catch (err) {
+        console.error('Fetch order error:', err);
+        toast.error('Failed to load order');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    if (params.id) fetchOrder();
+  }, [params.id]);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-forest"></div>
+      </div>
+    );
+  }
+
+  if (!order) {
+    return <div className="text-center py-20 text-forest/60">Order not found</div>;
+  }
 
   const currentIdx = STATUS_FLOW.indexOf(order.status);
 
@@ -59,11 +113,21 @@ export default function AdminOrderDetailPage() {
     setShowConfirm(true);
   };
 
-  const handleConfirmTransition = () => {
-    if (pendingStatus) setOrder((prev) => ({ ...prev, status: pendingStatus }));
-    setShowConfirm(false);
-    setPendingStatus(null);
-    setNote('');
+  const confirmStatusChange = async () => {
+    if (!pendingStatus) return;
+    setIsUpdating(true);
+    try {
+      await ordersApi.adminUpdateStatus(order.id, pendingStatus);
+      setOrder({ ...order, status: pendingStatus });
+      toast.success(`Order marked as ${STATUS_META[pendingStatus].label}`);
+    } catch (err) {
+      console.error('Update status error:', err);
+      toast.error('Failed to update status');
+    } finally {
+      setIsUpdating(false);
+      setShowConfirm(false);
+      setNote('');
+    }
   };
 
   return (
@@ -115,7 +179,7 @@ export default function AdminOrderDetailPage() {
             </div>
 
             {/* Next-step actions */}
-            {!['cancelled', 'returned', 'delivered'].includes(order.status) && (
+            {!['cancelled', 'delivered'].includes(order.status) && (
               <div className="flex flex-wrap gap-2 border-t border-forest/5 pt-4">
                 {currentIdx < STATUS_FLOW.length - 1 && (
                   <button
@@ -125,10 +189,7 @@ export default function AdminOrderDetailPage() {
                     Advance to {STATUS_META[STATUS_FLOW[currentIdx + 1]].label} <ChevronRight size={14} />
                   </button>
                 )}
-                <button
-                  onClick={() => handleStatusClick('cancelled')}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-terracotta/10 text-terracotta text-sm font-semibold hover:bg-terracotta/20 transition-colors"
-                >
+                <button onClick={() => handleStatusClick('cancelled')} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-terracotta/10 text-terracotta text-sm font-semibold hover:bg-terracotta/20 transition-colors">
                   <XCircle size={14} /> Cancel Order
                 </button>
               </div>
@@ -139,7 +200,7 @@ export default function AdminOrderDetailPage() {
           <div className="rounded-2xl border border-forest/10 bg-white p-6 shadow-sm">
             <h2 className="font-display text-lg font-bold text-forest mb-4">Items</h2>
             <div className="divide-y divide-forest/5">
-              {order.items.map((item) => (
+              {order.items.map((item: any) => (
                 <div key={item.id} className="flex items-center gap-4 py-4 first:pt-0 last:pb-0">
                   <div className="h-12 w-12 rounded-xl bg-forest/5 flex items-center justify-center shrink-0">
                     <Package size={20} className="text-forest/40" />
@@ -159,7 +220,7 @@ export default function AdminOrderDetailPage() {
               {[
                 { label: 'Subtotal', val: order.subtotal },
                 { label: 'Shipping', val: order.shippingFee },
-                { label: 'Discount', val: order.discount },
+                { label: order.discountCode ? `Discount (${order.discountCode})` : 'Discount', val: order.discount },
               ].map(({ label, val }) => (
                 <div key={label} className="flex justify-between text-sm text-forest/70">
                   <span>{label}</span><span>{val}</span>
@@ -183,15 +244,17 @@ export default function AdminOrderDetailPage() {
           </div>
 
           {/* Shipping address */}
-          <div className="rounded-2xl border border-forest/10 bg-white p-5 shadow-sm">
-            <h2 className="font-semibold text-forest mb-3">Shipping Address</h2>
-            <address className="not-italic text-sm text-forest/70 leading-relaxed">
-              {order.shippingAddress.line1}<br />
-              {order.shippingAddress.line2 && <>{order.shippingAddress.line2}<br /></>}
-              {order.shippingAddress.city}, {order.shippingAddress.state} {order.shippingAddress.postalCode}<br />
-              {order.shippingAddress.country}
-            </address>
-          </div>
+          {order.shippingAddress && (
+            <div className="rounded-2xl border border-forest/10 bg-white p-5 shadow-sm">
+              <h2 className="font-semibold text-forest mb-3">Shipping Address</h2>
+              <address className="not-italic text-sm text-forest/70 leading-relaxed">
+                {order.shippingAddress.line1}<br />
+                {order.shippingAddress.line2 && <>{order.shippingAddress.line2}<br /></>}
+                {order.shippingAddress.city}, {order.shippingAddress.state} {order.shippingAddress.postalCode}<br />
+                {order.shippingAddress.country}
+              </address>
+            </div>
+          )}
 
           {/* Payment */}
           <div className="rounded-2xl border border-forest/10 bg-white p-5 shadow-sm">
@@ -210,15 +273,14 @@ export default function AdminOrderDetailPage() {
         </div>
       </div>
 
-      {/* Confirm status-change dialog */}
       <ConfirmDialog
         isOpen={showConfirm}
         onClose={() => setShowConfirm(false)}
-        onConfirm={handleConfirmTransition}
-        title={`Move to ${pendingStatus ? STATUS_META[pendingStatus].label : ''}?`}
+        onConfirm={confirmStatusChange}
+        title={`Update Status to ${pendingStatus ? STATUS_META[pendingStatus].label : ''}?`}
         message={`This will update the order status to "${pendingStatus ? STATUS_META[pendingStatus].label : ''}" and the customer will be notified. This drives the tracking timeline the customer sees.`}
         confirmText="Yes, Update Status"
-        isDestructive={pendingStatus === 'cancelled' || pendingStatus === 'returned'}
+        isDestructive={pendingStatus === 'cancelled'}
       />
     </div>
   );

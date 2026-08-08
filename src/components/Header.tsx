@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
-import { MenuIcon, SearchIcon, ShoppingBagIcon, UserIcon, XIcon, ArrowRightIcon, HeartIcon, MapPinIcon, BellIcon, LogOutIcon, ChevronDownIcon, PackageIcon } from 'lucide-react';
+import { MenuIcon, SearchIcon, ShoppingBagIcon, UserIcon, XIcon, ArrowRightIcon, HeartIcon, MapPinIcon, BellIcon, LogOutIcon, ChevronDownIcon, PackageIcon, SettingsIcon } from 'lucide-react';
 import { Logo } from './Logo';
 import { useCart } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -331,16 +331,23 @@ export function Header() {
               </AnimatePresence>
             </div>
 
-            {/* Login / User Profile (Hidden on mobile because it's in the bottom tab bar) */}
+            {/* Login / User Profile */}
             {!isLoading && user ? (
-              <div className="relative hidden sm:block" ref={profileRef}>
+              <div className="relative" ref={profileRef}>
                 <button
                   onClick={() => setIsProfileOpen(!isProfileOpen)}
-                  className="flex items-center gap-1.5 px-2 py-1 text-forest transition-colors hover:text-forest/70"
+                  className="relative flex items-center gap-1.5 px-2 py-1 text-forest transition-colors hover:text-forest/70"
                   aria-label="Account menu"
                   aria-expanded={isProfileOpen}
                 >
-                  <UserIcon size={20} strokeWidth={1.5} />
+                  <div className="relative">
+                    <UserIcon size={20} strokeWidth={1.5} />
+                    {wishlist.length > 0 && (
+                      <span className="absolute -right-1 -top-1 sm:hidden flex h-3.5 w-3.5 items-center justify-center rounded-full border border-white bg-terracotta text-[8px] font-bold text-white shadow-sm">
+                        {wishlist.length}
+                      </span>
+                    )}
+                  </div>
                   <span className="hidden sm:inline-block text-[14px] font-medium">{user.firstName}</span>
                   <ChevronDownIcon size={16} strokeWidth={1.5} className={`hidden sm:inline-block transition-transform duration-200 ${isProfileOpen ? 'rotate-180' : ''}`} />
                 </button>
@@ -355,7 +362,7 @@ export function Header() {
                       transition={{ duration: 0.15, ease: 'easeOut' }}
                       className="absolute right-0 top-full mt-4 z-50"
                     >
-                      <div className="w-72 rounded-2xl bg-white shadow-[0_8px_30px_rgba(0,0,0,0.12)] overflow-hidden flex flex-col border border-forest/10">
+                      <div className="w-64 sm:w-72 rounded-2xl bg-white shadow-[0_8px_30px_rgba(0,0,0,0.12)] overflow-hidden flex flex-col border border-forest/10">
                         
                         <div className="bg-[#FDFBF9]">
                           <ProfileIdentityBlock />
@@ -364,6 +371,11 @@ export function Header() {
                         <div className="h-px bg-forest/5 w-full" />
                         
                         <div className="py-2 flex flex-col">
+                          {user?.role === 'admin' && (
+                            <Link href="/admin" onClick={() => setIsProfileOpen(false)} className="px-5 py-2.5 text-[14px] text-forest hover:bg-forest/5 flex items-center gap-3 transition-colors font-semibold">
+                              <SettingsIcon size={18} strokeWidth={1.8} className="text-forest" /> Admin Panel
+                            </Link>
+                          )}
                           <Link href="/account" onClick={() => setIsProfileOpen(false)} className="px-5 py-2.5 text-[14px] text-forest/80 hover:bg-forest/5 hover:text-forest flex items-center gap-3 transition-colors font-medium">
                             <UserIcon size={18} strokeWidth={1.8} className="text-forest/60" /> My Profile
                           </Link>
@@ -377,8 +389,15 @@ export function Header() {
                           <Link href="/account/addresses" onClick={() => setIsProfileOpen(false)} className="px-5 py-2.5 text-[14px] text-forest/80 hover:bg-forest/5 hover:text-forest flex items-center gap-3 transition-colors font-medium">
                             <MapPinIcon size={18} strokeWidth={1.8} className="text-forest/60" /> Saved Addresses
                           </Link>
-                          <Link href="/wishlist" onClick={() => setIsProfileOpen(false)} className="px-5 py-2.5 text-[14px] text-forest/80 hover:bg-forest/5 hover:text-forest flex items-center gap-3 transition-colors font-medium">
-                            <HeartIcon size={18} strokeWidth={1.8} className="text-forest/60" /> Wishlist
+                          <Link href="/wishlist" onClick={() => setIsProfileOpen(false)} className="px-5 py-2.5 text-[14px] text-forest/80 hover:bg-forest/5 hover:text-forest flex items-center justify-between transition-colors font-medium">
+                            <div className="flex items-center gap-3">
+                              <HeartIcon size={18} strokeWidth={1.8} className="text-forest/60" /> Wishlist
+                            </div>
+                            {wishlist.length > 0 && (
+                              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-terracotta text-[10px] font-bold text-white shadow-sm">
+                                {wishlist.length}
+                              </span>
+                            )}
                           </Link>
                           <Link href="/account/settings" onClick={() => setIsProfileOpen(false)} className="px-5 py-2.5 text-[14px] text-forest/80 hover:bg-forest/5 hover:text-forest flex items-center justify-between transition-colors font-medium">
                             <div className="flex items-center gap-3">
@@ -405,7 +424,7 @@ export function Header() {
             ) : (
               <Link
                 href="/login"
-                className="group hidden sm:flex items-center gap-2 sm:gap-3.5 rounded-full bg-forest px-3 sm:px-6 py-1.5 sm:py-2 text-cream shadow-soft transition-colors hover:bg-forest/90"
+                className="group flex items-center gap-2 sm:gap-3.5 rounded-full bg-forest p-2 sm:px-6 sm:py-2 text-cream shadow-soft transition-colors hover:bg-forest/90"
                 aria-label="Log In"
               >
                 <UserIcon size={16} strokeWidth={2} className="transition-transform group-hover:scale-110 sm:h-[18px] sm:w-[18px]" />
@@ -418,7 +437,7 @@ export function Header() {
             {/* Wishlist */}
             <Link
               href="/wishlist"
-              className="group relative ml-1 sm:ml-3 p-1 text-forest transition-colors hover:text-forest/70 block"
+              className="group relative ml-1 sm:ml-3 p-1 text-forest transition-colors hover:text-forest/70 hidden sm:block"
               aria-label={`Wishlist, ${wishlist.length} items`}
             >
               <HeartIcon size={24} strokeWidth={1.8} className="transition-transform group-hover:scale-110" />
@@ -464,7 +483,7 @@ export function Header() {
         </motion.div>
       </motion.header>
 
-      <MobileMenu open={menuOpen} onClose={() => setMenuOpen(false)} pathname={pathname} />
+      <MobileMenu open={menuOpen} onClose={() => setMenuOpen(false)} pathname={pathname} categories={categories} />
     </>
   );
 }
@@ -473,11 +492,16 @@ function MobileMenu({
   open,
   onClose,
   pathname,
+  categories,
 }: {
   open: boolean;
   onClose: () => void;
   pathname: string;
+  categories: any[];
 }) {
+  const [shopOpen, setShopOpen] = React.useState(false);
+  const { user, logout } = useAuth();
+
   return (
     <AnimatePresence>
       {open && (
@@ -513,6 +537,44 @@ function MobileMenu({
             <ul className="space-y-1">
               {navItems.map((item, i) => {
                 const isActive = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href);
+                if (item.label === 'Shop') {
+                  return (
+                    <motion.li
+                      key={item.href}
+                      initial={{ opacity: 0, x: -16 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.06 * i + 0.1 }}
+                    >
+                      <div className="flex flex-col">
+                        <div className={`flex items-center justify-between rounded-2xl px-4 py-3.5 font-display text-xl transition-colors ${isActive ? 'bg-white text-terracotta shadow-sm' : 'text-forest hover:bg-white/50'}`}>
+                          <Link href={item.href} onClick={onClose} className="flex-1">
+                            {item.label}
+                          </Link>
+                          <button onClick={() => setShopOpen(!shopOpen)} className="p-2 -mr-2 text-forest/60" aria-label="Toggle Shop Dropdown">
+                            <ChevronDownIcon size={20} className={`transition-transform ${shopOpen ? 'rotate-180' : ''}`} />
+                          </button>
+                        </div>
+                        <AnimatePresence>
+                          {shopOpen && (
+                            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                              <div className="pl-6 pt-2 pb-2 space-y-2 border-l-2 border-forest/10 ml-6 mt-2">
+                                <Link href="/shop" onClick={onClose} className="block text-lg font-display text-forest/80 hover:text-terracotta transition-colors py-1">
+                                  All Shop
+                                </Link>
+                                {categories.map(c => (
+                                  <Link key={c.slug} href={`/shop/${c.slug}`} onClick={onClose} className="block text-lg font-display text-forest/80 hover:text-terracotta transition-colors py-1">
+                                    {c.name}
+                                  </Link>
+                                ))}
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    </motion.li>
+                  );
+                }
+
                 return (
                   <motion.li
                     key={item.href}
@@ -534,16 +596,39 @@ function MobileMenu({
               })}
             </ul>
             <div className="mt-auto flex flex-col gap-3">
-              <Link
-                href="/login"
-                onClick={onClose}
-                className="flex items-center justify-center gap-2 rounded-full bg-forest px-5 py-3.5 text-[15px] font-semibold text-cream shadow-soft transition-colors hover:bg-forest/90"
-              >
-                <UserIcon size={18} strokeWidth={2} /> Sign In
-              </Link>
-              <p className="text-center text-[12px] text-muted">
-                Browsing works without an account.
-              </p>
+              {user ? (
+                <>
+                  <Link
+                    href="/account"
+                    onClick={onClose}
+                    className="flex items-center justify-center gap-2 rounded-full border border-forest px-5 py-3.5 text-[15px] font-semibold text-forest shadow-soft transition-colors hover:bg-forest/5"
+                  >
+                    <UserIcon size={18} strokeWidth={2} /> My Profile
+                  </Link>
+                  <button
+                    onClick={async () => {
+                      onClose();
+                      await logout();
+                    }}
+                    className="flex items-center justify-center gap-2 rounded-full bg-forest px-5 py-3.5 text-[15px] font-semibold text-cream shadow-soft transition-colors hover:bg-forest/90"
+                  >
+                    <LogOutIcon size={18} strokeWidth={2} /> Logout
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link
+                    href="/login"
+                    onClick={onClose}
+                    className="flex items-center justify-center gap-2 rounded-full bg-forest px-5 py-3.5 text-[15px] font-semibold text-cream shadow-soft transition-colors hover:bg-forest/90"
+                  >
+                    <UserIcon size={18} strokeWidth={2} /> Sign In
+                  </Link>
+                  <p className="text-center text-[12px] text-muted">
+                    Browsing works without an account.
+                  </p>
+                </>
+              )}
             </div>
           </motion.nav>
         </React.Fragment>

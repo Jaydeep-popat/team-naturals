@@ -7,86 +7,51 @@ import { motion } from 'framer-motion';
 import { useCart } from "@/src/contexts/CartContext";
 import { CheckoutStepper } from "@/src/components/CheckoutStepper";
 import { CheckoutSummary } from "@/src/components/CheckoutSummary";
-import { ArrowLeftIcon, LockIcon } from 'lucide-react';
+import { ArrowLeftIcon, Loader2, LockIcon } from 'lucide-react';
 import { orders } from '@/src/lib/api';
-import { useRazorpay } from "react-razorpay";
+import toast from 'react-hot-toast';
 
 import { Suspense } from 'react';
 
+const COD_FEE = 30;
+
 function PaymentContent() {
-  const { lines, subtotal, clearCart } = useCart();
+  const { lines, subtotal, originalSubtotal, promoDiscountAmount, clearCart } = useCart();
   const router = useRouter();
   const searchParams = useSearchParams();
   const addressId = searchParams.get('addressId');
   const [loading, setLoading] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<'razorpay' | 'cod'>('razorpay');
-  const { Razorpay } = useRazorpay();
+  const [paymentMethod, setPaymentMethod] = useState<'razorpay' | 'cod'>('cod');
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
-  const shipping = subtotal === 0 || subtotal >= 499 ? 0 : 49;
-  const total = subtotal + shipping;
+  const shipping = originalSubtotal === 0 || originalSubtotal >= 499 ? 0 : 49;
+  const codFee = paymentMethod === 'cod' ? COD_FEE : 0;
+  const total = Math.max(0, subtotal - (promoDiscountAmount || 0)) + shipping + codFee;
 
   const handlePayment = async () => {
+    setCheckoutError(null);
     if (!addressId) {
-      alert("Please select a delivery address first.");
+      toast.error("Please select a delivery address first.");
       router.push('/checkout/address');
       return;
     }
 
     setLoading(true);
     try {
-      // 1. Create order on backend (creates a pending order)
-      const res = await orders.checkout(Number(addressId));
-      const { razorpay, order } = res.data;
+      const res = await orders.checkout(Number(addressId), paymentMethod);
+      const { order } = res.data;
 
       if (paymentMethod === 'cod') {
-        // For COD, we just clear the cart and redirect. The order remains pending in backend.
         await clearCart();
-        router.push('/order-confirmation');
+        router.push(`/order-confirmation?orderId=${order.orderId}`);
         return;
       }
-
-      // 2. Initialize Razorpay options
-      const options = {
-        key: razorpay.key,
-        amount: razorpay.amount,
-        currency: razorpay.currency,
-        name: razorpay.name,
-        description: razorpay.description,
-        order_id: razorpay.orderId,
-        handler: async (response: any) => {
-          try {
-            // 3. Verify payment on backend
-            await orders.verifyPayment({
-              razorpay_order_id: response.razorpay_order_id,
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_signature: response.razorpay_signature,
-            });
-            await clearCart();
-            router.push('/order-confirmation');
-          } catch (error) {
-            console.error("Payment verification failed", error);
-            alert("Payment verification failed. Please contact support.");
-          }
-        },
-        prefill: {
-          name: order.shippingName,
-          contact: order.shippingPhone,
-        },
-        theme: {
-          color: "#1F3D2B", // Forest green
-        },
-      };
-
-      const rzpay = new Razorpay(options);
-      rzpay.on("payment.failed", function (response: any) {
-        console.error("Payment Failed", response.error);
-        alert(`Payment failed: ${response.error.description}`);
-      });
-      
-      rzpay.open();
+      toast.error('Online payment is not enabled yet. Please use Cash on Delivery.');
     } catch (error) {
       console.error("Checkout failed", error);
-      alert("Failed to initiate checkout. Please try again.");
+      const message = error instanceof Error ? error.message : 'Failed to initiate checkout. Please try again.';
+      setCheckoutError(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -115,21 +80,6 @@ function PaymentContent() {
                 <h2 className="text-lg font-medium text-forest mb-4">Select Payment Method</h2>
                 
                 <div className="space-y-4 mb-8">
-                  <label className={`flex items-center gap-4 p-4 rounded-2xl border cursor-pointer transition-all ${paymentMethod === 'razorpay' ? 'border-forest bg-forest/5' : 'border-forest/10 hover:border-forest/30'}`}>
-                    <input 
-                      type="radio" 
-                      name="payment" 
-                      value="razorpay"
-                      checked={paymentMethod === 'razorpay'}
-                      onChange={() => setPaymentMethod('razorpay')}
-                      className="w-5 h-5 text-forest border-forest/30 focus:ring-forest"
-                    />
-                    <div>
-                      <h3 className="font-medium text-forest">Razorpay (Online Payment)</h3>
-                      <p className="text-sm text-forest/70">UPI, Credit/Debit cards, Net Banking</p>
-                    </div>
-                  </label>
-
                   <label className={`flex items-center gap-4 p-4 rounded-2xl border cursor-pointer transition-all ${paymentMethod === 'cod' ? 'border-forest bg-forest/5' : 'border-forest/10 hover:border-forest/30'}`}>
                     <input 
                       type="radio" 
@@ -139,9 +89,27 @@ function PaymentContent() {
                       onChange={() => setPaymentMethod('cod')}
                       className="w-5 h-5 text-forest border-forest/30 focus:ring-forest"
                     />
-                    <div>
+                    <div className="flex-1">
                       <h3 className="font-medium text-forest">Cash on Delivery</h3>
-                      <p className="text-sm text-forest/70">Pay in cash when your order arrives</p>
+                      <p className="text-sm text-forest/70">Pay when your order arrives. COD fee: â‚¹{COD_FEE}</p>
+                    </div>
+                  </label>
+
+                  <label className="flex cursor-not-allowed items-center gap-4 rounded-2xl border border-forest/10 bg-gray-50 p-4 opacity-70">
+                    <input 
+                      type="radio" 
+                      name="payment" 
+                      value="razorpay"
+                      checked={paymentMethod === 'razorpay'}
+                      disabled
+                      className="w-5 h-5 text-forest border-forest/30 focus:ring-forest"
+                    />
+                    <div className="flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="font-medium text-forest">Online Payment</h3>
+                        <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-forest/50">Coming soon</span>
+                      </div>
+                      <p className="text-sm text-forest/70">UPI, cards, and net banking will be enabled after Razorpay setup.</p>
                     </div>
                   </label>
                 </div>
@@ -153,8 +121,16 @@ function PaymentContent() {
                     whileTap={{ scale: 0.98 }}
                     className="rounded-full bg-forest px-10 py-4 w-full max-w-md text-[16px] font-medium text-cream shadow-soft transition-all hover:bg-forest-deep hover:shadow-lift disabled:opacity-50"
                   >
-                    {loading ? 'Processing...' : paymentMethod === 'razorpay' ? `Pay Securely · ₹${total}` : `Place Order · ₹${total}`}
+                    <span className="inline-flex items-center justify-center gap-2">
+                      {loading && <Loader2 size={16} className="animate-spin" />}
+                      {loading ? 'Processing...' : `Place Order · ₹${total}`}
+                    </span>
                   </motion.button>
+                  {checkoutError && (
+                    <p className="mt-3 text-sm font-medium text-terracotta">
+                      {checkoutError}
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -164,13 +140,13 @@ function PaymentContent() {
                 </Link>
                 <div className="flex items-center gap-2 text-[12px] text-muted mt-2">
                   <LockIcon size={14} strokeWidth={2} className="text-forest/60" />
-                  <span>SSL secured checkout. Your payment information is encrypted by Razorpay.</span>
+                  <span>SSL secured checkout. Cash on Delivery is available now.</span>
                 </div>
               </div>
             </div>
           </div>
 
-          <CheckoutSummary lines={lines} subtotal={subtotal} />
+          <CheckoutSummary codFee={codFee} />
         </div>
       </motion.div>
     </div>

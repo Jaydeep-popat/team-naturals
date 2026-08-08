@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
@@ -10,6 +11,7 @@ import {
   TagIcon,
   Trash2Icon,
   TruckIcon,
+  SparklesIcon,
 } from 'lucide-react';
 import { useCart } from "@/src/contexts/CartContext";
 import { Breadcrumb } from "@/src/components/Breadcrumb";
@@ -17,19 +19,49 @@ import { CheckoutStepper } from "@/src/components/CheckoutStepper";
 import { QtyStepper } from "@/src/components/QtyStepper";
 import { usePageLoad } from "@/src/hooks/usePageLoad";
 import { SkeletonBlock } from "@/src/components/Skeletons";
+import { discounts } from '@/src/lib/api';
+import toast from 'react-hot-toast';
 
 export default function CartPage() {
-  const { lines, setQuantity, removeFromCart, subtotal } = useCart();
+  const router = useRouter();
+  const { lines, setQuantity, removeFromCart, originalSubtotal, subtotal, promoCode, eventDiscountAmount, promoDiscountAmount, applyPromo, removePromo } = useCart();
   const loading = usePageLoad(500);
-  const [promo, setPromo] = useState('');
-  const [promoApplied, setPromoApplied] = useState(false);
+  const [promoInput, setPromoInput] = useState('');
+  const [isApplyingPromo, setIsApplyingPromo] = useState(false);
+  const [availableDiscounts, setAvailableDiscounts] = useState<any[]>([]);
 
-  const shipping = subtotal === 0 || subtotal >= 499 ? 0 : 49;
-  const discount = promoApplied ? Math.round(subtotal * 0.1) : 0;
-  const total = subtotal + shipping - discount;
+  const shipping = originalSubtotal === 0 || originalSubtotal >= 499 ? 0 : 49;
+  const total = subtotal + shipping - promoDiscountAmount;
+
+  useEffect(() => {
+    if (!loading && lines.length === 0) {
+      router.replace('/');
+    }
+  }, [loading, lines.length, router]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    discounts.available()
+      .then((res) => {
+        if (!mounted) return;
+        setAvailableDiscounts(res.data?.discounts || []);
+      })
+      .catch((error) => {
+        console.error('Failed to fetch available discounts:', error);
+        toast.error('Could not load available offers');
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   return (
     <div className="w-full bg-white pb-16">
+      <Suspense fallback={null}>
+        <AutoApplyPromo />
+      </Suspense>
       <div className="bg-gradient-to-b from-cream-soft to-white">
         <div className="mx-auto max-w-4xl px-5 py-10 lg:px-8 text-center">
           <h1 className="font-display text-4xl font-medium tracking-tight text-forest">Checkout</h1>
@@ -100,7 +132,7 @@ export default function CartPage() {
                           </h2>
                         </Link>
                         <p className="mt-1 text-xs text-muted">
-                          {line.product.weight} · ₹{line.product.price}
+                          {line.product.weight}
                         </p>
                       </div>
                       <button
@@ -118,9 +150,25 @@ export default function CartPage() {
                         onChange={(q) => setQuantity(String(productId), q)}
                         label={line.product.name}
                       />
-                      <span className="font-display text-[15px] sm:text-lg text-forest">
-                        ₹{line.product.price * line.quantity}
-                      </span>
+                      <div className="flex flex-col items-end">
+                        {line.finalUnitPrice && line.finalUnitPrice < (line.product.price || 0) ? (
+                          <>
+                            <span className="font-display text-[15px] sm:text-lg text-[#388E3C]">
+                              ₹{line.finalUnitPrice * line.quantity}
+                            </span>
+                            <span className="text-xs text-muted line-through">
+                              ₹{line.product.price * line.quantity}
+                            </span>
+                            {line.appliedEventName && (
+                              <span className="text-[10px] text-[#388E3C] uppercase">{line.appliedEventName}</span>
+                            )}
+                          </>
+                        ) : (
+                          <span className="font-display text-[15px] sm:text-lg text-forest">
+                            ₹{line.product.price * line.quantity}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </motion.li>
@@ -131,42 +179,96 @@ export default function CartPage() {
           <aside className="h-fit space-y-6 rounded-[28px] border border-forest/8 bg-gradient-to-b from-cream-soft/50 to-white p-6 shadow-soft lg:sticky lg:top-28 lg:p-8">
             <h2 className="font-display text-2xl font-medium text-forest">Order summary</h2>
 
-            <form
-              className="flex gap-2"
-              onSubmit={(e) => {
-                e.preventDefault();
-                setPromoApplied(promo.trim().length > 0);
-              }}
-            >
-              <label htmlFor="promo" className="sr-only">
-                Promo code
-              </label>
-              <div className="flex flex-1 items-center gap-2 rounded-full border border-forest/12 bg-white px-4 py-2.5">
-                <TagIcon size={15} strokeWidth={1.6} className="text-muted" />
-                <input
-                  id="promo"
-                  value={promo}
-                  onChange={(e) => setPromo(e.target.value)}
-                  placeholder="Promo code"
-                  className="w-full bg-transparent text-sm outline-none placeholder:text-muted/70"
-                />
+            {promoCode ? (
+              <div className="flex items-center justify-between rounded-full border border-forest/15 bg-[#E8F3EB] px-4 py-3">
+                <div className="flex items-center gap-2">
+                  <TagIcon size={15} className="text-forest" />
+                  <span className="text-sm font-medium text-forest">{promoCode}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => removePromo()}
+                  className="text-xs font-semibold text-terracotta hover:text-terracotta/70"
+                >
+                  Remove
+                </button>
               </div>
-              <motion.button
-                type="submit"
-                whileTap={{ scale: 0.95 }}
-                className="rounded-full border border-forest/15 px-4 text-sm text-forest transition-colors hover:bg-white"
+            ) : (
+              <form
+                className="flex gap-2"
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  if (!promoInput.trim()) return;
+                  setIsApplyingPromo(true);
+                  await applyPromo(promoInput.trim());
+                  setIsApplyingPromo(false);
+                  setPromoInput('');
+                }}
               >
-                Apply
-              </motion.button>
-            </form>
-            {promoApplied && (
-              <p className="text-xs text-forest-soft">Code applied — 10% off (demo only).</p>
+                <label htmlFor="promo" className="sr-only">
+                  Promo code
+                </label>
+                <div className="flex flex-1 items-center gap-2 rounded-full border border-forest/12 bg-white px-4 py-2.5">
+                  <TagIcon size={15} strokeWidth={1.6} className="text-muted" />
+                  <input
+                    id="promo"
+                    value={promoInput}
+                    onChange={(e) => setPromoInput(e.target.value)}
+                    placeholder="Promo code"
+                    className="w-full bg-transparent text-sm outline-none placeholder:text-muted/70"
+                    disabled={isApplyingPromo}
+                  />
+                </div>
+                <motion.button
+                  type="submit"
+                  disabled={isApplyingPromo}
+                  whileTap={{ scale: 0.95 }}
+                  className="rounded-full border border-forest/15 px-4 text-sm text-forest transition-colors hover:bg-white disabled:opacity-50"
+                >
+                  {isApplyingPromo ? '...' : 'Apply'}
+                </motion.button>
+              </form>
+            )}
+
+            {!promoCode && (
+              <div className="rounded-2xl border border-forest/8 bg-cream-soft/30 p-4 mt-4">
+                <h3 className="font-display text-sm font-medium text-forest mb-3 flex items-center gap-1.5">
+                  <SparklesIcon size={14} className="text-gold" /> Available Offers
+                </h3>
+                <div className="space-y-2">
+                  {availableDiscounts.length > 0 ? availableDiscounts.slice(0, 3).map((offer) => (
+                    <button
+                      key={offer.discountId || offer.code}
+                      onClick={async () => {
+                        setIsApplyingPromo(true);
+                        await applyPromo(offer.code);
+                        setIsApplyingPromo(false);
+                      }}
+                      disabled={isApplyingPromo}
+                      className="w-full text-left flex items-center justify-between rounded-xl border border-forest/5 bg-white p-3 hover:border-gold/30 hover:bg-gold/5 transition-colors disabled:opacity-50"
+                    >
+                      <div>
+                        <span className="block font-medium text-forest text-sm">{offer.code}</span>
+                        <span className="block text-[11px] text-muted mt-0.5">
+                          {offer.type === 'percent' ? `${offer.value}% off` : `₹${offer.value} off`}
+                        </span>
+                      </div>
+                      <TagIcon size={14} className="text-forest/40" />
+                    </button>
+                  )) : (
+                    <div className="rounded-xl border border-dashed border-forest/10 bg-white px-3 py-4 text-sm text-muted">
+                      No active offers right now.
+                    </div>
+                  )}
+                </div>
+              </div>
             )}
 
             <dl className="space-y-2.5 border-t border-forest/8 pt-4 text-sm">
-              <CartLine label="Subtotal" value={`₹${subtotal}`} />
+              <CartLine label="Subtotal (Original)" value={`₹${originalSubtotal || subtotal}`} />
+              {eventDiscountAmount > 0 && <CartLine label="Event Discounts" value={`− ₹${eventDiscountAmount}`} accent />}
               <CartLine label="Shipping" value={shipping === 0 ? 'Free' : `₹${shipping}`} />
-              {discount > 0 && <CartLine label="Discount" value={`− ₹${discount}`} accent />}
+              {promoDiscountAmount > 0 && <CartLine label="Promo Discount" value={`− ₹${promoDiscountAmount}`} accent />}
               <div className="flex items-center justify-between border-t border-forest/8 pt-3">
                 <dt className="text-forest">Total</dt>
                 <dd className="font-display text-2xl text-forest">₹{total}</dd>
@@ -213,4 +315,18 @@ function CartLine({
       <dd className={accent ? 'text-terracotta' : 'text-forest'}>{value}</dd>
     </div>
   );
+}
+
+function AutoApplyPromo() {
+  const searchParams = useSearchParams();
+  const { applyPromo, promoCode } = useCart();
+  const promo = searchParams.get('promo');
+  
+  useEffect(() => {
+    if (promo && promoCode !== promo) {
+      applyPromo(promo);
+    }
+  }, [promo, promoCode, applyPromo]);
+
+  return null;
 }

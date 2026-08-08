@@ -16,7 +16,7 @@ export function LogoMark({ className = 'h-8 w-8', animate = false, layoutId, use
     return (
       <motion.img 
         layoutId={layoutId}
-        src="/full_logo.png"
+        src="/full_logo.webp"
         alt="Team Naturals"
         className={`object-contain object-left -ml-3 lg:-ml-5 ${className}`}
       />

@@ -10,6 +10,7 @@ import { Breadcrumb } from "@/src/components/Breadcrumb";
 import { staggerContainer, staggerItem } from "@/src/components/Reveal";
 import { useCart } from "@/src/contexts/CartContext";
 import { ProductGridSkeleton } from "@/src/components/Skeletons";
+import toast from 'react-hot-toast';
 
 export default function WishlistPage() {
   const { wishlist } = useCart();
@@ -30,7 +31,10 @@ export default function WishlistPage() {
         const filtered = res.data.products.filter((p: any) => stringWishlist.includes(String(p.productId || p.id)));
         setSavedProducts(filtered);
       })
-      .catch(console.error)
+      .catch(err => {
+        console.error(err);
+        toast.error('Failed to load wishlist products');
+      })
       .finally(() => setLoading(false));
   }, [wishlist]);
 

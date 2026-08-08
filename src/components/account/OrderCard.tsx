@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChevronRightIcon, PackageIcon } from 'lucide-react';
+import { ChevronRightIcon, PackageIcon, StarIcon, CheckCircle2Icon } from 'lucide-react';
 import { StatusPill } from './StatusPill';
 
 export interface OrderItem {
@@ -9,17 +9,20 @@ export interface OrderItem {
   variant: string;
   price: number;
   image: string | null;
-  status: 'Delivered' | 'On the way' | 'Cancelled' | 'Returned';
+  status: 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled' | 'Delivered' | 'On the way' | 'Cancelled' | 'Returned';
   date: string;
   dateObj: Date;
+  productId?: number;
+  hasReviewed?: boolean;
 }
 
 interface OrderCardProps {
   item: OrderItem;
   onClick: () => void;
+  onReview?: (e: React.MouseEvent, productId: number, productName: string) => void;
 }
 
-export function OrderCard({ item, onClick }: OrderCardProps) {
+export function OrderCard({ item, onClick, onReview }: OrderCardProps) {
   return (
     <div 
       onClick={onClick}
@@ -58,9 +61,29 @@ export function OrderCard({ item, onClick }: OrderCardProps) {
           <span>{item.variant}</span>
         </div>
 
-        {/* Status Pill (Mobile) */}
-        <div className="mt-4 sm:hidden">
-          <StatusPill status={item.status} />
+        {/* Status Pill & Actions (Mobile/Bottom Row) */}
+        <div className="mt-4 flex items-center justify-between">
+          <div className="sm:hidden">
+            <StatusPill status={item.status} />
+          </div>
+          
+          {item.status === 'delivered' && (
+            item.hasReviewed ? (
+              <span className="ml-auto sm:ml-0 flex items-center gap-1.5 rounded-lg border border-forest/10 bg-forest/5 px-3 py-1.5 text-[12px] font-bold text-forest/60">
+                <CheckCircle2Icon size={14} className="text-forest/40" /> Reviewed
+              </span>
+            ) : onReview && item.productId && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onReview(e, item.productId!, item.name);
+                }}
+                className="ml-auto sm:ml-0 flex items-center gap-1.5 rounded-lg border border-forest/20 px-3 py-1.5 text-[12px] font-bold text-forest transition-colors hover:bg-forest/5 hover:border-forest/40 group/btn"
+              >
+                <StarIcon size={14} className="group-hover/btn:fill-forest/20" /> Write a Review
+              </button>
+            )
+          )}
         </div>
       </div>
 

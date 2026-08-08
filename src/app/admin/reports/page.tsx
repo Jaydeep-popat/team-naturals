@@ -3,23 +3,104 @@
 import React, { useState } from 'react';
 import { BarChart2, TrendingUp, Download } from 'lucide-react';
 
+import { orders as ordersApi, products as productsApi } from '@/src/lib/api';
+import toast from 'react-hot-toast';
+
 type Period = '7d' | '30d' | '90d';
 
-const MOCK_SALES = [
-  { label: 'Mon', revenue: 4200 }, { label: 'Tue', revenue: 6100 }, { label: 'Wed', revenue: 3400 },
-  { label: 'Thu', revenue: 8900 }, { label: 'Fri', revenue: 12000 }, { label: 'Sat', revenue: 15400 }, { label: 'Sun', revenue: 9800 },
-];
-
-const MOCK_PRODUCTS = [
-  { name: 'Neem & Tulsi Face Wash', revenue: '₹34,200', units: 98, pct: 100 },
-  { name: 'Charcoal Detox Soap', revenue: '₹21,450', units: 108, pct: 63 },
-  { name: 'Rose & Honey Soap', revenue: '₹18,900', units: 83, pct: 55 },
-  { name: 'Sandalwood Luxury Soap', revenue: '₹14,220', units: 51, pct: 42 },
-];
+type SalesData = { label: string; revenue: number };
+type ProductData = { name: string; revenue: string; units: number; pct: number };
 
 export default function AdminReportsPage() {
   const [period, setPeriod] = useState<Period>('7d');
-  const maxRevenue = Math.max(...MOCK_SALES.map((s) => s.revenue));
+  const [salesData, setSalesData] = useState<SalesData[]>([]);
+  const [productData, setProductData] = useState<ProductData[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  const maxRevenue = salesData.length > 0 ? Math.max(...salesData.map((s) => s.revenue)) : 100;
+
+  React.useEffect(() => {
+    const fetchReports = async () => {
+      setIsLoading(true);
+      try {
+        const [ordersRes, productsRes] = await Promise.all([
+          ordersApi.adminList({ limit: '1000' }), 
+          productsApi.adminList({ limit: '100' }) 
+        ]);
+        
+        const orders = ordersRes.data.orders;
+        const products = productsRes.data.products;
+        
+        const days = period === '7d' ? 7 : period === '30d' ? 30 : 90;
+        const now = new Date();
+        const past = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+        
+        const recentOrders = orders.filter((o: any) => new Date(o.createdAt) >= past && o.status !== 'cancelled');
+
+        // Bucket sales
+        const bucketsCount = period === '7d' ? 7 : period === '30d' ? 6 : 9;
+        const msPerBucket = (days * 24 * 60 * 60 * 1000) / bucketsCount;
+        
+        const buckets = Array.from({ length: bucketsCount }, (_, i) => ({
+          label: period === '7d' ? `Day ${i + 1}` : period === '30d' ? `Wk ${i + 1}` : `Pt ${i + 1}`,
+          revenue: 0,
+          startTime: past.getTime() + (i * msPerBucket),
+          endTime: past.getTime() + ((i + 1) * msPerBucket)
+        }));
+
+        recentOrders.forEach((o: any) => {
+          const t = new Date(o.createdAt).getTime();
+          const bucket = buckets.find(b => t >= b.startTime && t <= b.endTime);
+          if (bucket) {
+            bucket.revenue += Number(o.totalAmount || 0);
+          }
+        });
+
+        setSalesData(buckets.map(b => ({ label: b.label, revenue: b.revenue })));
+
+        // Aggregate top products
+        const productSales: Record<string, { revenue: number, units: number }> = {};
+        
+        recentOrders.forEach((o: any) => {
+          if (o.items && Array.isArray(o.items)) {
+             o.items.forEach((item: any) => {
+               const pId = String(item.productId || (item.product && item.product.productId));
+               if (pId && pId !== 'undefined') {
+                 if (!productSales[pId]) productSales[pId] = { revenue: 0, units: 0 };
+                 productSales[pId].revenue += Number(item.price || 0) * Number(item.quantity || 1);
+                 productSales[pId].units += Number(item.quantity || 1);
+               }
+             });
+          }
+        });
+
+        const maxUnits = Math.max(...Object.values(productSales).map(p => p.units), 1);
+
+        const topProducts = products
+          .map((p: any) => {
+            const sale = productSales[String(p.productId)] || { revenue: 0, units: 0 };
+            return {
+              name: p.name,
+              revenue: `₹${sale.revenue.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`,
+              units: sale.units,
+              pct: Math.round((sale.units / maxUnits) * 100) || 0
+            };
+          })
+          .sort((a: any, b: any) => b.units - a.units)
+          .slice(0, 4);
+
+        setProductData(topProducts);
+        
+      } catch (err) {
+        console.error('Reports error:', err);
+        toast.error('Failed to load reports');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchReports();
+  }, [period]);
 
   return (
     <div className="space-y-8">
@@ -47,39 +128,47 @@ export default function AdminReportsPage() {
       <div className="rounded-2xl border border-forest/10 bg-white p-6 shadow-sm">
         <h2 className="font-display text-lg font-bold text-forest mb-6">Revenue Trend</h2>
         <div className="flex items-end gap-3 h-40">
-          {MOCK_SALES.map((d) => (
-            <div key={d.label} className="flex flex-col items-center gap-2 flex-1">
-              <div className="relative w-full flex items-end justify-center" style={{ height: 128 }}>
-                <div
-                  className="w-full rounded-t-lg bg-forest/20 hover:bg-forest transition-colors cursor-default relative group"
-                  style={{ height: `${(d.revenue / maxRevenue) * 100}%` }}
-                >
-                  <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-forest text-white text-[10px] font-bold px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                    ₹{d.revenue.toLocaleString()}
-                  </div>
-                </div>
-              </div>
-              <span className="text-[11px] text-forest/50 font-medium">{d.label}</span>
+          {isLoading ? (
+            <div className="w-full h-full flex items-center justify-center">
+               <span className="text-forest/40">Loading chart...</span>
             </div>
-          ))}
+          ) : (
+            salesData.map((d) => (
+              <div key={d.label} className="relative flex-1 group flex flex-col items-center justify-end gap-2 h-full">
+                <div className="absolute bottom-full mb-2 bg-forest text-white text-xs font-semibold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 pointer-events-none">
+                  ₹{d.revenue.toLocaleString()}
+                </div>
+                <div className="w-full bg-forest/20 rounded-t-sm overflow-hidden" style={{ height: `${(d.revenue / maxRevenue) * 100}%` }}>
+                  <div className="w-full h-full bg-forest opacity-80 group-hover:opacity-100 transition-opacity"></div>
+                </div>
+                <span className="text-xs font-medium text-forest/60">{d.label}</span>
+              </div>
+            ))
+          )}
         </div>
       </div>
 
       {/* Top Products */}
       <div className="rounded-2xl border border-forest/10 bg-white p-6 shadow-sm">
         <h2 className="font-display text-lg font-bold text-forest mb-6">Top Products</h2>
-        <div className="space-y-5">
-          {MOCK_PRODUCTS.map((p) => (
-            <div key={p.name} className="space-y-1.5">
-              <div className="flex items-center justify-between text-sm">
-                <span className="font-medium text-forest">{p.name}</span>
-                <div className="flex items-center gap-4 text-forest/60">
-                  <span>{p.units} units</span>
-                  <span className="font-bold text-forest">{p.revenue}</span>
+        <div className="flex flex-col gap-4">
+          {isLoading ? (
+             <div className="animate-pulse space-y-4">
+               {[1,2,3,4].map(i => <div key={i} className="h-12 bg-gray-100 rounded-lg w-full"></div>)}
+             </div>
+          ) : productData.map((p) => (
+            <div key={p.name} className="flex items-center gap-4 group">
+              <div className="flex-1">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-sm font-semibold text-forest group-hover:text-gold transition-colors">{p.name}</span>
+                  <span className="text-sm font-bold text-forest">{p.revenue}</span>
                 </div>
-              </div>
-              <div className="h-2 rounded-full bg-forest/10 overflow-hidden">
-                <div className="h-full rounded-full bg-forest transition-all" style={{ width: `${p.pct}%` }} />
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 h-2 bg-forest/5 rounded-full overflow-hidden">
+                    <div className="h-full bg-forest rounded-full transition-all duration-500" style={{ width: `${p.pct}%` }}></div>
+                  </div>
+                  <span className="text-[11px] font-medium text-forest/50 min-w-[50px] text-right">{p.units} units</span>
+                </div>
               </div>
             </div>
           ))}

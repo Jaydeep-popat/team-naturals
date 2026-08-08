@@ -89,10 +89,10 @@ export function DataTable<T>({
   const someSelected = data.length > 0 && data.some(item => selectedKeys.has(keyExtractor(item))) && !allSelected;
 
   return (
-    <div className="flex flex-col rounded-2xl border border-forest/10 bg-white shadow-sm overflow-hidden">
+    <div className="flex flex-col rounded-[24px] border border-white/60 bg-white/70 backdrop-blur-md shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden transition-all duration-300">
       <div className="overflow-x-auto">
         <table className="w-full text-left text-[14px] text-forest">
-          <thead className="bg-[#FDFBF9] border-b border-forest/10 sticky top-0 z-10">
+          <thead className="bg-white/40 backdrop-blur-md border-b border-forest/5 sticky top-0 z-10">
             <tr>
               {selectable && (
                 <th className="w-12 px-4 py-3 text-center">
@@ -168,7 +168,7 @@ export function DataTable<T>({
                 return (
                   <tr 
                     key={key} 
-                    className={`transition-all duration-200 border-b border-forest/5 last:border-0 ${isSelected ? 'bg-forest/5' : 'hover:bg-[#FDFBF9] hover:shadow-sm'} ${onRowClick ? 'cursor-pointer group' : ''}`}
+                    className={`transition-all duration-200 border-b border-forest/5 last:border-0 ${isSelected ? 'bg-forest/5' : 'hover:bg-white/90 hover:shadow-sm'} ${onRowClick ? 'cursor-pointer group' : ''}`}
                     onClick={(e) => {
                       if ((e.target as HTMLElement).closest('input[type="checkbox"]')) return;
                       onRowClick?.(item);

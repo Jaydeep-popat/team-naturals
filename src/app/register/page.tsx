@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowRightIcon,
@@ -29,16 +29,21 @@ function RegisterForm() {
   const { register, verifyEmail, login, isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
 
-  const [step, setStep] = useState(1);
+  const searchParams = useSearchParams();
+  const initialStep = searchParams.get('step') ? parseInt(searchParams.get('step') as string, 10) : 1;
+  const initialEmail = searchParams.get('email') || '';
+  const initialMessage = searchParams.get('message') || '';
+
+  const [step, setStep] = useState(initialStep);
   const [direction, setDirection] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState(initialMessage);
 
   // Step 1 fields
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [username, setUsername] = useState('');
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -116,8 +121,12 @@ function RegisterForm() {
     setIsSubmitting(true);
     try {
       await verifyEmail(email, otp);
-      await login(email, password);
-      next(); // Go to address screen
+      if (password) {
+        await login(email, password);
+        next(); // Go to address screen
+      } else {
+        router.push('/login?message=' + encodeURIComponent('Email verified successfully. Please log in.'));
+      }
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Verification failed. Check the code and try again.');
     } finally {
@@ -178,7 +187,7 @@ function RegisterForm() {
         <img src={storyImage} alt="Brand Story" className="h-full w-full object-cover" />
         <div className="absolute inset-0 bg-forest/50" />
         <div className="absolute top-10 left-10 z-30">
-          <img src="/full_logo.png" alt="Team Naturals" className="w-48 h-auto object-contain drop-shadow-md" />
+          <img src="/full_logo.webp" alt="Team Naturals" className="w-48 h-auto object-contain drop-shadow-md" />
         </div>
         <div className="absolute inset-0 flex flex-col justify-end p-12 text-cream">
           <h2 className="max-w-sm font-display text-4xl font-semibold leading-[1.1]">
@@ -226,7 +235,7 @@ function RegisterForm() {
               {/* ── STEP 1: Details ── */}
               {step === 1 && (
                 <div className="mb-8">
-                  <img src="/full_logo.png" alt="Team Naturals" className="w-40 h-auto object-contain mb-4 lg:hidden" />
+                  <img src="/full_logo.webp" alt="Team Naturals" className="w-40 h-auto object-contain mb-4 lg:hidden" />
                   <h1 className="font-display text-4xl font-bold tracking-tight text-forest">
                     Create your account
                   </h1>
@@ -456,6 +465,8 @@ function Field({ id, label, placeholder, type = 'text', value, onChange, require
 
 export default function RegisterPage() {
   return (
-    <RegisterForm />
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
+      <RegisterForm />
+    </Suspense>
   );
 }

@@ -10,6 +10,7 @@ import { CheckoutSummary } from "@/src/components/CheckoutSummary";
 import { ArrowLeftIcon, MapPin, Plus, CheckCircle2 } from 'lucide-react';
 import { addresses } from '@/src/lib/api';
 import { Address } from '@/src/types/auth';
+import toast from 'react-hot-toast';
 
 export default function AddressPage() {
   const { lines, subtotal } = useCart();
@@ -92,7 +93,7 @@ export default function AddressPage() {
         router.push(`/checkout/payment?addressId=${addressId}`);
       } catch (error) {
         console.error('Failed to create address', error);
-        alert('Failed to save address. Please make sure you are logged in.');
+        toast.error('Failed to save address. Please make sure you are logged in.');
       }
     }
   };
@@ -238,7 +239,7 @@ export default function AddressPage() {
             )}
           </div>
 
-          <CheckoutSummary lines={lines} subtotal={subtotal} />
+          <CheckoutSummary />
         </div>
       </motion.div>
     </div>

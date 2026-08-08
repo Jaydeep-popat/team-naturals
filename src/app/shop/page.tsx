@@ -12,6 +12,7 @@ import { Breadcrumb } from "@/src/components/Breadcrumb";
 import { ProductGridSkeleton } from "@/src/components/Skeletons";
 import { usePageLoad } from "@/src/hooks/usePageLoad";
 import { staggerContainer, staggerItem } from "@/src/components/Reveal";
+import toast from 'react-hot-toast';
 
 type SortKey = 'popularity' | 'price-asc' | 'price-desc';
 
@@ -38,7 +39,10 @@ export default function ShopPage() {
   React.useEffect(() => {
     productsApi.list()
       .then(res => setLiveProducts(res.data.products))
-      .catch(console.error)
+      .catch(err => {
+        console.error(err);
+        toast.error('Failed to load products');
+      })
       .finally(() => setLoadingProducts(false));
   }, []);
 

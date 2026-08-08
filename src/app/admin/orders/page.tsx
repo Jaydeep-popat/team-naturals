@@ -7,37 +7,22 @@ import { ConfirmDialog } from '@/src/components/admin/ConfirmDialog';
 import { Drawer } from '@/src/components/admin/Drawer';
 import { useRouter } from 'next/navigation';
 import { Download, ChevronRight, Package } from 'lucide-react';
+import { orders as ordersApi } from '@/src/lib/api';
+import toast from 'react-hot-toast';
 
-type OrderStatus = 'pending' | 'confirmed' | 'shipped' | 'out_for_delivery' | 'delivered' | 'cancelled' | 'returned';
-
-type Order = {
-  id: string; number: string; customer: string; email: string;
-  date: string; total: string; items: number; status: OrderStatus;
-};
-
-const MOCK_ORDERS: Order[] = [
-  { id: '1', number: 'ORD-20260803-0011', customer: 'Priya Sharma', email: 'priya@email.com', date: '03 Aug 2026', total: '₹1,249', items: 2, status: 'pending' },
-  { id: '2', number: 'ORD-20260803-0010', customer: 'Raj Patel', email: 'raj@email.com', date: '03 Aug 2026', total: '₹2,890', items: 4, status: 'confirmed' },
-  { id: '3', number: 'ORD-20260803-0009', customer: 'Sneha K.', email: 'sneha@email.com', date: '03 Aug 2026', total: '₹649', items: 1, status: 'shipped' },
-  { id: '4', number: 'ORD-20260803-0008', customer: 'Ameesha Joshi', email: 'am@email.com', date: '02 Aug 2026', total: '₹3,100', items: 5, status: 'delivered' },
-  { id: '5', number: 'ORD-20260802-0041', customer: 'Karan Mehta', email: 'karan@email.com', date: '02 Aug 2026', total: '₹890', items: 2, status: 'cancelled' },
-  { id: '6', number: 'ORD-20260802-0040', customer: 'Deepa R.', email: 'deepa@email.com', date: '02 Aug 2026', total: '₹1,790', items: 3, status: 'out_for_delivery' },
-];
+type OrderStatus = 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled';
 
 const STATUS_STYLES: Record<OrderStatus, string> = {
   pending:          'bg-gold/10 text-[#7A5E1A]',
   confirmed:        'bg-forest/10 text-forest',
   shipped:          'bg-blue-50 text-blue-700',
-  out_for_delivery: 'bg-purple-50 text-purple-700',
   delivered:        'bg-[#3F7D4C]/10 text-[#3F7D4C]',
   cancelled:        'bg-terracotta/10 text-terracotta',
-  returned:         'bg-[#6B7268]/10 text-[#6B7268]',
 };
 
 const STATUS_LABELS: Record<OrderStatus, string> = {
   pending: 'Pending', confirmed: 'Confirmed', shipped: 'Shipped',
-  out_for_delivery: 'Out for Delivery', delivered: 'Delivered',
-  cancelled: 'Cancelled', returned: 'Returned',
+  delivered: 'Delivered', cancelled: 'Cancelled',
 };
 
 function StatusPill({ status }: { status: OrderStatus }) {
@@ -50,11 +35,41 @@ function StatusPill({ status }: { status: OrderStatus }) {
 
 export default function AdminOrdersPage() {
   const router = useRouter();
-  const [orders, setOrders] = useState(MOCK_ORDERS);
+  const [orders, setOrders] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [activeFilters, setActiveFilters] = useState<Record<string, string>>({});
   const [selectedKeys, setSelectedKeys] = useState(new Set<string>());
   const [bulkAction, setBulkAction] = useState('');
   const [showBulkConfirm, setShowBulkConfirm] = useState(false);
+
+  const fetchOrders = React.useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const res = await ordersApi.adminList(activeFilters);
+      
+      const mappedOrders = res.data.orders.map((o: any) => ({
+        id: o.orderId,
+        number: o.orderNumber,
+        customer: o.user ? `${o.user.firstName || ''} ${o.user.lastName || ''}`.trim() || o.user.username : 'Guest',
+        email: o.user?.email || 'N/A',
+        date: new Date(o.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+        total: `₹${o.totalAmount || 0}`,
+        items: o.items?.length || 0,
+        status: o.status
+      }));
+      
+      setOrders(mappedOrders);
+    } catch (err) {
+      console.error('Failed to fetch orders:', err);
+      toast.error('Failed to load orders');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [activeFilters]);
+
+  React.useEffect(() => {
+    fetchOrders();
+  }, [fetchOrders]);
 
   const handleFilterChange = (key: string, value: string | undefined) => {
     setActiveFilters((prev) => {
@@ -69,7 +84,7 @@ export default function AdminOrdersPage() {
     return true;
   });
 
-  const columns: Column<Order>[] = [
+  const columns: Column<any>[] = [
     { key: 'number', header: 'Order', sortable: true,
       render: (o) => <span className="font-mono text-[13px] font-medium text-forest">{o.number}</span> },
     { key: 'customer', header: 'Customer', sortable: true,
@@ -154,6 +169,7 @@ export default function AdminOrdersPage() {
         selectedKeys={selectedKeys}
         onSelectionChange={setSelectedKeys}
         onRowClick={(o) => router.push(`/admin/orders/${o.id}`)}
+        isLoading={isLoading}
         emptyMessage="No orders match your filters."
       />
 

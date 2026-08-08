@@ -2,10 +2,12 @@
 
 import React from 'react';
 import { usePathname } from 'next/navigation';
-import { Header } from './Header';
-import { Footer } from './Footer';
-import { MobileTabBar } from './MobileTabBar';
-import { CartFloatingPill } from './CartFloatingPill';
+import dynamic from 'next/dynamic';
+
+const Header = dynamic(() => import('./Header').then((mod) => mod.Header), { ssr: true });
+const Footer = dynamic(() => import('./Footer').then((mod) => mod.Footer), { ssr: true });
+const MobileTabBar = dynamic(() => import('./MobileTabBar').then((mod) => mod.MobileTabBar), { ssr: false });
+const CartFloatingPill = dynamic(() => import('./CartFloatingPill').then((mod) => mod.CartFloatingPill), { ssr: false });
 
 export function LayoutWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();

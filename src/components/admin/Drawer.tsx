@@ -8,9 +8,10 @@ export interface DrawerProps {
   title: string;
   children: React.ReactNode;
   width?: string; // e.g. 'max-w-md', 'max-w-xl'
+  className?: string;
 }
 
-export function Drawer({ isOpen, onClose, title, children, width = 'max-w-md' }: DrawerProps) {
+export function Drawer({ isOpen, onClose, title, children, width = 'max-w-md', className = '' }: DrawerProps) {
   // Prevent body scroll when open
   useEffect(() => {
     if (isOpen) {
@@ -49,7 +50,7 @@ export function Drawer({ isOpen, onClose, title, children, width = 'max-w-md' }:
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: '100%', opacity: 0.5 }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className={`fixed inset-y-0 right-0 z-50 w-full ${width} bg-white shadow-lift border-l border-forest/10 flex flex-col`}
+            className={`fixed inset-y-0 right-0 z-50 w-full ${width} ${className} bg-white shadow-lift border-l border-forest/10 flex flex-col`}
           >
             <div className="flex items-center justify-between px-6 py-5 border-b border-forest/10 bg-[#FDFBF9]">
               <h2 className="font-display text-xl font-bold text-forest">{title}</h2>

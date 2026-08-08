@@ -14,22 +14,74 @@ import { AuthModal } from './AuthModal';
 
 export function ProductCard({ product }: { product: Product }) {
   const { addToCart, wishlist, toggleWishlist } = useCart();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const pathname = usePathname();
   const productId = (product as any).productId || product.id;
   const wished = wishlist.includes(String(productId));
   const [added, setAdded] = React.useState(false);
   const [showAuthModal, setShowAuthModal] = React.useState(false);
+  const [hoverFill, setHoverFill] = React.useState(false);
+  const [activeImageIndex, setActiveImageIndex] = React.useState(0);
+  const [quantity, setQuantity] = React.useState(1);
+  const hoverTimerRef = React.useRef<number | null>(null);
+  const hoverCycleRef = React.useRef<number | null>(null);
 
   function handleAddToCart() {
     if (!isAuthenticated) {
       setShowAuthModal(true);
       return;
     }
-    addToCart(product);
+    addToCart(product, quantity);
     setAdded(true);
-    setTimeout(() => setAdded(false), 1800);
+    setTimeout(() => {
+      setAdded(false);
+      setQuantity(1);
+    }, 1800);
   }
+
+  const images = (product.images || []).map((img) => (typeof img === 'string' ? img : ((img as any)?.url || '/placeholder.png')));
+  const primaryImage = images[0] || '/placeholder.png';
+  const hasMultipleImages = images.length > 1;
+  const activeImage = images[activeImageIndex] || primaryImage;
+
+  const startHoverSwap = () => {
+    if (hoverTimerRef.current) {
+      window.clearTimeout(hoverTimerRef.current);
+    }
+    if (hoverCycleRef.current) {
+      window.clearInterval(hoverCycleRef.current);
+    }
+    setActiveImageIndex(0);
+    setHoverFill(true);
+    if (!hasMultipleImages) return;
+    hoverTimerRef.current = window.setTimeout(() => {
+      hoverCycleRef.current = window.setInterval(() => {
+        setActiveImageIndex((current) => (current + 1) % images.length);
+      }, 2000);
+    }, 2000);
+  };
+
+  const clearHoverSwap = () => {
+    if (hoverTimerRef.current) {
+      window.clearTimeout(hoverTimerRef.current);
+      hoverTimerRef.current = null;
+    }
+    if (hoverCycleRef.current) {
+      window.clearInterval(hoverCycleRef.current);
+      hoverCycleRef.current = null;
+    }
+    setHoverFill(false);
+    setActiveImageIndex(0);
+  };
+
+  React.useEffect(() => () => {
+    if (hoverTimerRef.current) {
+      window.clearTimeout(hoverTimerRef.current);
+    }
+    if (hoverCycleRef.current) {
+      window.clearInterval(hoverCycleRef.current);
+    }
+  }, []);
 
   const categoryLabel = typeof product.category === 'object' && product.category !== null 
     ? (product.category as any).name 
@@ -38,6 +90,10 @@ export function ProductCard({ product }: { product: Product }) {
   return (
     <>
       <motion.article
+        onMouseEnter={startHoverSwap}
+        onMouseLeave={clearHoverSwap}
+        onFocus={startHoverSwap}
+        onBlur={clearHoverSwap}
         whileHover={{ y: -8 }}
         transition={{ type: 'spring', stiffness: 280, damping: 22 }}
         className="group relative flex flex-col overflow-hidden rounded-[28px] border border-forest/8 bg-white shadow-soft transition-shadow duration-300 hover:shadow-lift"
@@ -49,12 +105,48 @@ export function ProductCard({ product }: { product: Product }) {
         style={{ aspectRatio: '4/5' }}
         tabIndex={0}
       >
-        <img
-          src={typeof product.images?.[0] === 'string' ? product.images[0] : ((product.images?.[0] as any)?.url || '/placeholder.png')}
-          alt={`${product.name} — handmade natural ${categoryLabel.toLowerCase()} by Team Naturals`}
-          loading="lazy"
-          className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-108"
-        />
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.img
+            key={activeImage}
+            src={activeImage}
+            alt={`${product.name} — handmade natural ${categoryLabel.toLowerCase()} by Team Naturals`}
+            loading="lazy"
+            initial={hasMultipleImages ? { opacity: 0, x: 36, scale: 1.02 } : { opacity: 0, scale: 1.04, x: 0 }}
+            animate={{ opacity: 1, scale: 1, x: 0 }}
+            exit={hasMultipleImages ? { opacity: 0, x: -28 } : { opacity: 0, scale: 1.01, x: 0 }}
+            transition={{ duration: hasMultipleImages ? 0.38 : 0.55, ease: 'easeOut' }}
+            className={`absolute inset-0 h-full w-full object-cover object-[58%_42%] transition-transform duration-700 ease-out ${
+              hasMultipleImages ? 'group-hover:scale-115' : 'group-hover:scale-[1.14]'
+            }`}
+          />
+        </AnimatePresence>
+
+        {/* Carousel Indicators (Bottom of image) */}
+        {hasMultipleImages && (
+          <div className="absolute bottom-3 inset-x-0 flex justify-center gap-1.5 z-20 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+            {images.map((_, i) => (
+              <div 
+                key={i} 
+                className={`h-1 rounded-full bg-white/40 overflow-hidden transition-all duration-300 ${
+                  i === activeImageIndex ? 'w-6' : 'w-1.5'
+                }`}
+              >
+                {i === activeImageIndex && hoverFill && (
+                  <motion.div
+                    key={activeImageIndex}
+                    initial={{ width: 0 }}
+                    animate={{ width: '100%' }}
+                    transition={{ duration: 2, ease: 'linear' }}
+                    className="h-full bg-white"
+                  />
+                )}
+                {i === activeImageIndex && !hoverFill && (
+                  <div className="h-full w-full bg-white" />
+                )}
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Gradient overlay on hover */}
         <div className="absolute inset-0 bg-gradient-to-t from-forest/30 via-transparent to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
@@ -67,7 +159,12 @@ export function ProductCard({ product }: { product: Product }) {
               Best Seller
             </span>
           )}
-          <span className="rounded-full bg-white/80 px-2.5 py-0.5 text-[10px] uppercase tracking-[0.12em] text-forest/70 backdrop-blur-sm">
+          {(product as any).activeDiscount && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-[#FFC5C5] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-forest shadow-sm">
+              {(product as any).activeDiscount.event}
+            </span>
+          )}
+          <span className="rounded-full bg-white/80 px-2.5 py-0.5 text-[10px] uppercase tracking-[0.12em] text-forest/70 backdrop-blur-sm w-fit">
             {categoryLabel}
           </span>
         </div>
@@ -128,18 +225,104 @@ export function ProductCard({ product }: { product: Product }) {
           <span className="text-[11px] text-muted/70">({product.reviewCount || 0})</span>
         </div>
 
-        {/* Price + CTA */}
-        <div className="mt-4 flex items-center justify-between gap-2">
-          <div className="flex items-baseline gap-1">
-            <span className="text-[18px] font-semibold text-forest">₹{product.price}</span>
-            <span className="text-[11px] text-muted">/ {product.weight || (product as any).size || '100g'}</span>
+        {/* Price & Stock */}
+        <div className="mt-4 flex flex-col gap-1">
+          <div className="flex items-center gap-2">
+            {(() => {
+              const activeDiscount = (product as any).activeDiscount;
+              const originalPrice = Number(product.price || 0);
+              const compareAtPrice = product.compareAtPrice ? Number(product.compareAtPrice) : null;
+              
+              let finalPrice = originalPrice;
+              let discountLabel = '';
+              
+              if (activeDiscount) {
+                if (activeDiscount.type === 'percent') {
+                  finalPrice = originalPrice - (originalPrice * Number(activeDiscount.value) / 100);
+                  discountLabel = `${activeDiscount.value}% off`;
+                } else if (activeDiscount.type === 'flat') {
+                  finalPrice = Math.max(0, originalPrice - Number(activeDiscount.value));
+                  discountLabel = `₹${activeDiscount.value} off`;
+                }
+              }
+
+              return (
+                <>
+                  <span className="text-[18px] font-semibold text-forest">₹{finalPrice.toFixed(2)}</span>
+                  {(activeDiscount || (compareAtPrice && compareAtPrice > originalPrice)) && (
+                    <>
+                      <span className="text-[13px] text-muted line-through">₹{compareAtPrice || originalPrice}</span>
+                      <span className="text-[12px] font-semibold text-[#388E3C]">
+                        {activeDiscount ? discountLabel : `${Math.round((((compareAtPrice || originalPrice) - originalPrice) / (compareAtPrice || originalPrice)) * 100)}% off`}
+                      </span>
+                    </>
+                  )}
+                </>
+              );
+            })()}
+            
+            <span className="text-[11px] text-muted ml-auto">/ {product.weight || (product as any).size || '100g'}</span>
           </div>
+          {product.stockQty !== undefined && product.stockQty > 0 && product.stockQty <= 10 && (
+            <div className="mt-1">
+              <span className="inline-flex items-center text-[11px] font-bold text-terracotta bg-terracotta/10 px-2 py-0.5 rounded-full">
+                Only {product.stockQty} left
+              </span>
+            </div>
+          )}
+          {product.stockQty === 0 && (
+            <div className="mt-1">
+              <span className="inline-flex items-center text-[11px] font-bold text-terracotta bg-terracotta/10 px-2 py-0.5 rounded-full">
+                Out of Stock
+              </span>
+            </div>
+          )}
         </div>
 
-        {/* Full-width Add to Cart (All screens) */}
-        <div className="mt-3">
-          <AnimatePresence mode="wait" initial={false}>
-            {added ? (
+        {/* Add to Cart & Quantity */}
+        <div className="mt-3 flex flex-row items-center gap-2">
+          {product.stockQty !== 0 && user?.role !== 'admin' && !added && (
+            <div className="flex h-9 items-center justify-between rounded-full border border-forest/15 bg-white px-2 py-1 min-w-[64px] shadow-sm">
+              <button 
+                type="button" 
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setQuantity(q => Math.max(1, q - 1)); }}
+                className="text-forest/70 hover:text-forest transition-colors focus:outline-none px-1"
+              >
+                -
+              </button>
+              <span className="text-[12px] font-semibold text-forest select-none">{quantity}</span>
+              <button 
+                type="button" 
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setQuantity(q => Math.min(product.stockQty || 99, q + 1)); }}
+                className="text-forest/70 hover:text-forest transition-colors focus:outline-none px-1"
+              >
+                +
+              </button>
+            </div>
+          )}
+          <div className="flex-1 min-w-0">
+            <AnimatePresence mode="wait" initial={false}>
+              {user?.role === 'admin' ? (
+              <motion.div
+                key="admin-disabled"
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex w-full items-center justify-center gap-2 rounded-full border border-forest/15 bg-gray-50 py-2.5 text-[13px] font-medium text-forest/50 cursor-not-allowed"
+                title="Admins cannot purchase items"
+              >
+                <ShoppingBagIcon size={14} strokeWidth={1.8} className="opacity-50" />
+                Admin View
+              </motion.div>
+            ) : product.stockQty === 0 ? (
+              <motion.div
+                key="out-of-stock"
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex w-full items-center justify-center gap-2 rounded-full border border-forest/15 bg-gray-50 py-2.5 text-[13px] font-medium text-forest/50 cursor-not-allowed"
+              >
+                Out of Stock
+              </motion.div>
+            ) : added ? (
               <motion.div
                 key="added"
                 initial={{ opacity: 0, y: 6 }}
@@ -162,13 +345,14 @@ export function ProductCard({ product }: { product: Product }) {
                 whileTap={{ scale: 0.97 }}
                 onClick={handleAddToCart}
                 aria-label={`Add ${product.name} to cart`}
-                className="flex w-full items-center justify-center gap-2 rounded-full border border-forest/15 bg-cream-soft py-2.5 text-[13px] font-medium text-forest transition-all duration-200 hover:border-forest hover:bg-forest hover:text-cream group-hover:border-forest group-hover:bg-forest group-hover:text-cream"
+                className="flex w-full items-center justify-center gap-1.5 rounded-full border border-forest/15 bg-cream-soft px-2 py-2.5 text-[12px] font-medium text-forest transition-all duration-200 hover:border-forest hover:bg-forest hover:text-cream group-hover:border-forest group-hover:bg-forest group-hover:text-cream"
               >
-                <ShoppingBagIcon size={14} strokeWidth={1.8} />
-                Add to Cart
+                <ShoppingBagIcon size={14} strokeWidth={1.8} className="shrink-0" />
+                <span className="whitespace-nowrap truncate">Add to Cart</span>
               </motion.button>
-            )}
-          </AnimatePresence>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
       </div>
     </motion.article>

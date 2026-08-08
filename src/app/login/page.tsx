@@ -54,7 +54,15 @@ function LoginForm() {
     } catch (err: any) {
       const isApiError = err instanceof ApiError || err?.name === 'ApiError';
       if (isApiError) {
-        if (err.statusCode === 401 || err.message === 'Invalid credentials') {
+        if (err.message.toLowerCase().includes('verify your email')) {
+          try {
+            await auth.resendVerification({ email: emailOrUsername });
+          } catch (e) {
+            console.error('Failed to auto-resend OTP', e);
+          }
+          router.push(`/register?step=2&email=${encodeURIComponent(emailOrUsername)}&message=${encodeURIComponent('Your account is not verified. A new OTP has been sent to your email.')}`);
+          return;
+        } else if (err.statusCode === 401 || err.message === 'Invalid credentials') {
           setError('Password incorrect or Email incorrect/not found. Please register if you don\'t have an account.');
         } else {
           setError(err.message);
@@ -73,7 +81,7 @@ function LoginForm() {
         <img src={storyImage} alt="" className="h-full w-full object-cover" />
         <div className="absolute inset-0 bg-forest/50" />
         <div className="absolute top-10 left-10 z-30">
-          <img src="/full_logo.png" alt="Team Naturals" className="w-48 h-auto object-contain drop-shadow-md" />
+          <img src="/full_logo.webp" alt="Team Naturals" className="w-48 h-auto object-contain drop-shadow-md" />
         </div>
         <div className="absolute inset-0 flex flex-col justify-end p-12 text-cream">
           <h2 className="max-w-sm font-display text-4xl font-semibold leading-[1.1]">
@@ -93,7 +101,7 @@ function LoginForm() {
           transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
           className="w-full max-w-sm"
         >
-          <img src="/full_logo.png" alt="Team Naturals" className="w-40 h-auto object-contain mb-2 lg:hidden" />
+          <img src="/full_logo.webp" alt="Team Naturals" className="w-40 h-auto object-contain mb-2 lg:hidden" />
           <h1 className="mt-4 font-display text-4xl font-bold tracking-tight text-forest">
             Welcome back
           </h1>

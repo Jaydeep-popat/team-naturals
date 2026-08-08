@@ -277,6 +277,10 @@ export const users = {
     return apiFetch<{ data: { users: any[], pagination: any } }>(`/api/auth/admin/users?${q}`);
   },
 
+  adminGet(userId: string) {
+    return apiFetch<{ data: { user: any } }>(`/api/auth/admin/users/${userId}`);
+  },
+
   promoteAdmin(email: string) {
     return apiFetch(`/api/auth/promote-admin`, {
       method: 'POST',
@@ -317,15 +321,28 @@ export const cart = {
       method: 'DELETE',
     });
   },
+
+  applyPromo(code: string) {
+    return apiFetch<{ data: { cart: any; warnings: any[] } }>('/api/cart/apply-promo', {
+      method: 'POST',
+      body: JSON.stringify({ code }),
+    });
+  },
+
+  removePromo() {
+    return apiFetch<{ data: { cart: any; warnings: any[] } }>('/api/cart/remove-promo', {
+      method: 'POST',
+    });
+  },
 };
 
 // ─── Orders endpoints ──────────────────────────────────────────────────────────
 
 export const orders = {
-  checkout(addressId: number, notes?: string) {
-    return apiFetch<{ data: { order: any; razorpay: any } }>('/api/orders/checkout', {
+  checkout(addressId: number, paymentMethod: 'razorpay' | 'cod', notes?: string) {
+    return apiFetch<{ data: { order: any; razorpay?: any; paymentMethod: 'razorpay' | 'cod' } }>('/api/orders/checkout', {
       method: 'POST',
-      body: JSON.stringify({ addressId, notes }),
+      body: JSON.stringify({ addressId, paymentMethod, notes }),
     });
   },
 
@@ -341,8 +358,24 @@ export const orders = {
     return apiFetch<{ data: { orders: any[]; pagination: any } }>(`/api/orders?${q}`);
   },
 
+  adminList(query: Record<string, string> = {}) {
+    const q = new URLSearchParams(query).toString();
+    return apiFetch<{ data: { orders: any[]; pagination: any } }>(`/api/admin/orders?${q}`);
+  },
+
   get(orderId: string) {
     return apiFetch<{ data: { order: any } }>(`/api/orders/${orderId}`);
+  },
+
+  adminGet(orderId: string) {
+    return apiFetch<{ data: { order: any } }>(`/api/admin/orders/${orderId}`);
+  },
+
+  adminUpdateStatus(orderId: string, status: string) {
+    return apiFetch<{ data: { order: any } }>(`/api/admin/orders/${orderId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status })
+    });
   },
 
   cancel(orderId: string, reason?: string) {
@@ -350,5 +383,117 @@ export const orders = {
       method: 'PATCH',
       body: JSON.stringify({ reason }),
     });
+  },
+};
+
+// ─── Events (Offers) endpoints ─────────────────────────────────────────────────────────
+
+export const events = {
+  // Public
+  getActiveHomepageEvent() {
+    return apiFetch<{ data: { event: any } }>('/api/events/active-homepage');
+  },
+  getActive() {
+    return apiFetch<{ data: { events: any[] } }>('/api/events/active');
+  },
+  getBySlug(slug: string) {
+    return apiFetch<{ data: { event: any } }>(`/api/events/slug/${slug}`);
+  },
+  getProductsBySlug(slug: string) {
+    return apiFetch<{ data: { event: any; products: any[] } }>(`/api/events/slug/${slug}/products`);
+  },
+
+  // Admin
+  list() {
+    return apiFetch<{ data: { events: any[] } }>('/api/events');
+  },
+  get(id: string) {
+    return apiFetch<{ data: { event: any } }>(`/api/events/${id}`);
+  },
+  create(body: any) {
+    return apiFetch<{ data: { event: any } }>('/api/events', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+  },
+  update(id: string, body: any) {
+    return apiFetch<{ data: { event: any } }>(`/api/events/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    });
+  },
+  delete(id: string) {
+    return apiFetch(`/api/events/${id}`, { method: 'DELETE' });
+  },
+};
+
+// ─── Discounts endpoints ───────────────────────────────────────────────────────
+
+export const discounts = {
+  available() {
+    return apiFetch<{ data: { discounts: any[] } }>('/api/discounts/available');
+  },
+
+  list() {
+    return apiFetch<{ data: { discounts: any[] } }>('/api/discounts');
+  },
+  
+  create(body: any) {
+    return apiFetch<{ data: { discount: any } }>('/api/discounts', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+  },
+
+  update(id: string, body: any) {
+    return apiFetch<{ data: { discount: any } }>(`/api/discounts/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    });
+  },
+
+  delete(id: string) {
+    return apiFetch(`/api/discounts/${id}`, { method: 'DELETE' });
+  },
+};
+
+// ─── Reviews endpoints ─────────────────────────────────────────────────────────
+
+export const reviews = {
+  // Public
+  listProductReviews(productId: string) {
+    return apiFetch<{ data: { reviews: any[] } }>(`/api/products/${productId}/reviews`);
+  },
+
+  add(productId: string, body: { rating: number; comment: string }) {
+    return apiFetch<{ data: { review: any } }>(`/api/products/${productId}/reviews`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+  },
+
+  // Admin
+  adminList(query: Record<string, string> = {}) {
+    const q = new URLSearchParams(query).toString();
+    return apiFetch<{ data: { reviews: any[]; pagination: any } }>(`/api/reviews?${q}`);
+  },
+
+  adminUpdateStatus(reviewId: string, status: 'approved' | 'rejected') {
+    return apiFetch<{ data: { review: any } }>(`/api/reviews/${reviewId}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    });
+  },
+
+  adminDelete(reviewId: string) {
+    return apiFetch(`/api/reviews/${reviewId}`, { method: 'DELETE' });
+  },
+};
+
+// ─── Settings endpoints ────────────────────────────────────────────────────────
+
+export const settings = {
+  getEventBanner() {
+    return apiFetch<{ data: { eventBanner: any } }>('/api/settings/event-banner');
   },
 };

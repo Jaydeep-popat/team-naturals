@@ -32,6 +32,7 @@ const FloatingParticles = ({ color }: { color: string }) => {
             ease: 'linear',
           }}
           className={`absolute bottom-0 left-[${20 + i * 15}%] ${color}`}
+          style={{ willChange: 'transform, opacity' }}
         >
           {i % 2 === 0 ? <SparklesIcon size={16} /> : <LeafIcon size={18} />}
         </motion.div>
@@ -93,6 +94,14 @@ const steps = [
 
 export function OrderProcess() {
   const [activeStep, setActiveStep] = useState<number>(1);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 1024);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   return (
     <section aria-labelledby="process-heading" className="w-full bg-white py-20 lg:py-32">
@@ -109,46 +118,42 @@ export function OrderProcess() {
             const isActive = activeStep === step.id;
 
             return (
-              <motion.div
+              <div
                 key={step.id}
-                onHoverStart={() => setActiveStep(step.id)}
+                onMouseEnter={() => !isMobile && setActiveStep(step.id)}
                 onClick={() => setActiveStep(step.id)}
-                layout
-                initial={false}
-                animate={{
-                  flex: isActive ? (typeof window !== 'undefined' && window.innerWidth < 1024 ? 3 : 4) : 1,
+                style={{
+                  flex: isActive ? (isMobile ? 3 : 4) : 1,
                   boxShadow: isActive ? '0 20px 40px -10px rgba(31, 61, 43, 0.3)' : '0 4px 10px -5px rgba(31, 61, 43, 0.1)',
                 }}
-                transition={{ type: 'spring', stiffness: 200, damping: 25 }}
-                className={`relative flex flex-col justify-end overflow-hidden rounded-3xl cursor-pointer bg-forest transition-shadow duration-500`}
+                className="relative flex flex-col justify-end overflow-hidden rounded-3xl cursor-pointer bg-forest transition-all duration-700 ease-[cubic-bezier(0.25,0.1,0.25,1.0)] group"
               >
                 {/* Background Image with Parallax/Zoom */}
-                <div className="absolute inset-0 z-0">
-                  <motion.div
-                    animate={{
-                      scale: isActive ? 1.1 : 1,
-                      filter: isActive ? 'grayscale(0%)' : 'grayscale(60%)',
+                <div className="absolute inset-0 z-0 overflow-hidden">
+                  <div
+                    className="h-full w-full transition-transform duration-1000 ease-[cubic-bezier(0.25,0.1,0.25,1.0)]"
+                    style={{
+                      transform: isActive ? 'scale(1.1)' : 'scale(1)',
                     }}
-                    transition={{ duration: 1.2, ease: [0.25, 0.1, 0.25, 1] }}
-                    className="h-full w-full"
                   >
                     <img 
                       src={step.image} 
                       alt="" 
-                      className="h-full w-full object-cover" 
+                      className={`h-full w-full object-cover transition-[filter] duration-700 ease-in-out ${isActive ? 'grayscale-0' : 'grayscale'}`} 
+                      loading="lazy"
                     />
-                  </motion.div>
+                  </div>
                 </div>
 
-                {/* Color Overlay (Blend Mode) */}
-                <div className={`absolute inset-0 z-0 ${step.bg} mix-blend-multiply opacity-80`} />
-                <div className={`absolute inset-0 z-0 ${isActive ? step.hoverBg : step.bg} opacity-90 transition-opacity duration-700`} />
+                {/* Color Overlay (Blend Mode) - Removed mix-blend-multiply for performance, using standard opacity overlay */}
+                <div className={`absolute inset-0 z-0 ${step.bg} opacity-70`} />
+                <div className={`absolute inset-0 z-0 ${isActive ? step.hoverBg : step.bg} transition-opacity duration-700 ease-in-out ${isActive ? 'opacity-90' : 'opacity-60'}`} />
 
                 {/* Floating Particles - only render when active to save performance */}
                 {isActive && <FloatingParticles color={step.color} />}
 
-                {/* Large Background Graphic (Simulated with massive faded icon) */}
-                <div className={`absolute -right-10 -top-10 pointer-events-none transition-transform duration-700 ease-out ${step.numberColor}`}
+                {/* Large Background Graphic */}
+                <div className={`absolute -right-10 -top-10 pointer-events-none transition-transform duration-700 ease-[cubic-bezier(0.25,0.1,0.25,1.0)] ${step.numberColor}`}
                      style={{ transform: isActive ? 'scale(1.2) rotate(-5deg)' : 'scale(1) rotate(0deg)' }}>
                   <step.icon size={300} />
                 </div>
@@ -156,7 +161,7 @@ export function OrderProcess() {
                 <div className="relative z-10 flex h-full flex-col justify-between p-6 sm:p-8 lg:p-10">
                   {/* Top section: Icon and Number */}
                   <div className="flex items-center justify-between">
-                    <div className={`flex h-12 w-12 items-center justify-center rounded-full backdrop-blur-md shadow-sm ${step.iconBg} ${step.color}`}>
+                    <div className={`flex h-12 w-12 items-center justify-center rounded-full shadow-sm ${step.iconBg} ${step.color}`}>
                       <step.icon size={22} strokeWidth={1.8} />
                     </div>
                     <span className={`text-4xl font-display font-bold ${step.numberColor}`}>0{step.id}</span>
@@ -164,31 +169,24 @@ export function OrderProcess() {
 
                   {/* Bottom section: Text content */}
                   <div className="mt-auto">
-                    <motion.h3 
-                      layout="position"
-                      className={`font-display text-2xl sm:text-3xl font-semibold whitespace-nowrap ${step.color}`}
-                      style={{ writingMode: isActive || (typeof window !== 'undefined' && window.innerWidth < 1024) ? 'horizontal-tb' : 'vertical-rl', transform: isActive || (typeof window !== 'undefined' && window.innerWidth < 1024) ? 'rotate(0deg)' : 'rotate(180deg)' }}
+                    <h3 
+                      className={`font-display text-2xl sm:text-3xl font-semibold whitespace-nowrap transition-all duration-700 ease-in-out ${step.color}`}
+                      style={{ 
+                        writingMode: isActive || isMobile ? 'horizontal-tb' : 'vertical-rl', 
+                        transform: isActive || isMobile ? 'rotate(0deg)' : 'rotate(180deg)',
+                      }}
                     >
                       {step.title}
-                    </motion.h3>
+                    </h3>
 
-                    <AnimatePresence>
-                      {isActive && (
-                        <motion.div
-                          initial={{ opacity: 0, y: 20, height: 0 }}
-                          animate={{ opacity: 1, y: 0, height: 'auto' }}
-                          exit={{ opacity: 0, y: 20, height: 0 }}
-                          transition={{ duration: 0.3, delay: 0.1 }}
-                        >
-                          <p className={`mt-4 max-w-sm text-[15px] leading-relaxed opacity-90 ${step.color}`}>
-                            {step.description}
-                          </p>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
+                    <div className={`overflow-hidden transition-all duration-700 ease-[cubic-bezier(0.25,0.1,0.25,1.0)] ${isActive ? 'max-h-40 opacity-100 mt-4' : 'max-h-0 opacity-0 mt-0'}`}>
+                      <p className={`max-w-sm text-[15px] leading-relaxed opacity-90 ${step.color}`}>
+                        {step.description}
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </motion.div>
+              </div>
             );
           })}
         </div>
@@ -196,3 +194,5 @@ export function OrderProcess() {
     </section>
   );
 }
+
+// Trigger HMR rebuild

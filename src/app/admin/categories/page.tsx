@@ -8,6 +8,7 @@ import { FilterBar } from '@/src/components/admin/FilterBar';
 import { Drawer } from '@/src/components/admin/Drawer';
 import { Plus, Trash2, Pencil, ToggleLeft, ToggleRight, GripVertical, Loader2, Image as ImageIcon } from 'lucide-react';
 import { categories as categoriesApi, ApiError } from '@/src/lib/api';
+import toast from 'react-hot-toast';
 
 type Category = {
   categoryId: number;
@@ -73,9 +74,10 @@ export default function AdminCategoriesPage() {
     try {
       await categoriesApi.delete(deleteTarget.categoryId.toString());
       setDeleteTarget(null);
+      toast.success('Category deleted successfully');
       fetchCategories();
     } catch (err: any) {
-      alert(err.message || 'Failed to delete category');
+      toast.error(err.message || 'Failed to delete category');
     } finally {
       setIsDeleting(false);
     }
@@ -93,14 +95,16 @@ export default function AdminCategoriesPage() {
 
       if (editId) {
         await categoriesApi.update(editId.toString(), payload);
+        toast.success('Category updated successfully');
       } else {
         await categoriesApi.create(payload);
+        toast.success('Category created successfully');
       }
       
       setShowDrawer(false);
       fetchCategories();
     } catch (err: any) {
-      alert(err.message || 'Failed to save category');
+      toast.error(err.message || 'Failed to save category');
     } finally {
       setIsSaving(false);
     }

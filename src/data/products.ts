@@ -1,8 +1,8 @@
 import type { Product } from '../types/product';
 
 // NOTE: seed/mock data only — no backend. Reviews are fictional UI placeholders.
-const HERO = "/6ecc3cac-18f0-4044-856c-cc50daf9ac26.jpg";
-const STORY = "/cf233d3b-a801-4fb2-9ced-7840b1e6f78e.jpg";
+const HERO = "/6ecc3cac-18f0-4044-856c-cc50daf9ac26.webp";
+const STORY = "/cf233d3b-a801-4fb2-9ced-7840b1e6f78e.webp";
 
 export const heroImage = HERO;
 export const storyImage = STORY;
@@ -15,7 +15,7 @@ export const products: Product[] = [
   category: 'soaps',
   price: 80,
   weight: '125g',
-  images: ["/68458ec2-cc6d-4ad9-a877-e6761b72e0fe.jpg",
+  images: ["/68458ec2-cc6d-4ad9-a877-e6761b72e0fe.webp",
 
   HERO,
   STORY],
@@ -48,7 +48,7 @@ export const products: Product[] = [
   category: 'soaps',
   price: 80,
   weight: '125g',
-  images: ["/4d43f26a-b03f-405e-985f-c84f473e0793.jpg",
+  images: ["/4d43f26a-b03f-405e-985f-c84f473e0793.webp",
 
   HERO,
   STORY],
@@ -81,7 +81,7 @@ export const products: Product[] = [
   category: 'soaps',
   price: 80,
   weight: '125g',
-  images: ["/9420a6be-2e5d-483a-8d4d-2d9b357ae5ee.jpg",
+  images: ["/9420a6be-2e5d-483a-8d4d-2d9b357ae5ee.webp",
 
   HERO,
   STORY],
@@ -113,7 +113,7 @@ export const products: Product[] = [
   category: 'soaps',
   price: 80,
   weight: '125g',
-  images: ["/25dcd76f-37d7-4036-b396-20449c8e4796.jpg",
+  images: ["/25dcd76f-37d7-4036-b396-20449c8e4796.webp",
 
   HERO,
   STORY],
@@ -146,7 +146,7 @@ export const products: Product[] = [
   category: 'soaps',
   price: 80,
   weight: '125g',
-  images: ["/22f656cd-e070-47f1-ad50-e243752d0d8e.jpg",
+  images: ["/22f656cd-e070-47f1-ad50-e243752d0d8e.webp",
 
   HERO,
   STORY],
@@ -176,7 +176,7 @@ export const products: Product[] = [
   category: 'soaps',
   price: 80,
   weight: '125g',
-  images: ["/db95c841-29e2-4a0f-bbff-d85ef56c0f30.jpg",
+  images: ["/db95c841-29e2-4a0f-bbff-d85ef56c0f30.webp",
 
   HERO,
   STORY],
@@ -208,7 +208,7 @@ export const products: Product[] = [
   category: 'face-wash',
   price: 249,
   weight: '200ml',
-  images: ["/bfe16391-2497-4af3-9cce-add860e6bb8a.jpg",
+  images: ["/bfe16391-2497-4af3-9cce-add860e6bb8a.webp",
 
   HERO,
   STORY],
@@ -241,13 +241,13 @@ export const categories = [
   label: 'Soaps',
   slug: 'soaps',
   description: 'Six cold-processed bars, 125g each',
-  image: "/db95c841-29e2-4a0f-bbff-d85ef56c0f30.jpg"
+  image: "/db95c841-29e2-4a0f-bbff-d85ef56c0f30.webp"
 },
 {
   label: 'Face Wash',
   slug: 'face-wash',
   description: 'Daily clay cleanser, 200ml',
-  image: "/bfe16391-2497-4af3-9cce-add860e6bb8a.jpg"
+  image: "/bfe16391-2497-4af3-9cce-add860e6bb8a.webp"
 },
 {
   label: 'Bundles',

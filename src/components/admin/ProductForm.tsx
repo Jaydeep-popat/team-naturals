@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Save, X, Package, Loader2, Image as ImageIcon, Trash2 } from 'lucide-react';
 import { products, categories, ApiError } from '@/src/lib/api';
+import toast from 'react-hot-toast';
 
 type ProductFormProps = {
   initialData?: any;
@@ -33,7 +34,10 @@ export function ProductForm({ initialData, isEdit }: ProductFormProps) {
   useEffect(() => {
     categories.list().then((res) => {
       setCategoryList(res.data.categories);
-    }).catch(console.error);
+    }).catch(err => {
+      console.error(err);
+      toast.error('Failed to load categories');
+    });
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -66,9 +70,11 @@ export function ProductForm({ initialData, isEdit }: ProductFormProps) {
         await products.uploadImages(productId, formData);
       }
 
+      toast.success(isEdit ? 'Product updated successfully' : 'Product created successfully');
       router.push('/admin/products');
     } catch (err: any) {
-      alert(err.message || 'Failed to save product');
+      console.error('Failed to save product', err);
+      toast.error(err.message || 'Failed to save product');
     } finally {
       setIsSaving(false);
     }

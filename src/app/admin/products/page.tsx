@@ -7,6 +7,7 @@ import { ConfirmDialog } from '@/src/components/admin/ConfirmDialog';
 import { useRouter } from 'next/navigation';
 import { Plus, Package, Eye, Pencil, Trash2 } from 'lucide-react';
 import { products as productsApi, ApiError } from '@/src/lib/api';
+import toast from 'react-hot-toast';
 
 type ProductStatus = 'active' | 'draft' | 'archived';
 
@@ -68,9 +69,10 @@ export default function AdminProductsPage() {
     try {
       await productsApi.delete(deleteTarget.productId.toString());
       setDeleteTarget(null);
+      toast.success('Product deleted successfully');
       fetchProducts();
     } catch (err: any) {
-      alert(err.message || 'Failed to delete product');
+      toast.error(err.message || 'Failed to delete product');
     } finally {
       setIsDeleting(false);
     }
@@ -141,7 +143,9 @@ export default function AdminProductsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="font-display text-3xl font-bold text-forest">Products</h1>
-          <p className="text-sm text-forest/60 mt-1">{products.length} products</p>
+          <p className="text-sm text-forest/60 mt-1">
+            {products.filter((p) => p.stockQty > 0).length}/{products.length} in stock
+          </p>
         </div>
         <button
           onClick={() => router.push('/admin/products/new')}

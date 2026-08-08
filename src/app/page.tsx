@@ -8,19 +8,25 @@ import { ArrowRightIcon, ChevronLeftIcon, ChevronRightIcon, ClockIcon, LeafIcon,
 import { categories as staticCategories, heroImage, storyImage } from "@/src/data/products";
 import { products as productsApi, categories as categoriesApi } from "@/src/lib/api";
 import { ProductCard } from "@/src/components/ProductCard";
+import { useAuth } from "@/src/contexts/AuthContext";
+import { useRouter } from "next/navigation";
+import toast from 'react-hot-toast';
 
+import dynamic from 'next/dynamic';
 import { PromiseBanner } from "@/src/components/PromiseBanner";
-import { IngredientSpotlight } from "@/src/components/IngredientSpotlight";
-import { DiscountPoster } from "@/src/components/DiscountPoster";
-
+import type { EventBannerModel } from "@/src/components/EventBanner";
+import { EventBanner } from "@/src/components/EventBanner";
+import { events as eventsApi } from "@/src/lib/api";
 import { SectionHeading } from '@/src/components/SectionHeading';
-import { TrustBadges } from '@/src/components/TrustBadges';
-import { TestimonialsCarousel } from "@/src/components/TestimonialsCarousel";
-import { WhyChooseUs } from "@/src/components/WhyChooseUs";
-import { OrderProcess } from "@/src/components/OrderProcess";
-import { InstagramFeed } from "@/src/components/InstagramFeed";
-import { CatalogCTA } from "@/src/components/CatalogCTA";
-import { FAQAccordion } from "@/src/components/FAQAccordion";
+
+const IngredientSpotlight = dynamic(() => import("@/src/components/IngredientSpotlight").then(mod => mod.IngredientSpotlight), { ssr: true });
+const TrustBadges = dynamic(() => import("@/src/components/TrustBadges").then(mod => mod.TrustBadges), { ssr: true });
+const TestimonialsCarousel = dynamic(() => import("@/src/components/TestimonialsCarousel").then(mod => mod.TestimonialsCarousel), { ssr: false });
+const WhyChooseUs = dynamic(() => import("@/src/components/WhyChooseUs").then(mod => mod.WhyChooseUs), { ssr: true });
+const OrderProcess = dynamic(() => import("@/src/components/OrderProcess").then(mod => mod.OrderProcess), { ssr: true });
+const InstagramFeed = dynamic(() => import("@/src/components/InstagramFeed").then(mod => mod.InstagramFeed), { ssr: false });
+const CatalogCTA = dynamic(() => import("@/src/components/CatalogCTA").then(mod => mod.CatalogCTA), { ssr: true });
+const FAQAccordion = dynamic(() => import("@/src/components/FAQAccordion").then(mod => mod.FAQAccordion), { ssr: true });
 import { Reveal, staggerContainer, staggerItem } from "@/src/components/Reveal";
 import { ProductGridSkeleton, ProductCardSkeleton } from "@/src/components/Skeletons";
 import { FirstTimeLoginPrompt } from "@/src/components/FirstTimeLoginPrompt";
@@ -33,18 +39,41 @@ function ProductJsonLd() {
 export default function HomePage() {
   const [liveProducts, setLiveProducts] = React.useState<any[]>([]);
   const [liveCategories, setLiveCategories] = React.useState<any[]>([]);
+  const [activeEvent, setActiveEvent] = React.useState<EventBannerModel | null>(null);
   const [loading, setLoading] = React.useState(true);
+  const { user } = useAuth();
+  const router = useRouter();
 
   React.useEffect(() => {
+    if (user?.role === 'admin' && !sessionStorage.getItem('admin_initial_redirect')) {
+      sessionStorage.setItem('admin_initial_redirect', 'true');
+      router.replace('/admin');
+      return;
+    }
+
     productsApi.list({ limit: '6' })
       .then(res => setLiveProducts(res.data.products))
-      .catch(console.error)
+      .catch(err => {
+        console.error(err);
+        toast.error('Failed to load products');
+      })
       .finally(() => setLoading(false));
 
     categoriesApi.list()
       .then(res => setLiveCategories(res.data.categories))
-      .catch(console.error);
-  }, []);
+      .catch(err => {
+        console.error(err);
+        toast.error('Failed to load categories');
+      });
+
+    eventsApi.getActiveHomepageEvent()
+      .then(res => {
+        if (res.data?.event) {
+          setActiveEvent(res.data.event);
+        }
+      })
+      .catch(err => console.error("Failed to load active event", err));
+  }, [router, user?.role]);
 
   const bestSellers = liveProducts;
   const categoriesToDisplay = liveCategories.length > 0 ? liveCategories : staticCategories;
@@ -55,7 +84,11 @@ export default function HomePage() {
       <FirstTimeLoginPrompt />
       <Hero />
 
-
+      {activeEvent && (
+        <section className="mx-auto max-w-7xl px-5 pt-12 lg:px-10">
+          <EventBanner event={activeEvent} />
+        </section>
+      )}
 
       {/* Shop by category — circular tiles */}
       <section
@@ -172,11 +205,6 @@ export default function HomePage() {
         </Reveal>
 
         <BestSellersCarousel loading={loading} bestSellers={bestSellers} />
-      </section>
-
-      {/* Discount Poster */}
-      <section className="mx-auto max-w-7xl px-5 pt-20 lg:px-10">
-        <DiscountPoster />
       </section>
 
       {/* Ingredient Spotlight */}
@@ -467,7 +495,7 @@ function Hero() {
           {/* Main large image (Arch shape) */}
           <div className="relative ml-auto w-[85%] overflow-hidden rounded-t-[140px] rounded-b-[40px] border-[6px] border-white shadow-xl">
             <img
-              src="/facewash/wash_1.png"
+              src="/facewash/wash_1.webp"
               alt="Team Naturals facewash styled"
               className="aspect-[3/4] w-full object-cover transition-transform duration-700 hover:scale-105"
             />
@@ -476,7 +504,7 @@ function Hero() {
           {/* Secondary overlapping image (Circle) */}
           <div className="absolute -bottom-6 left-0 w-[45%] overflow-hidden rounded-full border-[6px] border-white shadow-2xl">
             <img
-              src="/facewash/wash_2.png"
+              src="/facewash/wash_2.webp"
               alt="Team Naturals facewash alternate styling"
               className="aspect-square w-full object-cover transition-transform duration-700 hover:scale-105"
             />

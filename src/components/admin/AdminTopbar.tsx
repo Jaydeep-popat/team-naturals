@@ -4,9 +4,10 @@ import React, { useState } from 'react';
 import { Search, Bell, Menu, LogOut, ChevronDown, User } from 'lucide-react';
 import { useAuth } from '@/src/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 
-export function AdminTopbar() {
+export function AdminTopbar({ onMenuClick }: { onMenuClick?: () => void }) {
   const { user, logout } = useAuth();
   const router = useRouter();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -19,7 +20,7 @@ export function AdminTopbar() {
   return (
     <header className="h-20 shrink-0 bg-white/70 backdrop-blur-2xl border-b border-forest/10 flex items-center justify-between px-6 lg:px-10 sticky top-0 z-30 transition-all">
       <div className="flex items-center gap-4 flex-1">
-        <button className="lg:hidden p-2 text-forest/70 hover:text-forest hover:bg-forest/5 rounded-xl transition-colors">
+        <button onClick={onMenuClick} className="lg:hidden p-2 text-forest/70 hover:text-forest hover:bg-forest/5 rounded-xl transition-colors">
           <Menu size={24} />
         </button>
         
@@ -74,12 +75,14 @@ export function AdminTopbar() {
                     <p className="text-[12px] text-forest/60 truncate">{user?.email}</p>
                   </div>
                   
-                  <button 
+                  <Link 
+                    href="/account"
+                    onClick={() => setIsProfileOpen(false)}
                     className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-forest hover:bg-[#FDFBF9] transition-colors"
                   >
                     <User size={16} className="text-forest/70" />
                     My Profile
-                  </button>
+                  </Link>
                   
                   <button 
                     onClick={handleLogout}

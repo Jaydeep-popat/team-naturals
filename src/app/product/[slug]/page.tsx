@@ -4,16 +4,18 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
-import { LeafIcon, LockIcon, HeartIcon, ChevronLeftIcon, ChevronRightIcon, PackageX } from 'lucide-react';
+import { LeafIcon, LockIcon, HeartIcon, ChevronLeftIcon, ChevronRightIcon, PackageX, Loader2 } from 'lucide-react';
 import { getRelated } from "@/src/data/products";
-import { products as productsApi } from "@/src/lib/api";
+import { products as productsApi, reviews as reviewsApi } from "@/src/lib/api";
 import { useCart } from "@/src/contexts/CartContext";
+import toast from 'react-hot-toast';
 import { Breadcrumb } from "@/src/components/Breadcrumb";
 import { StarRating } from "@/src/components/StarRating";
 import { QtyStepper } from "@/src/components/QtyStepper";
-import { PromiseBanner } from "@/src/components/PromiseBanner";
+import dynamic from 'next/dynamic';
+const PromiseBanner = dynamic(() => import("@/src/components/PromiseBanner").then(mod => mod.PromiseBanner), { ssr: true });
 import { ProductCard } from "@/src/components/ProductCard";
-import { AuthModal } from "@/src/components/AuthModal";
+const AuthModal = dynamic(() => import("@/src/components/AuthModal").then(mod => mod.AuthModal), { ssr: false });
 import { useAuth } from "@/src/contexts/AuthContext";
 import { ProductDetailSkeleton, ProductCardSkeleton } from "@/src/components/Skeletons";
 import { Reveal } from "@/src/components/Reveal";
@@ -32,9 +34,10 @@ export default function ProductDetailPage() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
   const [loadingRelated, setLoadingRelated] = useState(true);
+  const galleryCycleRef = React.useRef<number | null>(null);
 
   const { addToCart, wishlist, toggleWishlist } = useCart();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
 
   useEffect(() => {
     if (slug) {
@@ -49,10 +52,17 @@ export default function ProductDetailPage() {
                 .slice(0, 4);
               setRelatedProducts(filtered);
             })
-            .catch(console.error)
+            .catch((err: any) => {
+              console.error('Failed to load related products:', err);
+            })
             .finally(() => setLoadingRelated(false));
         })
-        .catch(console.error)
+        .catch((err: any) => {
+          if (err?.statusCode !== 404) {
+            console.error('Failed to load product details:', err);
+            toast.error('Failed to load product details');
+          }
+        })
         .finally(() => setLoadingProduct(false));
     }
   }, [slug]);
@@ -61,6 +71,20 @@ export default function ProductDetailPage() {
     setActiveImage(0);
     setQty(1);
   }, [slug]);
+
+  useEffect(() => {
+    const imagesCount = product?.images?.length || 1;
+    if (imagesCount > 1) {
+      galleryCycleRef.current = window.setInterval(() => {
+        setActiveImage((current) => (current + 1) % imagesCount);
+      }, 2000);
+    }
+    return () => {
+      if (galleryCycleRef.current) {
+        window.clearInterval(galleryCycleRef.current);
+      }
+    };
+  }, [product]);
 
   if (loading || loadingProduct) return <ProductDetailSkeleton />;
 
@@ -127,19 +151,43 @@ export default function ProductDetailPage() {
       <div className="mx-auto grid max-w-6xl gap-10 px-5 py-10 lg:grid-cols-2 lg:gap-14 lg:px-8">
         {/* Gallery */}
         <div>
-          <div className="relative aspect-square overflow-hidden rounded-3xl border border-forest/8 bg-cream">
+          <div className="group relative aspect-square overflow-hidden rounded-3xl border border-forest/8 bg-cream">
             <AnimatePresence mode="wait">
               <motion.img
                 key={activeImage}
                 src={displayImages[activeImage]}
                 alt={`${product.name} — view ${activeImage + 1}`}
-                initial={{ opacity: 0, scale: 1.02 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0 }}
+                initial={{ opacity: 0, x: 40, scale: 1.02 }}
+                animate={{ opacity: 1, scale: 1, x: 0 }}
+                exit={{ opacity: 0, x: -24 }}
                 transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
                 className="absolute inset-0 h-full w-full object-cover"
               />
             </AnimatePresence>
+
+            {/* Carousel Indicators (Bottom of image) */}
+            {displayImages.length > 1 && (
+              <div className="absolute bottom-4 inset-x-0 flex justify-center gap-1.5 z-20 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+                {displayImages.map((_: string, i: number) => (
+                  <div 
+                    key={i} 
+                    className={`h-1.5 rounded-full bg-white/40 overflow-hidden transition-all duration-300 ${
+                      i === activeImage ? 'w-8' : 'w-2'
+                    }`}
+                  >
+                    {i === activeImage && (
+                      <motion.div
+                        key={activeImage}
+                        initial={{ width: 0 }}
+                        animate={{ width: '100%' }}
+                        transition={{ duration: 2, ease: 'linear' }}
+                        className="h-full bg-white"
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
             <button
               type="button"
               onClick={() =>
@@ -187,8 +235,18 @@ export default function ProductDetailPage() {
             <h1 className="font-display text-3xl leading-tight text-forest sm:text-4xl">
               {product.name}
             </h1>
-            <span className="mt-1 flex-shrink-0 rounded-full bg-forest-mist px-3 py-1 text-[11px] text-forest">
-              In stock
+            <span className={`mt-1 flex-shrink-0 rounded-full px-3 py-1 text-[11px] font-medium ${
+              product.stockQty === 0 
+                ? 'bg-terracotta/10 text-terracotta'
+                : product.stockQty !== undefined && product.stockQty > 0 && product.stockQty <= 5 
+                ? 'bg-[#C2185B]/10 text-[#C2185B]'
+                : 'bg-forest-mist text-forest'
+            }`}>
+              {product.stockQty === 0 
+                ? 'Out of stock' 
+                : product.stockQty !== undefined && product.stockQty > 0 && product.stockQty <= 5 
+                ? `Only ${product.stockQty} left`
+                : 'In stock'}
             </span>
           </div>
 
@@ -199,29 +257,84 @@ export default function ProductDetailPage() {
             </span>
           </div>
 
-          <p className="mt-5 font-display text-3xl text-forest">₹{product.price}</p>
+          <div className="mt-5 flex items-baseline gap-3">
+            {(() => {
+              const activeDiscount = (product as any).activeDiscount;
+              const originalPrice = product.price;
+              
+              let finalPrice = originalPrice;
+              let discountLabel = '';
+              
+              if (activeDiscount) {
+                if (activeDiscount.type === 'percent') {
+                  finalPrice = originalPrice - (originalPrice * activeDiscount.value / 100);
+                  discountLabel = `${activeDiscount.value}% off`;
+                } else if (activeDiscount.type === 'flat') {
+                  finalPrice = Math.max(0, originalPrice - activeDiscount.value);
+                  discountLabel = `₹${activeDiscount.value} off`;
+                }
+              }
+
+              return (
+                <>
+                  <span className="font-display text-3xl text-forest">₹{finalPrice.toFixed(2)}</span>
+                  {(activeDiscount || (product.compareAtPrice && product.compareAtPrice > originalPrice)) && (
+                    <>
+                      <span className="text-lg text-muted line-through">₹{product.compareAtPrice || originalPrice}</span>
+                      <span className="text-lg font-semibold text-[#388E3C]">
+                        {activeDiscount ? discountLabel : `${Math.round((((product.compareAtPrice || originalPrice) - originalPrice) / (product.compareAtPrice || originalPrice)) * 100)}% off`}
+                      </span>
+                    </>
+                  )}
+                </>
+              );
+            })()}
+          </div>
+          {product.activeDiscount && (
+            <div className="mt-2">
+              <span className="inline-block bg-[#FFC5C5] text-forest font-bold text-xs px-3 py-1 rounded-full uppercase tracking-wider shadow-sm">
+                {product.activeDiscount.event}
+              </span>
+            </div>
+          )}
           <p className="mt-1 text-xs text-muted">MRP incl. of all taxes · {product.weight || product.size || '100g'}</p>
 
           <p className="mt-5 text-[15px] leading-relaxed text-muted">{product.shortDescription || product.description || ''}</p>
 
           <div className="mt-7 flex flex-wrap items-center gap-3">
             <QtyStepper value={qty} onChange={(q) => setQty(Math.max(1, q))} label={product.name} />
-            <motion.button
-              type="button"
-              whileTap={{ scale: 0.96 }}
-              onClick={handleAddToCart}
-              className="flex-1 rounded-full bg-forest px-6 py-3.5 text-sm text-cream transition-colors hover:bg-forest-deep sm:flex-none sm:px-8"
-            >
-              Add to Cart
-            </motion.button>
-            <motion.button
-              type="button"
-              whileTap={{ scale: 0.96 }}
-              onClick={buyNow}
-              className="flex-1 rounded-full bg-gold px-6 py-3.5 text-sm text-forest-deep transition-colors hover:bg-gold/90 sm:flex-none sm:px-8"
-            >
-              Buy Now
-            </motion.button>
+            {user?.role === 'admin' ? (
+              <div className="flex-1 flex gap-3">
+                <div className="flex-1 flex items-center justify-center rounded-full bg-gray-100 px-6 py-3.5 text-sm font-medium text-gray-500 cursor-not-allowed border border-gray-200">
+                  Admins cannot purchase
+                </div>
+              </div>
+            ) : product.stockQty === 0 ? (
+              <div className="flex-1 flex gap-3">
+                <div className="flex-1 flex items-center justify-center rounded-full bg-gray-50 px-6 py-3.5 text-sm font-medium text-forest/50 cursor-not-allowed border border-forest/15">
+                  Out of Stock
+                </div>
+              </div>
+            ) : (
+              <>
+                <motion.button
+                  type="button"
+                  whileTap={{ scale: 0.96 }}
+                  onClick={handleAddToCart}
+                  className="flex-1 rounded-full bg-forest px-6 py-3.5 text-sm text-cream transition-colors hover:bg-forest-deep sm:flex-none sm:px-8"
+                >
+                  Add to Cart
+                </motion.button>
+                <motion.button
+                  type="button"
+                  whileTap={{ scale: 0.96 }}
+                  onClick={buyNow}
+                  className="flex-1 rounded-full bg-gold px-6 py-3.5 text-sm text-forest-deep transition-colors hover:bg-gold/90 sm:flex-none sm:px-8"
+                >
+                  Buy Now
+                </motion.button>
+              </>
+            )}
             <button
               type="button"
               onClick={() => toggleWishlist(product.id)}
@@ -362,12 +475,63 @@ function Row({ label, value }: { label: string; value: string }) {
 }
 
 function Reviews({ product }: { product: any }) {
-  const reviews = product.reviews || [];
+  const { isAuthenticated } = useAuth();
+  const [reviewsList, setReviewsList] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  const [rating, setRating] = useState(5);
+  const [comment, setComment] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const fetchReviews = React.useCallback(async () => {
+    try {
+      const res = await reviewsApi.listProductReviews(product.productId || product.id);
+      setReviewsList(res.data?.reviews || []);
+    } catch (error: any) {
+      if (error?.statusCode !== 403) {
+        console.error('Failed to fetch product reviews:', error);
+        toast.error('Failed to load reviews');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  }, [product.productId, product.id]);
+
+  useEffect(() => {
+    fetchReviews();
+  }, [fetchReviews]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isAuthenticated) {
+      toast.error('Please login to submit a review.');
+      return;
+    }
+    if (!comment.trim()) return;
+
+    setIsSubmitting(true);
+    try {
+      await reviewsApi.add(product.productId || product.id, { rating, comment });
+      toast.success('Review submitted successfully!');
+      setComment('');
+      setRating(5);
+      fetchReviews(); // Refetch to show the review immediately
+    } catch (error: any) {
+      console.error('Failed to submit review:', error);
+      toast.error(error.message || 'Failed to submit review');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const distribution = [5, 4, 3, 2, 1].map((star) => ({
     star,
-    count: reviews.filter((r: any) => r.rating === star).length,
+    count: reviewsList.filter((r: any) => r.rating === star).length,
   }));
-  const total = reviews.length || 1;
+  const total = reviewsList.length || 1;
+  const avgRating = reviewsList.length > 0 
+    ? (reviewsList.reduce((acc, r) => acc + r.rating, 0) / reviewsList.length).toFixed(1) 
+    : '0.0';
 
   return (
     <section className="mx-auto max-w-6xl px-5 pt-16 lg:px-8" aria-labelledby="reviews-heading">
@@ -375,18 +539,15 @@ function Reviews({ product }: { product: any }) {
         <h2 id="reviews-heading" className="font-display text-2xl text-forest">
           Reviews
         </h2>
-        <p className="mt-1 text-xs text-muted">
-          Sample reviews shown for layout — this is a demo store.
-        </p>
 
         <div className="mt-6 grid gap-8 rounded-3xl border border-forest/8 bg-cream-soft p-6 sm:grid-cols-[180px_1fr] sm:p-8">
           <div className="text-center sm:text-left">
-            <p className="font-display text-5xl text-forest">{product.rating || 5}</p>
+            <p className="font-display text-5xl text-forest">{avgRating}</p>
             <p className="mt-1 text-xs text-muted">out of 5</p>
             <div className="mt-2 flex justify-center sm:justify-start">
-              <StarRating rating={product.rating || 5} size={16} />
+              <StarRating rating={Number(avgRating)} size={16} />
             </div>
-            <p className="mt-2 text-xs text-muted">({product.reviewCount || 0} reviews)</p>
+            <p className="mt-2 text-xs text-muted">({reviewsList.length} reviews)</p>
           </div>
           <ul className="space-y-2">
             {distribution.map(({ star, count }) => (
@@ -407,25 +568,36 @@ function Reviews({ product }: { product: any }) {
           </ul>
         </div>
 
-        <ul className="mt-6 space-y-3">
-          {reviews.map((r: any) => (
-            <li key={r.id} className="rounded-2xl border border-forest/8 p-5">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-forest-mist text-sm text-forest">
-                    {r.name.charAt(0)}
-                  </span>
-                  <div>
-                    <p className="text-sm text-forest">{r.name}</p>
-                    <StarRating rating={r.rating} size={11} />
+
+
+        {isLoading ? (
+          <div className="flex justify-center p-12 mt-6">
+            <Loader2 size={24} className="animate-spin text-forest" />
+          </div>
+        ) : (
+          <ul className="mt-6 space-y-3">
+            {reviewsList.length === 0 ? (
+              <li className="text-center py-8 text-forest/50 text-sm">No reviews yet. Be the first to review!</li>
+            ) : (
+            reviewsList.map((r: any) => (
+              <li key={r.reviewId} className="rounded-2xl border border-forest/8 p-5">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-full bg-forest-mist text-sm text-forest font-semibold uppercase">
+                      {r.user?.firstName?.charAt(0) || 'A'}
+                    </span>
+                    <div>
+                      <p className="text-sm text-forest font-semibold">{r.user?.firstName} {r.user?.lastName}</p>
+                      <StarRating rating={r.rating} size={11} />
+                    </div>
                   </div>
+                  <span className="text-xs text-muted">{new Date(r.createdAt).toLocaleDateString()}</span>
                 </div>
-                <span className="text-xs text-muted">{r.date}</span>
-              </div>
-              <p className="mt-3 text-sm leading-relaxed text-muted">{r.comment}</p>
-            </li>
-          ))}
-        </ul>
+                <p className="mt-3 text-sm leading-relaxed text-muted">{r.comment}</p>
+              </li>
+            )))}
+          </ul>
+        )}
       </Reveal>
     </section>
   );

@@ -20,13 +20,21 @@ import {
   Bell,
   LogOut,
   Menu,
-  ChevronLeft
+  ChevronLeft,
+  Store,
+  X
 } from 'lucide-react';
 
-export function AdminSidebar() {
+export function AdminSidebar({ isMobileOpen, setIsMobileOpen }: { isMobileOpen?: boolean; setIsMobileOpen?: (val: boolean) => void }) {
   const pathname = usePathname();
   const router = useRouter();
   const [isCollapsed, setIsCollapsed] = useState(false);
+
+  React.useEffect(() => {
+    if (isMobileOpen) {
+      setIsCollapsed(false);
+    }
+  }, [isMobileOpen]);
 
   const navGroups = [
     {
@@ -48,8 +56,8 @@ export function AdminSidebar() {
     {
       heading: 'Marketing',
       items: [
-        { label: 'Discounts', href: '/admin/discounts', icon: Ticket },
-        { label: 'Content', href: '/admin/content', icon: LayoutTemplate },
+        { label: 'Events', href: '/admin/events', icon: LayoutTemplate },
+        { label: 'Promo Codes', href: '/admin/promo-codes', icon: Ticket },
       ]
     },
     {
@@ -63,14 +71,21 @@ export function AdminSidebar() {
   ];
 
   return (
-    <aside 
-      className={`group hidden lg:flex flex-col h-screen bg-[#1B3A2B] text-white shrink-0 transition-all duration-300 ease-in-out relative z-10 ${isCollapsed ? 'w-24' : 'w-72'}`}
-    >
+    <>
+      {isMobileOpen && (
+        <div 
+          className="fixed inset-0 bg-[#1B3A2B]/40 backdrop-blur-sm z-40 lg:hidden"
+          onClick={() => setIsMobileOpen?.(false)}
+        />
+      )}
+      <aside 
+        className={`group fixed lg:static flex flex-col h-screen bg-[#1B3A2B] text-white shrink-0 transition-transform duration-300 ease-in-out z-50 ${isCollapsed ? 'w-24' : 'w-72'} ${isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
+      >
       <div className={`flex flex-col gap-6 p-6 pt-8 relative`}>
         <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} w-full`}>
           {!isCollapsed ? (
             <Link href="/admin" className="block transition-opacity hover:opacity-80 shrink-0 w-[190px] -my-4">
-              <img src="/full_logo.png" alt="Team Naturals" className="w-full h-auto brightness-0 invert drop-shadow-sm" />
+              <img src="/full_logo.webp" alt="Team Naturals" className="w-full h-auto brightness-0 invert drop-shadow-sm" />
             </Link>
           ) : (
             <Link href="/admin" className="block transition-opacity hover:opacity-80 mix-blend-screen">
@@ -80,9 +95,15 @@ export function AdminSidebar() {
           
           <button 
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className={`text-white/60 hover:text-white hover:bg-white/10 p-2 rounded-xl transition-all ${isCollapsed ? 'absolute -right-3 top-9 bg-[#1B3A2B] border border-white/10 shadow-sm opacity-0 group-hover:opacity-100 hover:scale-110' : ''}`}
+            className={`hidden lg:block text-white/60 hover:text-white hover:bg-white/10 p-2 rounded-xl transition-all ${isCollapsed ? 'absolute -right-3 top-9 bg-[#1B3A2B] border border-white/10 shadow-sm opacity-0 group-hover:opacity-100 hover:scale-110' : ''}`}
           >
             {isCollapsed ? <ChevronLeft size={16} className="rotate-180" /> : <ChevronLeft size={20} />}
+          </button>
+          <button 
+            onClick={() => setIsMobileOpen?.(false)}
+            className="lg:hidden text-white/60 hover:text-white p-2"
+          >
+            <X size={24} />
           </button>
         </div>
       </div>
@@ -106,6 +127,7 @@ export function AdminSidebar() {
                 <Link
                   key={item.href}
                   href={item.href}
+                  onClick={() => setIsMobileOpen?.(false)}
                   title={isCollapsed ? item.label : undefined}
                   className={`relative flex items-center gap-3 px-3 py-3 text-sm font-medium transition-colors z-10 ${
                     isActive 
@@ -132,6 +154,20 @@ export function AdminSidebar() {
         ))}
       </nav>
 
+      <div className="mt-auto p-6 flex flex-col border-t border-white/10">
+        <Link
+          href="/"
+          onClick={() => setIsMobileOpen?.(false)}
+          className={`flex items-center gap-3 px-3 py-3 text-sm font-medium transition-colors text-white/60 hover:bg-white/5 hover:text-white rounded-xl ${isCollapsed ? 'justify-center' : ''}`}
+          title={isCollapsed ? 'Storefront' : undefined}
+        >
+          <div className="flex items-center justify-center shrink-0 w-8 h-8">
+            <Store size={18} />
+          </div>
+          {!isCollapsed && <span className="whitespace-nowrap font-bold">Storefront</span>}
+        </Link>
+      </div>
     </aside>
+    </>
   );
 }

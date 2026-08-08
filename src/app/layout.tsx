@@ -2,10 +2,12 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { CartProvider } from '@/src/contexts/CartContext';
 import { AuthProvider } from '@/src/contexts/AuthContext';
-import { MobileTabBar } from '@/src/components/MobileTabBar';
-import { Preloader } from '@/src/components/Preloader';
+
+import dynamic from 'next/dynamic';
 import { LayoutWrapper } from '@/src/components/LayoutWrapper';
 
+const Preloader = dynamic(() => import('@/src/components/Preloader').then(mod => mod.Preloader));
+const Toaster = dynamic(() => import('react-hot-toast').then(mod => mod.Toaster));
 export const metadata: Metadata = {
   title: {
     default: 'Team Naturals — Handmade Natural Skincare',
@@ -22,7 +24,7 @@ export const metadata: Metadata = {
     url: 'https://teamnaturals.in',
     images: [
       {
-        url: '/6ecc3cac-18f0-4044-856c-cc50daf9ac26.jpg',
+        url: '/6ecc3cac-18f0-4044-856c-cc50daf9ac26.webp',
         width: 1200,
         height: 630,
         alt: 'Team Naturals handmade soaps and face wash on a natural stone tray',
@@ -35,7 +37,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Team Naturals — Handmade Natural Skincare',
     description: 'Rooted in Nature. Made with Care.',
-    images: ['/6ecc3cac-18f0-4044-856c-cc50daf9ac26.jpg'],
+    images: ['/6ecc3cac-18f0-4044-856c-cc50daf9ac26.webp'],
   },
   robots: {
     index: true,
@@ -63,6 +65,7 @@ export default function RootLayout({
             <LayoutWrapper>
               {children}
             </LayoutWrapper>
+            <Toaster position="top-right" />
           </CartProvider>
         </AuthProvider>
       </body>

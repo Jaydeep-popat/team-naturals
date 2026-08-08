@@ -126,7 +126,7 @@ function ForgotPasswordForm() {
         <img src={storyImage} alt="" className="h-full w-full object-cover" />
         <div className="absolute inset-0 bg-forest/50" />
         <div className="absolute top-10 left-10 z-30">
-          <img src="/full_logo.png" alt="Team Naturals" className="w-48 h-auto object-contain drop-shadow-md" />
+          <img src="/full_logo.webp" alt="Team Naturals" className="w-48 h-auto object-contain drop-shadow-md" />
         </div>
         <div className="absolute inset-0 flex flex-col justify-end p-12 text-cream">
           <h2 className="max-w-sm font-display text-4xl font-semibold leading-[1.1]">
