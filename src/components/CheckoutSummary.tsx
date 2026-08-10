@@ -105,7 +105,7 @@ export function CheckoutSummary({ codFee = 0 }: { codFee?: number }) {
                 <XIcon size={14} />
               </button>
             </dt>
-            <dd className="font-medium">-₹{promoDiscountAmount}</dd>
+            <dd className="font-medium">{promoDiscountAmount > 0 ? `-₹${promoDiscountAmount}` : 'Not eligible'}</dd>
           </div>
         )}
 

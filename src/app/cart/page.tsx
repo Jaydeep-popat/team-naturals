@@ -184,6 +184,9 @@ export default function CartPage() {
                 <div className="flex items-center gap-2">
                   <TagIcon size={15} className="text-forest" />
                   <span className="text-sm font-medium text-forest">{promoCode}</span>
+                  {promoDiscountAmount === 0 && (
+                    <span className="ml-1 text-[10px] font-bold uppercase text-terracotta bg-white px-2 py-0.5 rounded-full border border-terracotta/20">Not eligible</span>
+                  )}
                 </div>
                 <button
                   type="button"
@@ -236,26 +239,31 @@ export default function CartPage() {
                   <SparklesIcon size={14} className="text-gold" /> Available Offers
                 </h3>
                 <div className="space-y-2">
-                  {availableDiscounts.length > 0 ? availableDiscounts.slice(0, 3).map((offer) => (
-                    <button
-                      key={offer.discountId || offer.code}
-                      onClick={async () => {
-                        setIsApplyingPromo(true);
-                        await applyPromo(offer.code);
-                        setIsApplyingPromo(false);
-                      }}
-                      disabled={isApplyingPromo}
-                      className="w-full text-left flex items-center justify-between rounded-xl border border-forest/5 bg-white p-3 hover:border-gold/30 hover:bg-gold/5 transition-colors disabled:opacity-50"
-                    >
-                      <div>
-                        <span className="block font-medium text-forest text-sm">{offer.code}</span>
-                        <span className="block text-[11px] text-muted mt-0.5">
-                          {offer.type === 'percent' ? `${offer.value}% off` : `₹${offer.value} off`}
-                        </span>
-                      </div>
-                      <TagIcon size={14} className="text-forest/40" />
-                    </button>
-                  )) : (
+                  {availableDiscounts.filter(offer => (originalSubtotal || subtotal) >= Number(offer.minOrderAmount || 0)).length > 0 ? (
+                    availableDiscounts
+                      .filter(offer => (originalSubtotal || subtotal) >= Number(offer.minOrderAmount || 0))
+                      .slice(0, 3)
+                      .map((offer) => (
+                        <button
+                          key={offer.discountId || offer.code}
+                          onClick={async () => {
+                            setIsApplyingPromo(true);
+                            await applyPromo(offer.code);
+                            setIsApplyingPromo(false);
+                          }}
+                          disabled={isApplyingPromo}
+                          className="w-full text-left flex items-center justify-between rounded-xl border border-forest/5 bg-white p-3 hover:border-gold/30 hover:bg-gold/5 transition-colors disabled:opacity-50"
+                        >
+                          <div>
+                            <span className="block font-medium text-forest text-sm">{offer.code}</span>
+                            <span className="block text-[11px] text-muted mt-0.5">
+                              {offer.type === 'percent' ? `${offer.value}% off` : `₹${offer.value} off`}
+                            </span>
+                          </div>
+                          <TagIcon size={14} className="text-forest/40" />
+                        </button>
+                      ))
+                  ) : (
                     <div className="rounded-xl border border-dashed border-forest/10 bg-white px-3 py-4 text-sm text-muted">
                       No active offers right now.
                     </div>

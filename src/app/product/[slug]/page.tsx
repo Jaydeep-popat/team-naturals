@@ -45,7 +45,7 @@ export default function ProductDetailPage() {
         .then(res => {
           setProduct(res.data.product);
           // Fetch related products
-          productsApi.list({ limit: '6' })
+          productsApi.list({ limit: '6', categoryId: res.data.product.categoryId })
             .then(relRes => {
               const filtered = relRes.data.products
                 .filter((p: any) => p.productId !== res.data.product.productId)
@@ -119,7 +119,7 @@ export default function ProductDetailPage() {
       return;
     }
     addToCart(product, qty);
-    router.push('/checkout');
+    router.push('/checkout/address');
   };
 
   const handleAddToCart = () => {
@@ -260,17 +260,18 @@ export default function ProductDetailPage() {
           <div className="mt-5 flex items-baseline gap-3">
             {(() => {
               const activeDiscount = (product as any).activeDiscount;
-              const originalPrice = product.price;
+              const originalPrice = Number(product.price || 0);
+              const compareAtPrice = product.compareAtPrice ? Number(product.compareAtPrice) : null;
               
               let finalPrice = originalPrice;
               let discountLabel = '';
               
               if (activeDiscount) {
                 if (activeDiscount.type === 'percent') {
-                  finalPrice = originalPrice - (originalPrice * activeDiscount.value / 100);
+                  finalPrice = originalPrice - (originalPrice * Number(activeDiscount.value) / 100);
                   discountLabel = `${activeDiscount.value}% off`;
                 } else if (activeDiscount.type === 'flat') {
-                  finalPrice = Math.max(0, originalPrice - activeDiscount.value);
+                  finalPrice = Math.max(0, originalPrice - Number(activeDiscount.value));
                   discountLabel = `₹${activeDiscount.value} off`;
                 }
               }
@@ -278,11 +279,11 @@ export default function ProductDetailPage() {
               return (
                 <>
                   <span className="font-display text-3xl text-forest">₹{finalPrice.toFixed(2)}</span>
-                  {(activeDiscount || (product.compareAtPrice && product.compareAtPrice > originalPrice)) && (
+                  {(activeDiscount || (compareAtPrice && compareAtPrice > originalPrice)) && (
                     <>
-                      <span className="text-lg text-muted line-through">₹{product.compareAtPrice || originalPrice}</span>
+                      <span className="text-lg text-muted line-through">₹{compareAtPrice || originalPrice}</span>
                       <span className="text-lg font-semibold text-[#388E3C]">
-                        {activeDiscount ? discountLabel : `${Math.round((((product.compareAtPrice || originalPrice) - originalPrice) / (product.compareAtPrice || originalPrice)) * 100)}% off`}
+                        {activeDiscount ? discountLabel : `${Math.round((((compareAtPrice || originalPrice) - originalPrice) / (compareAtPrice || originalPrice)) * 100)}% off`}
                       </span>
                     </>
                   )}

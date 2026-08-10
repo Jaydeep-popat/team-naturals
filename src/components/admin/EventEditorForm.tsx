@@ -3,7 +3,7 @@
 import React, { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Image as ImageIcon, Loader2, PaintBucket, Percent, Save, Send, Type } from 'lucide-react';
+import { ArrowLeft, Image as ImageIcon, Loader2, PaintBucket, Percent, Save, Send, Type, Maximize2, Monitor, Smartphone, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { EventBanner, EventBannerModel } from '@/src/components/EventBanner';
 import { events, products as productsApi, categories as categoriesApi } from '@/src/lib/api';
@@ -23,7 +23,7 @@ type EventFormState = {
   startDate: string;
   endDate: string;
   priority: number;
-  bannerType: 'image' | 'custom' | 'gradient';
+  bannerType: 'image' | 'custom' | 'gradient' | 'pattern';
   bannerImage: string;
   bannerMobileImage: string;
   bannerOverlay: boolean;
@@ -124,6 +124,8 @@ export function EventEditorForm({ initialEvent }: { initialEvent?: any }) {
   const [form, setForm] = useState<EventFormState>(() => buildInitialForm(initialEvent));
   const [activeTab, setActiveTab] = useState<'info' | 'design' | 'content' | 'rules'>('info');
   const [savingAction, setSavingAction] = useState<string | null>(null);
+  const [isFullscreenPreview, setIsFullscreenPreview] = useState(false);
+  const [previewDevice, setPreviewDevice] = useState<'desktop' | 'mobile'>('desktop');
   const isEditing = Boolean(initialEvent?.eventId);
 
   const inputClass = 'w-full rounded-xl border border-forest/20 bg-white px-3.5 py-2.5 text-sm text-forest placeholder:text-forest/40 focus:outline-none focus:ring-1 focus:ring-forest';
@@ -303,6 +305,7 @@ export function EventEditorForm({ initialEvent }: { initialEvent?: any }) {
                     <option value="image">Image</option>
                     <option value="custom">Custom Color</option>
                     <option value="gradient">Gradient</option>
+                    <option value="pattern">Pattern Scatter</option>
                   </select>
                 </div>
 
@@ -337,7 +340,45 @@ export function EventEditorForm({ initialEvent }: { initialEvent?: any }) {
                           }}
                         />
                       </div>
-                      <input value={form.gradientColors} onChange={(e) => setForm({ ...form, gradientColors: e.target.value })} className={inputClass} placeholder="#f5efe6,#dbe8d2,#1f3d2b" />
+                      <div className="flex flex-wrap gap-2">
+                        {form.gradientColors.split(',').map((color, idx) => (
+                          <div key={idx} className="flex items-center gap-1 bg-white p-1 rounded-lg border border-forest/10 shadow-sm">
+                            <input 
+                              type="color" 
+                              value={color.trim() || '#ffffff'} 
+                              onChange={(e) => {
+                                const colors = form.gradientColors.split(',');
+                                colors[idx] = e.target.value;
+                                setForm({ ...form, gradientColors: colors.join(',') });
+                              }}
+                              className="h-8 w-10 cursor-pointer rounded border-none p-0" 
+                            />
+                            <button 
+                              type="button" 
+                              onClick={() => {
+                                const colors = form.gradientColors.split(',');
+                                colors.splice(idx, 1);
+                                setForm({ ...form, gradientColors: colors.join(',') });
+                              }}
+                              className="text-forest/40 hover:text-terracotta px-1 disabled:opacity-30"
+                              disabled={form.gradientColors.split(',').length <= 2}
+                            >
+                              &times;
+                            </button>
+                          </div>
+                        ))}
+                        <button 
+                          type="button" 
+                          onClick={() => {
+                            const colors = form.gradientColors.split(',');
+                            colors.push('#ffffff');
+                            setForm({ ...form, gradientColors: colors.join(',') });
+                          }}
+                          className="px-3 py-1.5 text-xs font-semibold bg-forest/5 hover:bg-forest/10 rounded-lg text-forest transition-colors"
+                        >
+                          + Add Color
+                        </button>
+                      </div>
                     </div>
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div>
@@ -351,6 +392,27 @@ export function EventEditorForm({ initialEvent }: { initialEvent?: any }) {
                         <label className={labelClass}>Direction</label>
                         <input value={form.gradientDirection} onChange={(e) => setForm({ ...form, gradientDirection: e.target.value })} className={inputClass} placeholder="to right" />
                       </div>
+                    </div>
+                  </div>
+                )}
+
+                {form.bannerType === 'pattern' && (
+                  <div className="space-y-4 rounded-2xl border border-forest/8 bg-cream-soft/50 p-4">
+                    <ColorField label="Base Background Color" value={form.backgroundColor} onChange={(value) => setForm({ ...form, backgroundColor: value })} inputClass={inputClass} labelClass={labelClass} />
+                    <div>
+                      <label className={labelClass}>Pattern Theme</label>
+                      <select value={form.gradientType} onChange={(e) => setForm({ ...form, gradientType: e.target.value })} className={inputClass}>
+                        <option value="dots">Polka Dots</option>
+                        <option value="independence">Independence Day</option>
+                        <option value="trees">Nature / Trees</option>
+                        <option value="diwali">Festive / Diwali</option>
+                        <option value="stars">Stars Scatter</option>
+                        <option value="waves">Ocean Waves</option>
+                        <option value="zigzag">Zigzag</option>
+                        <option value="hexagons">Honeycomb</option>
+                        <option value="confetti">Party Confetti</option>
+                        <option value="stripes">Diagonal Stripes</option>
+                      </select>
                     </div>
                   </div>
                 )}
@@ -548,12 +610,64 @@ export function EventEditorForm({ initialEvent }: { initialEvent?: any }) {
           <div className="rounded-2xl border border-forest/10 bg-[#FDFBF9] p-3 sm:p-4">
             <div className="mb-3 flex items-center justify-between gap-3">
               <h2 className="text-xs font-bold uppercase tracking-[0.18em] text-forest/50">Live Preview</h2>
-              <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-medium text-forest/60">Customer banner</span>
+              <button
+                type="button"
+                onClick={() => setIsFullscreenPreview(true)}
+                className="rounded-full bg-white px-2.5 py-1 text-[11px] font-medium text-forest/80 shadow-sm hover:bg-forest/5 transition-colors flex items-center gap-1.5"
+              >
+                <Maximize2 size={12} /> Full Screen
+              </button>
             </div>
-            <EventBanner event={previewEvent} className="shadow-soft" />
+            <div 
+              className="cursor-pointer transition-transform hover:scale-[1.01] active:scale-[0.99]"
+              onClick={() => setIsFullscreenPreview(true)}
+            >
+              <EventBanner event={previewEvent} className="shadow-soft pointer-events-none" />
+            </div>
           </div>
         </aside>
       </div>
+
+      {isFullscreenPreview && (
+        <div className="fixed inset-0 z-[100] flex flex-col bg-ink/95 backdrop-blur-sm">
+          <div className="flex items-center justify-between p-4 sm:px-8 border-b border-white/10">
+            <h3 className="text-cream font-medium">Live Preview ({previewDevice === 'mobile' ? 'Mobile' : 'Desktop'})</h3>
+            <div className="flex items-center gap-4">
+              <div className="flex rounded-lg bg-white/10 p-1">
+                <button 
+                  type="button"
+                  onClick={() => setPreviewDevice('desktop')}
+                  className={`rounded-md p-1.5 transition-colors ${previewDevice === 'desktop' ? 'bg-white text-ink shadow-sm' : 'text-cream/50 hover:text-cream'}`}
+                  title="Desktop View"
+                >
+                  <Monitor size={16} />
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => setPreviewDevice('mobile')}
+                  className={`rounded-md p-1.5 transition-colors ${previewDevice === 'mobile' ? 'bg-white text-ink shadow-sm' : 'text-cream/50 hover:text-cream'}`}
+                  title="Mobile View"
+                >
+                  <Smartphone size={16} />
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsFullscreenPreview(false)}
+                className="rounded-lg p-2 text-cream/50 hover:bg-white/10 hover:text-cream transition-colors"
+                title="Close"
+              >
+                <X size={20} />
+              </button>
+            </div>
+          </div>
+          <div className="flex-1 overflow-auto flex justify-center items-start p-4 sm:p-8">
+            <div className={`transition-all duration-300 w-full ${previewDevice === 'mobile' ? 'max-w-[375px]' : 'max-w-[1400px]'}`}>
+               <EventBanner event={previewEvent} className="shadow-2xl" />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

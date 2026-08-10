@@ -103,10 +103,11 @@ export default function HomePage() {
         </Reveal>
 
         <motion.ul
+          key={loading ? 'loading' : 'loaded'}
           variants={staggerContainer}
           initial="hidden"
           whileInView="visible"
-          viewport={{ once: true, margin: '-60px' }}
+          viewport={{ once: true, margin: '0px' }}
           className="mt-10 flex items-start justify-center gap-6 sm:gap-10 lg:gap-16"
         >
           {loading ? (
@@ -297,31 +298,52 @@ function BestSellersCarousel({
   const trackRef = React.useRef<HTMLDivElement>(null);
   const [canPrev, setCanPrev] = React.useState(false);
   const [canNext, setCanNext] = React.useState(true);
+  const [activeIdx, setActiveIdx] = React.useState(0);
 
-  function updateButtons() {
+  function updateState() {
     const el = trackRef.current;
     if (!el) return;
     setCanPrev(el.scrollLeft > 8);
     setCanNext(el.scrollLeft < el.scrollWidth - el.clientWidth - 8);
+    // Derive active card index from scroll position
+    const cardEls = el.querySelectorAll('[data-card]');
+    if (cardEls.length === 0) return;
+    let closestIdx = 0;
+    let closestDist = Infinity;
+    cardEls.forEach((card, i) => {
+      const dist = Math.abs((card as HTMLElement).getBoundingClientRect().left - el.getBoundingClientRect().left);
+      if (dist < closestDist) { closestDist = dist; closestIdx = i; }
+    });
+    setActiveIdx(closestIdx);
   }
 
   function scroll(dir: 'prev' | 'next') {
     const el = trackRef.current;
     if (!el) return;
-    const cardW = el.querySelector('div')?.clientWidth ?? 300;
-    el.scrollBy({ left: dir === 'next' ? cardW + 16 : -(cardW + 16), behavior: 'smooth' });
+    const firstCard = el.querySelector('[data-card]') as HTMLElement | null;
+    const cardW = firstCard ? firstCard.clientWidth + 12 : 300;
+    el.scrollBy({ left: dir === 'next' ? cardW : -cardW, behavior: 'smooth' });
   }
+
+  function scrollToCard(i: number) {
+    const el = trackRef.current;
+    if (!el) return;
+    const cards = el.querySelectorAll('[data-card]');
+    (cards[i] as HTMLElement)?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
+  }
+
+  const cardCount = loading ? 6 : bestSellers.length;
 
   return (
     <div className="relative mt-8">
-      {/* Prev arrow */}
+      {/* Prev arrow — hidden on mobile, visible on sm+ */}
       <motion.button
         type="button"
         aria-label="Previous products"
         onClick={() => scroll('prev')}
         animate={{ opacity: canPrev ? 1 : 0, scale: canPrev ? 1 : 0.8 }}
         transition={{ duration: 0.2 }}
-        className="absolute -left-2 top-1/2 z-10 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-forest/12 bg-white text-forest shadow-lift transition-colors hover:bg-forest hover:text-cream sm:-left-5 sm:h-11 sm:w-11 lg:-left-6"
+        className="absolute -left-2 top-[45%] z-10 hidden sm:flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-forest/12 bg-white text-forest shadow-lift transition-colors hover:bg-forest hover:text-cream sm:-left-5 sm:h-11 sm:w-11 lg:-left-6"
         style={{ pointerEvents: canPrev ? 'auto' : 'none' }}
       >
         <ChevronLeftIcon className="h-4 w-4 sm:h-5 sm:w-5" strokeWidth={1.8} />
@@ -334,23 +356,25 @@ function BestSellersCarousel({
         onClick={() => scroll('next')}
         animate={{ opacity: canNext ? 1 : 0, scale: canNext ? 1 : 0.8 }}
         transition={{ duration: 0.2 }}
-        className="absolute -right-2 top-1/2 z-10 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-forest/12 bg-white text-forest shadow-lift transition-colors hover:bg-forest hover:text-cream sm:-right-5 sm:h-11 sm:w-11 lg:-right-6"
+        className="absolute -right-2 top-[45%] z-10 hidden sm:flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-forest/12 bg-white text-forest shadow-lift transition-colors hover:bg-forest hover:text-cream sm:-right-5 sm:h-11 sm:w-11 lg:-right-6"
         style={{ pointerEvents: canNext ? 'auto' : 'none' }}
       >
         <ChevronRightIcon className="h-4 w-4 sm:h-5 sm:w-5" strokeWidth={1.8} />
       </motion.button>
 
-      {/* Scrollable track */}
+      {/* Scrollable track — 80vw cards on mobile so next card peeks through */}
       <div
         ref={trackRef}
-        onScroll={updateButtons}
-        className="flex snap-x snap-mandatory gap-4 overflow-x-auto px-5 pb-4 scrollbar-none lg:px-10"
+        onScroll={updateState}
+        className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-4 scrollbar-none"
+        style={{ paddingLeft: 'max(20px, calc((100vw - min(1280px, 100vw)) / 2 + 20px))', paddingRight: 20, WebkitOverflowScrolling: 'touch' } as React.CSSProperties}
       >
         {loading
           ? Array.from({ length: 6 }).map((_, i) => (
               <div
                 key={`skel-${i}`}
-                className="w-[220px] flex-none snap-start sm:w-[260px] lg:w-[calc((100%-48px)/4)]"
+                data-card=""
+                className="w-[80vw] flex-none snap-start sm:w-[260px] lg:w-[calc((100%-48px)/4)]"
               >
                 <ProductCardSkeleton />
               </div>
@@ -366,20 +390,40 @@ function BestSellersCarousel({
               return (
               <motion.div
                 key={productId}
+                data-card=""
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: i * 0.07, ease: [0.22, 1, 0.36, 1] }}
-                className="w-[220px] flex-none snap-start sm:w-[260px] lg:w-[calc((100%-48px)/4)]"
+                className="w-[80vw] flex-none snap-start sm:w-[260px] lg:w-[calc((100%-48px)/4)]"
               >
                 <ProductCard product={p} />
               </motion.div>
             )})}
+
+        {/* Last card scroll-margin spacer so final card snaps fully */}
+        <div className="w-[1px] flex-none" aria-hidden="true" />
       </div>
 
-      {/* Fade edge hints */}
-      <div className="pointer-events-none absolute inset-y-0 left-0 w-10 bg-gradient-to-r from-white to-transparent" />
-      <div className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-white to-transparent" />
+      {/* Row-level position dots (mobile only) */}
+      {cardCount > 1 && (
+        <div className="mt-3 flex justify-center gap-1.5 sm:hidden">
+          {Array.from({ length: cardCount }).map((_, i) => (
+            <button
+              key={i}
+              onClick={() => scrollToCard(i)}
+              aria-label={`Go to product ${i + 1}`}
+              className={`h-1.5 rounded-full transition-all duration-300 ${
+                i === activeIdx ? 'w-5 bg-forest' : 'w-1.5 bg-forest/20'
+              }`}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Fade edge hints on desktop */}
+      <div className="pointer-events-none absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-white to-transparent hidden sm:block" />
+      <div className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-white to-transparent hidden sm:block" />
     </div>
   );
 }
@@ -413,7 +457,7 @@ function Hero() {
           variants={staggerContainer}
           initial="hidden"
           animate="visible"
-          className="order-2 lg:order-1 relative"
+          className="order-1 lg:order-1 relative"
         >
           {/* Decorative organic shape behind text */}
           <div className="absolute -left-[10%] -top-[20%] -z-10 h-[140%] w-[120%] rounded-full bg-cream blur-[80px]" />
@@ -490,7 +534,7 @@ function Hero() {
           initial={{ opacity: 0, scale: 0.94 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.9, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
-          className="relative order-1 mx-auto w-full max-w-[360px] lg:order-2"
+          className="relative order-2 mx-auto w-full max-w-[360px] lg:order-2"
         >
           {/* Main large image (Arch shape) */}
           <div className="relative ml-auto w-[85%] overflow-hidden rounded-t-[140px] rounded-b-[40px] border-[6px] border-white shadow-xl">

@@ -5,6 +5,7 @@ import { Search, Bell, Menu, LogOut, ChevronDown, User } from 'lucide-react';
 import { useAuth } from '@/src/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { GlobalSearch } from './GlobalSearch';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export function AdminTopbar({ onMenuClick }: { onMenuClick?: () => void }) {
@@ -24,13 +25,8 @@ export function AdminTopbar({ onMenuClick }: { onMenuClick?: () => void }) {
           <Menu size={24} />
         </button>
         
-        <div className="hidden sm:flex relative w-full max-w-md group">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-[18px] w-[18px] text-forest/40 group-focus-within:text-forest transition-colors" />
-          <input
-            type="text"
-            placeholder="Search orders, customers, or products..."
-            className="w-full pl-11 pr-4 py-2.5 bg-[#FDFBF9] border border-forest/10 rounded-2xl text-[15px] text-forest placeholder:text-forest/40 focus:outline-none focus:ring-2 focus:ring-forest/20 focus:bg-white transition-all shadow-sm"
-          />
+        <div className="hidden sm:flex flex-1 max-w-md">
+          <GlobalSearch />
         </div>
       </div>
 
@@ -76,7 +72,7 @@ export function AdminTopbar({ onMenuClick }: { onMenuClick?: () => void }) {
                   </div>
                   
                   <Link 
-                    href="/account"
+                    href="/admin/profile"
                     onClick={() => setIsProfileOpen(false)}
                     className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-forest hover:bg-[#FDFBF9] transition-colors"
                   >

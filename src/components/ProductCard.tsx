@@ -11,6 +11,9 @@ import { useAuth } from '../contexts/AuthContext';
 import { StarRating } from './StarRating';
 import { AuthModal } from './AuthModal';
 
+// True hover guard: returns true only on pointer-fine (mouse) devices
+const canHover = typeof window !== 'undefined' && window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+
 
 export function ProductCard({ product }: { product: Product }) {
   const { addToCart, wishlist, toggleWishlist } = useCart();
@@ -45,6 +48,8 @@ export function ProductCard({ product }: { product: Product }) {
   const activeImage = images[activeImageIndex] || primaryImage;
 
   const startHoverSwap = () => {
+    // Only run on true pointer-capable (mouse) devices
+    if (!canHover) return;
     if (hoverTimerRef.current) {
       window.clearTimeout(hoverTimerRef.current);
     }
@@ -62,6 +67,7 @@ export function ProductCard({ product }: { product: Product }) {
   };
 
   const clearHoverSwap = () => {
+    if (!canHover) return;
     if (hoverTimerRef.current) {
       window.clearTimeout(hoverTimerRef.current);
       hoverTimerRef.current = null;
@@ -92,11 +98,10 @@ export function ProductCard({ product }: { product: Product }) {
       <motion.article
         onMouseEnter={startHoverSwap}
         onMouseLeave={clearHoverSwap}
-        onFocus={startHoverSwap}
-        onBlur={clearHoverSwap}
-        whileHover={{ y: -8 }}
+        // Do NOT use onFocus/onBlur for hover swap — they fire on touch tap
+        whileHover={canHover ? { y: -8 } : {}}
         transition={{ type: 'spring', stiffness: 280, damping: 22 }}
-        className="group relative flex flex-col overflow-hidden rounded-[28px] border border-forest/8 bg-white shadow-soft transition-shadow duration-300 hover:shadow-lift"
+        className="group relative flex flex-col overflow-hidden rounded-[28px] border border-forest/8 bg-white shadow-soft transition-shadow duration-300 hover:shadow-lift h-full"
     >
       {/* ── Image area ── */}
       <Link
@@ -116,7 +121,8 @@ export function ProductCard({ product }: { product: Product }) {
             exit={hasMultipleImages ? { opacity: 0, x: -28 } : { opacity: 0, scale: 1.01, x: 0 }}
             transition={{ duration: hasMultipleImages ? 0.38 : 0.55, ease: 'easeOut' }}
             className={`absolute inset-0 h-full w-full object-cover object-[58%_42%] transition-transform duration-700 ease-out ${
-              hasMultipleImages ? 'group-hover:scale-115' : 'group-hover:scale-[1.14]'
+              // Only scale on hover for true pointer devices
+              canHover ? (hasMultipleImages ? 'group-hover:scale-115' : 'group-hover:scale-[1.14]') : ''
             }`}
           />
         </AnimatePresence>
@@ -219,15 +225,24 @@ export function ProductCard({ product }: { product: Product }) {
         </p>
 
         {/* Rating row */}
-        <div className="mt-2.5 flex items-center gap-2">
-          <StarRating rating={product.rating || 5} size={12} />
-          <span className="text-[11px] font-medium text-forest">{product.rating || 5}</span>
-          <span className="text-[11px] text-muted/70">({product.reviewCount || 0})</span>
-        </div>
+        {(() => {
+          const rating = (product as any).avgRating ?? product.rating ?? null;
+          const count = (product as any).reviewCount ?? product.reviewCount ?? 0;
+          if (!rating && count === 0) return (
+            <p className="mt-2.5 text-[11px] text-muted/60 italic">No reviews yet</p>
+          );
+          return (
+            <div className="mt-2.5 flex items-center gap-2">
+              <StarRating rating={rating ?? 5} size={12} />
+              <span className="text-[11px] font-semibold text-forest">{(rating ?? 5).toFixed(1)}</span>
+              <span className="text-[11px] text-muted/60">({count})</span>
+            </div>
+          );
+        })()}
 
         {/* Price & Stock */}
         <div className="mt-4 flex flex-col gap-1">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
             {(() => {
               const activeDiscount = (product as any).activeDiscount;
               const originalPrice = Number(product.price || 0);
@@ -252,7 +267,7 @@ export function ProductCard({ product }: { product: Product }) {
                   {(activeDiscount || (compareAtPrice && compareAtPrice > originalPrice)) && (
                     <>
                       <span className="text-[13px] text-muted line-through">₹{compareAtPrice || originalPrice}</span>
-                      <span className="text-[12px] font-semibold text-[#388E3C]">
+                      <span className="whitespace-nowrap text-[12px] font-semibold text-[#388E3C]">
                         {activeDiscount ? discountLabel : `${Math.round((((compareAtPrice || originalPrice) - originalPrice) / (compareAtPrice || originalPrice)) * 100)}% off`}
                       </span>
                     </>
@@ -282,19 +297,21 @@ export function ProductCard({ product }: { product: Product }) {
         {/* Add to Cart & Quantity */}
         <div className="mt-3 flex flex-row items-center gap-2">
           {product.stockQty !== 0 && user?.role !== 'admin' && !added && (
-            <div className="flex h-9 items-center justify-between rounded-full border border-forest/15 bg-white px-2 py-1 min-w-[64px] shadow-sm">
+            <div className="flex h-9 shrink-0 items-center justify-between rounded-full border border-forest/15 bg-white px-1 py-1 min-w-[72px] shadow-sm">
               <button 
                 type="button" 
                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); setQuantity(q => Math.max(1, q - 1)); }}
-                className="text-forest/70 hover:text-forest transition-colors focus:outline-none px-1"
+                className="min-w-[32px] min-h-[32px] flex items-center justify-center text-forest/70 hover:text-forest transition-colors focus:outline-none rounded-full"
+                aria-label="Decrease quantity"
               >
-                -
+                −
               </button>
               <span className="text-[12px] font-semibold text-forest select-none">{quantity}</span>
               <button 
                 type="button" 
                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); setQuantity(q => Math.min(product.stockQty || 99, q + 1)); }}
-                className="text-forest/70 hover:text-forest transition-colors focus:outline-none px-1"
+                className="min-w-[32px] min-h-[32px] flex items-center justify-center text-forest/70 hover:text-forest transition-colors focus:outline-none rounded-full"
+                aria-label="Increase quantity"
               >
                 +
               </button>
@@ -348,7 +365,7 @@ export function ProductCard({ product }: { product: Product }) {
                 className="flex w-full items-center justify-center gap-1.5 rounded-full border border-forest/15 bg-cream-soft px-2 py-2.5 text-[12px] font-medium text-forest transition-all duration-200 hover:border-forest hover:bg-forest hover:text-cream group-hover:border-forest group-hover:bg-forest group-hover:text-cream"
               >
                 <ShoppingBagIcon size={14} strokeWidth={1.8} className="shrink-0" />
-                <span className="whitespace-nowrap truncate">Add to Cart</span>
+                <span className="whitespace-nowrap">Add<span className="hidden sm:inline"> to Cart</span></span>
               </motion.button>
               )}
             </AnimatePresence>

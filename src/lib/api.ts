@@ -16,6 +16,17 @@ interface FetchOptions extends RequestInit {
    */
   silent401?: boolean;
 }
+let isRefreshing = false;
+let refreshSubscribers: ((error: Error | null) => void)[] = [];
+
+function onRefreshed(error: Error | null) {
+  refreshSubscribers.forEach((callback) => callback(error));
+  refreshSubscribers = [];
+}
+
+function addRefreshSubscriber(callback: (error: Error | null) => void) {
+  refreshSubscribers.push(callback);
+}
 
 async function apiFetch<T = unknown>(
   path: string,
@@ -30,28 +41,75 @@ async function apiFetch<T = unknown>(
     ...(init.headers ?? {}),
   };
 
-  const res = await fetch(`${BASE_URL}${path}`, {
+  let res = await fetch(`${BASE_URL}${path}`, {
     ...init,
     credentials: 'include',
     headers,
   });
 
   if (!res.ok) {
-    // On 401, clear client auth state and bounce to login unless suppressed
     if (res.status === 401 && !silent401 && typeof window !== 'undefined') {
-      const redirect = encodeURIComponent(window.location.pathname + window.location.search);
-      window.location.href = `/login?redirect=${redirect}`;
-      // Return a never-resolving promise to stop further execution
-      return new Promise(() => {});
+      if (path === '/api/auth/refresh-token') {
+        // Refresh token itself failed, redirect to login
+        const redirect = encodeURIComponent(window.location.pathname + window.location.search);
+        window.location.href = `/login?redirect=${redirect}`;
+        return new Promise(() => {});
+      }
+
+      if (!isRefreshing) {
+        isRefreshing = true;
+        try {
+          await auth.refreshToken();
+          isRefreshing = false;
+          onRefreshed(null);
+          
+          // Retry original request
+          res = await fetch(`${BASE_URL}${path}`, {
+            ...init,
+            credentials: 'include',
+            headers,
+          });
+        } catch (error: any) {
+          isRefreshing = false;
+          onRefreshed(error);
+          const redirect = encodeURIComponent(window.location.pathname + window.location.search);
+          window.location.href = `/login?redirect=${redirect}`;
+          return new Promise(() => {});
+        }
+      } else {
+        // Wait for ongoing refresh
+        return new Promise<T>((resolve, reject) => {
+          addRefreshSubscriber(async (error) => {
+            if (error) return reject(error);
+            try {
+              const retryRes = await fetch(`${BASE_URL}${path}`, {
+                ...init,
+                credentials: 'include',
+                headers,
+              });
+              if (!retryRes.ok) {
+                let errBody = {};
+                try { errBody = await retryRes.json(); } catch {}
+                return reject(new ApiError(retryRes.status, (errBody as any)?.message ?? retryRes.statusText));
+              }
+              resolve(await retryRes.json());
+            } catch (err) {
+              reject(err);
+            }
+          });
+        });
+      }
     }
 
-    let errorBody: { message?: string } = {};
-    try {
-      errorBody = await res.json();
-    } catch {
-      // ignore parse error
+    if (!res.ok) {
+      let errorBody: { message?: string } = {};
+      try {
+        errorBody = await res.json();
+      } catch {
+        // ignore parse error
+      }
+      throw new ApiError(res.status, errorBody?.message ?? res.statusText);
     }
-    throw new ApiError(res.status, errorBody?.message ?? res.statusText);
   }
 
   return res.json() as Promise<T>;

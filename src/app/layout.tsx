@@ -8,6 +8,7 @@ import { LayoutWrapper } from '@/src/components/LayoutWrapper';
 
 const Preloader = dynamic(() => import('@/src/components/Preloader').then(mod => mod.Preloader));
 const Toaster = dynamic(() => import('react-hot-toast').then(mod => mod.Toaster));
+const BackToTop = dynamic(() => import('@/src/components/BackToTop').then(mod => mod.BackToTop));
 export const metadata: Metadata = {
   title: {
     default: 'Team Naturals — Handmade Natural Skincare',
@@ -66,6 +67,7 @@ export default function RootLayout({
               {children}
             </LayoutWrapper>
             <Toaster position="top-right" />
+            <BackToTop />
           </CartProvider>
         </AuthProvider>
       </body>

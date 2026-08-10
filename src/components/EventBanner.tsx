@@ -8,7 +8,7 @@ export type EventBannerModel = {
   eventId: number;
   name: string;
   slug: string;
-  bannerType: 'image' | 'custom' | 'gradient';
+  bannerType: 'image' | 'custom' | 'gradient' | 'pattern';
   bannerImage?: string | null;
   bannerMobileImage?: string | null;
   bannerOverlay?: boolean;
@@ -49,10 +49,27 @@ export function EventBanner({ event, className = '' }: { event: EventBannerModel
 
   const type = event.bannerType || 'image';
 
+const PATTERNS: Record<string, string> = {
+  independence: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23FF9933' fill-opacity='0.15'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3Cg fill='%23138808' fill-opacity='0.15'%3E%3Cpath d='M21 19v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0 30v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zM51 19v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0 30v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+  trees: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 5l10 15h-5v10h-10v-10h-5l10-15z' fill='%232a523a' fill-opacity='0.1' fill-rule='evenodd'/%3E%3C/svg%3E")`,
+  diwali: `url("data:image/svg+xml,%3Csvg width='50' height='50' viewBox='0 0 50 50' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M25 5c0 0-5 10-5 15s5 15 5 15 5-10 5-15-5-15-5-15z' fill='%23C9A268' fill-opacity='0.15'/%3E%3C/svg%3E")`,
+  stars: `url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M10 0l2.5 7.5h7.5l-6 4.5 2.5 7.5-6-4.5-6 4.5 2.5-7.5-6-4.5h7.5z' fill='%23ffffff' fill-opacity='0.1'/%3E%3C/svg%3E")`,
+  dots: `url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='10' cy='10' r='2' fill='%23000000' fill-opacity='0.05'/%3E%3C/svg%3E")`,
+  waves: `url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 10 Q5 0 10 10 T20 10' fill='none' stroke='%23000000' stroke-opacity='0.1' stroke-width='1'/%3E%3C/svg%3E")`,
+  zigzag: `url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 10l5-5 5 5 5-5 5 5v2l-5-5-5 5-5-5-5 5z' fill='%23000000' fill-opacity='0.1'/%3E%3C/svg%3E")`,
+  hexagons: `url("data:image/svg+xml,%3Csvg width='28' height='49' viewBox='0 0 28 49' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M14 33L0 25V8l14-8 14 8v17l-14 8zM14 17V33M0 25L14 17 28 25' fill='none' stroke='%23000000' stroke-opacity='0.1' stroke-width='1'/%3E%3C/svg%3E")`,
+  confetti: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4z' fill='%23e63946' fill-opacity='0.2'/%3E%3Ccircle cx='10' cy='10' r='4' fill='%23457b9d' fill-opacity='0.2'/%3E%3Cpath d='M50 40l5 8h-10z' fill='%232a9d8f' fill-opacity='0.2'/%3E%3C/g%3E%3C/svg%3E")`,
+  stripes: `url("data:image/svg+xml,%3Csvg width='10' height='10' viewBox='0 0 10 10' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M-1 11L11 -1M-1 1L1 -1M9 11L11 9' stroke='%23000000' stroke-opacity='0.1' stroke-width='1'/%3E%3C/svg%3E")`
+};
+
   // Base styles for custom & gradient
   let bgStyle: React.CSSProperties = {};
   if (type === 'custom') {
     bgStyle.backgroundColor = event.backgroundColor || '#f5efe6'; // Cream default
+  } else if (type === 'pattern') {
+    bgStyle.backgroundColor = event.backgroundColor || '#f5efe6';
+    const patternType = event.gradientType || 'dots';
+    bgStyle.backgroundImage = PATTERNS[patternType] || PATTERNS.dots;
   } else if (type === 'image' && !event.bannerImage) {
     bgStyle.backgroundColor = event.backgroundColor || '#f5efe6';
   } else if (type === 'gradient') {

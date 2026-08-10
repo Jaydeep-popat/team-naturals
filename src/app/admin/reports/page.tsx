@@ -67,7 +67,7 @@ export default function AdminReportsPage() {
                const pId = String(item.productId || (item.product && item.product.productId));
                if (pId && pId !== 'undefined') {
                  if (!productSales[pId]) productSales[pId] = { revenue: 0, units: 0 };
-                 productSales[pId].revenue += Number(item.price || 0) * Number(item.quantity || 1);
+                 productSales[pId].revenue += Number(item.lineTotal || (Number(item.unitPrice || 0) * Number(item.quantity || 1)));
                  productSales[pId].units += Number(item.quantity || 1);
                }
              });

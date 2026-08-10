@@ -54,7 +54,7 @@ export default function AdminOrdersPage() {
         email: o.user?.email || 'N/A',
         date: new Date(o.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
         total: `₹${o.totalAmount || 0}`,
-        items: o.items?.length || 0,
+        items: o.items?.reduce((sum: number, item: any) => sum + (item.quantity || 1), 0) || 0,
         status: o.status
       }));
       
@@ -125,6 +125,7 @@ export default function AdminOrdersPage() {
       </div>
 
       <FilterBar
+        onSearch={(q) => handleFilterChange('search', q || undefined)}
         searchPlaceholder="Search by order # or customer name..."
         filters={[
           {
