@@ -29,6 +29,14 @@ interface AuthContextValue {
   }) => Promise<void>;
   verifyEmail: (email: string, otp: string) => Promise<void>;
   refreshUser: () => Promise<void>;
+  updateProfile: (data: {
+    firstName?: string;
+    lastName?: string;
+    username?: string;
+    phoneNo?: string | null;
+    profilePic?: string | null;
+    dateOfBirth?: string | null;
+  }) => Promise<void>;
 }
 
 // ─── Context ──────────────────────────────────────────────────────────────────
@@ -95,6 +103,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Backend verifies but still does not issue tokens; user must login after
   }, []);
 
+  const updateProfile = useCallback(async (data: {
+    firstName?: string;
+    lastName?: string;
+    username?: string;
+    phoneNo?: string | null;
+    profilePic?: string | null;
+    dateOfBirth?: string | null;
+  }) => {
+    const res = await auth.updateProfile(data);
+    setUser(res.data.user);
+  }, []);
+
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
@@ -105,8 +125,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       register,
       verifyEmail,
       refreshUser,
+      updateProfile,
     }),
-    [user, isLoading, login, logout, register, verifyEmail, refreshUser]
+    [user, isLoading, login, logout, register, verifyEmail, refreshUser, updateProfile]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

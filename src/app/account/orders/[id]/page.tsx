@@ -128,77 +128,77 @@ export default function OrderDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-forest" />
+      <div className="flex items-center justify-center py-16">
+        <Loader2 className="h-7 w-7 animate-spin text-forest" />
       </div>
     );
   }
 
   if (!order) {
-    return <div className="text-center py-20 text-forest/60">Order not found</div>;
+    return <div className="text-center py-16 text-forest/60 font-medium">Order not found</div>;
   }
 
   const trackingSteps = buildTrackingSteps(order);
 
   return (
-    <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 pb-10">
+    <div className="animate-in fade-in duration-200 space-y-6">
       
       {/* Header Row */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-forest/8">
         <div>
-          <Link href="/account/orders" className="inline-flex items-center gap-1.5 text-[13px] font-bold text-forest/70 hover:text-forest transition-colors mb-3">
-            <ChevronLeftIcon size={16} strokeWidth={2.5} /> Back to Orders
+          <Link href="/account/orders" className="inline-flex items-center gap-1 text-[12px] font-bold text-forest/70 hover:text-forest transition-colors mb-2">
+            <ChevronLeftIcon size={14} strokeWidth={2.5} /> Back to Orders
           </Link>
-          <div className="flex items-center gap-4 flex-wrap">
-            <h1 className="font-display text-2xl sm:text-3xl font-bold text-forest">#{order.orderNumber}</h1>
+          <div className="flex items-center gap-3 flex-wrap">
+            <h2 className="font-display text-xl sm:text-2xl font-bold text-forest">#{order.orderNumber}</h2>
             <StatusPill status={order.status} />
           </div>
-          <p className="text-[14px] text-muted font-medium mt-1">Placed on {formatTimestamp(order.createdAt)}</p>
+          <p className="text-[12px] text-muted font-medium mt-0.5">Placed on {formatTimestamp(order.createdAt)}</p>
         </div>
         
-        <button className="hidden sm:flex items-center gap-2 rounded-full border-2 border-forest/10 px-5 py-2.5 text-[13px] font-bold text-forest transition-colors hover:border-forest hover:bg-forest hover:text-white shrink-0">
-          <DownloadIcon size={16} strokeWidth={2} /> Download Invoice
+        <button className="hidden sm:flex items-center gap-1.5 rounded-full border border-forest/20 px-4 py-2 text-[12px] font-semibold text-forest transition-all hover:bg-forest hover:text-white shrink-0">
+          <DownloadIcon size={14} strokeWidth={2} /> Download Invoice
         </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* Left Column (Items & Timeline) */}
-        <div className="lg:col-span-2 space-y-8">
+        <div className="lg:col-span-2 space-y-5">
           
           {/* Tracking Timeline */}
-          <div className="rounded-2xl border border-forest/10 bg-white p-6 shadow-sm overflow-hidden">
-            <h2 className="font-display text-xl font-bold text-forest mb-6 flex items-center gap-2">
-              <PackageIcon size={20} className="text-forest/60" /> Tracking Details
-            </h2>
+          <div className="rounded-2xl border border-forest/10 bg-white p-4 sm:p-5 shadow-2xs">
+            <h3 className="font-display text-base font-bold text-forest mb-4 flex items-center gap-2">
+              <PackageIcon size={18} className="text-forest/60" /> Tracking Details
+            </h3>
             <OrderTrackingTimeline steps={trackingSteps} />
           </div>
 
           {/* Items List */}
-          <div className="rounded-2xl border border-forest/10 bg-white p-6 shadow-sm">
-            <h2 className="font-display text-xl font-bold text-forest mb-6">Items in this order ({order.items.length})</h2>
-            <div className="space-y-5">
+          <div className="rounded-2xl border border-forest/10 bg-white p-4 sm:p-5 shadow-2xs">
+            <h3 className="font-display text-base font-bold text-forest mb-4">Items in this order ({order.items.length})</h3>
+            <div className="space-y-4">
               {order.items.map((item, i) => (
-                <div key={item.orderItemId} className={`flex gap-5 ${i !== 0 ? 'pt-5 border-t border-forest/5' : ''}`}>
-                  <div className="h-20 w-20 shrink-0 rounded-xl bg-forest/5 flex items-center justify-center border border-forest/10 overflow-hidden">
+                <div key={item.orderItemId} className={`flex gap-4 ${i !== 0 ? 'pt-4 border-t border-forest/5' : ''}`}>
+                  <div className="h-16 w-16 shrink-0 rounded-xl bg-forest/5 flex items-center justify-center border border-forest/10 overflow-hidden">
                     {item.productImage ? (
                       <img src={item.productImage} alt={item.productName} className="h-full w-full object-cover" />
                     ) : (
-                      <PackageIcon className="text-forest/20" size={32} />
+                      <PackageIcon className="text-forest/20" size={24} />
                     )}
                   </div>
                   <div className="flex-1 min-w-0 flex flex-col justify-center">
-                    <h3 className="font-bold text-forest text-[15px] truncate">{item.productName}</h3>
-                    <p className="text-[13px] text-muted font-medium mt-0.5">SKU: {item.productSku} · Qty: {item.quantity}</p>
-                    <p className="font-display font-semibold text-forest text-[15px] mt-2">{formatMoney(item.lineTotal)}</p>
+                    <h4 className="font-bold text-forest text-[14px] truncate">{item.productName}</h4>
+                    <p className="text-[12px] text-muted font-medium mt-0.5">SKU: {item.productSku} · Qty: {item.quantity}</p>
+                    <p className="font-display font-semibold text-forest text-[14px] mt-1">{formatMoney(item.lineTotal)}</p>
                   </div>
                   {order.status === 'delivered' && (
-                    <div className="flex items-center pl-4 shrink-0">
+                    <div className="flex items-center pl-2 shrink-0">
                       <button 
                         onClick={() => setReviewingProduct({ id: item.productId || (item as any).product?.productId || item.orderItemId, name: item.productName })}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-forest/20 text-[12px] font-bold text-forest hover:bg-forest/5 transition-colors"
+                        className="flex items-center gap-1 px-2.5 py-1 rounded-lg border border-forest/20 text-[11px] font-bold text-forest hover:bg-forest/5 transition-colors"
                       >
-                        <MessageSquareIcon size={14} /> Review
+                        <MessageSquareIcon size={12} /> Review
                       </button>
                     </div>
                   )}
@@ -210,15 +210,15 @@ export default function OrderDetailPage() {
         </div>
 
         {/* Right Column (Address, Payment, Actions) */}
-        <div className="space-y-6">
+        <div className="space-y-5">
           
           {/* Shipping Address */}
-          <div className="rounded-2xl border border-forest/10 bg-[#FDFBF9] p-6 shadow-sm">
-            <h2 className="font-display text-lg font-bold text-forest mb-4 flex items-center gap-2">
-              <MapPinIcon size={18} className="text-forest/60" /> Shipping Address
-            </h2>
-            <div className="space-y-1 text-[14px] text-forest/80 font-medium">
-              <p className="font-bold text-forest text-[15px] mb-2">{order.shipping.name}</p>
+          <div className="rounded-2xl border border-forest/10 bg-[#FDFBF9] p-4 sm:p-5 shadow-2xs">
+            <h3 className="font-display text-base font-bold text-forest mb-3 flex items-center gap-2">
+              <MapPinIcon size={16} className="text-forest/60" /> Shipping Address
+            </h3>
+            <div className="space-y-0.5 text-[13px] text-forest/80 font-medium">
+              <p className="font-bold text-forest text-[14px] mb-1">{order.shipping.name}</p>
               <p>{order.shipping.line1}</p>
               {order.shipping.line2 && <p>{order.shipping.line2}</p>}
               <p>{order.shipping.city}, {order.shipping.state} {order.shipping.postalCode}</p>
@@ -226,11 +226,11 @@ export default function OrderDetailPage() {
           </div>
 
           {/* Payment Summary */}
-          <div className="rounded-2xl border border-forest/10 bg-[#FDFBF9] p-6 shadow-sm">
-            <h2 className="font-display text-lg font-bold text-forest mb-4 flex items-center gap-2">
-              <ReceiptIcon size={18} className="text-forest/60" /> Payment Summary
-            </h2>
-            <div className="space-y-3 text-[14px] font-medium text-forest/80">
+          <div className="rounded-2xl border border-forest/10 bg-[#FDFBF9] p-4 sm:p-5 shadow-2xs">
+            <h3 className="font-display text-base font-bold text-forest mb-3 flex items-center gap-2">
+              <ReceiptIcon size={16} className="text-forest/60" /> Payment Summary
+            </h3>
+            <div className="space-y-2 text-[13px] font-medium text-forest/80">
               <div className="flex justify-between">
                 <span>Subtotal</span>
                 <span>{formatMoney(order.subtotal)}</span>
@@ -245,39 +245,33 @@ export default function OrderDetailPage() {
                   <span>-{formatMoney(order.discount)}</span>
                 </div>
               )}
-              <div className="flex justify-between border-t border-forest/10 pt-3 font-display text-[18px] font-bold text-forest">
+              <div className="flex justify-between border-t border-forest/10 pt-2.5 font-display text-[16px] font-bold text-forest">
                 <span>Total</span>
                 <span>{formatMoney(order.totalAmount)}</span>
               </div>
             </div>
-            <div className="mt-4 pt-4 border-t border-forest/10">
-              <p className="text-[12px] text-muted">Paid via {order.payment?.provider === 'cod' ? 'Cash on Delivery' : 'Online Payment'}</p>
+            <div className="mt-3 pt-3 border-t border-forest/10">
+              <p className="text-[11px] text-muted">Paid via {order.payment?.provider === 'cod' ? 'Cash on Delivery' : 'Online Payment'}</p>
             </div>
           </div>
 
           {/* Actions Row Contextual */}
-          <div className="rounded-2xl border border-forest/10 bg-white p-5 shadow-sm space-y-3">
+          <div className="rounded-2xl border border-forest/10 bg-white p-4 shadow-2xs space-y-2">
             {order.status === 'shipped' && (
-              <button className="w-full flex items-center justify-center gap-2 rounded-full bg-forest px-5 py-3.5 text-[14px] font-bold text-white shadow-soft transition-colors hover:bg-forest/90">
-                Track Package <ExternalLinkIcon size={16} />
+              <button className="w-full flex items-center justify-center gap-1.5 rounded-full bg-forest px-4 py-2.5 text-[13px] font-bold text-white shadow-2xs transition-colors hover:bg-forest/90">
+                Track Package <ExternalLinkIcon size={14} />
               </button>
             )}
             
             {(order.status === 'delivered' || order.status === 'shipped') && (
-              <button className="w-full rounded-full border-2 border-forest/10 bg-white px-5 py-3 text-[14px] font-bold text-forest transition-colors hover:bg-forest/5">
+              <button className="w-full rounded-full border border-forest/15 bg-white px-4 py-2 text-[13px] font-semibold text-forest transition-colors hover:bg-forest/5">
                 {order.status === 'delivered' ? 'Return / Replace' : 'Cancel Order'}
-              </button>
-            )}
-
-            {order.status === 'delivered' && (
-              <button className="w-full rounded-full border-2 border-forest/10 bg-white px-5 py-3 text-[14px] font-bold text-forest transition-colors hover:bg-forest/5">
-                Rate & Review Items
               </button>
             )}
             
             {/* Mobile invoice download */}
-            <button className="w-full flex sm:hidden items-center justify-center gap-2 rounded-full border-2 border-forest/10 bg-white px-5 py-3 text-[14px] font-bold text-forest transition-colors hover:bg-forest/5 mt-2">
-              <DownloadIcon size={16} /> Download Invoice
+            <button className="w-full flex sm:hidden items-center justify-center gap-1.5 rounded-full border border-forest/15 bg-white px-4 py-2 text-[13px] font-semibold text-forest transition-colors hover:bg-forest/5">
+              <DownloadIcon size={14} /> Download Invoice
             </button>
           </div>
 

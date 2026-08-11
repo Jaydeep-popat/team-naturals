@@ -1,11 +1,11 @@
 'use client';
+
 import React, { useEffect, useMemo, useState } from 'react';
-import { SearchIcon, FilterIcon, XIcon } from 'lucide-react';
+import { SearchIcon, FilterIcon, XIcon, Loader2, PackageIcon, RefreshCwIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { OrderCard, type OrderItem } from '@/src/components/account/OrderCard';
 import { ReviewModal } from '@/src/components/account/ReviewModal';
-import { Loader2 } from 'lucide-react';
 import { orders as ordersApi } from '@/src/lib/api';
 
 type BackendOrder = {
@@ -17,36 +17,37 @@ type BackendOrder = {
   items: Array<{ productId: number; productName: string; productSku: string; productImage: string | null; quantity: number; hasReviewed?: boolean }>;
 };
 
+const STATUS_TABS = [
+  { id: 'all', label: 'All Orders' },
+  { id: 'pending', label: 'Pending' },
+  { id: 'confirmed', label: 'Confirmed' },
+  { id: 'shipped', label: 'Shipped' },
+  { id: 'delivered', label: 'Delivered' },
+  { id: 'cancelled', label: 'Cancelled' },
+];
+
 export default function OrdersPage() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilters, setStatusFilters] = useState<string[]>([]);
-  const [timeFilters, setTimeFilters] = useState<string[]>([]);
-  const [showMobileFilters, setShowMobileFilters] = useState(false);
+  const [activeStatus, setActiveStatus] = useState('all');
   const [orders, setOrders] = useState<BackendOrder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [reviewingProduct, setReviewingProduct] = useState<{ id: number; name: string } | null>(null);
 
+  const loadOrders = async () => {
+    setIsLoading(true);
+    try {
+      const res = await ordersApi.list({ limit: '100' });
+      setOrders((res.data?.orders || []) as BackendOrder[]);
+    } catch (error) {
+      console.error('Failed to fetch orders:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
-    let mounted = true;
-
-    const loadOrders = async () => {
-      try {
-        const res = await ordersApi.list({ limit: '100' });
-        if (!mounted) return;
-        setOrders((res.data?.orders || []) as BackendOrder[]);
-      } catch (error) {
-        console.error('Failed to fetch orders:', error);
-      } finally {
-        if (mounted) setIsLoading(false);
-      }
-    };
-
     loadOrders();
-
-    return () => {
-      mounted = false;
-    };
   }, []);
 
   const orderItems: OrderItem[] = useMemo(() => {
@@ -72,199 +73,110 @@ export default function OrdersPage() {
 
   const filteredItems = useMemo(() => {
     return orderItems.filter((item) => {
-      if (searchQuery.trim() && !item.name.toLowerCase().includes(searchQuery.toLowerCase()) && !item.orderId.toLowerCase().includes(searchQuery.toLowerCase())) {
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const matchesName = item.name.toLowerCase().includes(q);
+        const matchesId = item.orderId.toLowerCase().includes(q);
+        if (!matchesName && !matchesId) return false;
+      }
+
+      if (activeStatus !== 'all' && item.status !== activeStatus) {
         return false;
       }
-      if (statusFilters.length > 0 && !statusFilters.includes(item.status)) {
-        return false;
-      }
-      if (timeFilters.length > 0) {
-        const now = new Date();
-        const itemDate = item.dateObj;
-        const daysDiff = (now.getTime() - itemDate.getTime()) / (1000 * 3600 * 24);
-        const itemYear = itemDate.getFullYear();
 
-        let matchesTime = false;
-        if (timeFilters.includes('Last 30 days') && daysDiff <= 30 && daysDiff >= 0) matchesTime = true;
-        if (timeFilters.includes('2024') && itemYear === 2024) matchesTime = true;
-        if (timeFilters.includes('2023') && itemYear === 2023) matchesTime = true;
-        if (timeFilters.includes('Older') && itemYear < 2023) matchesTime = true;
-
-        if (!matchesTime) return false;
-      }
       return true;
     });
-  }, [searchQuery, statusFilters, timeFilters, orderItems]);
-
-  const handleStatusToggle = (status: string) => {
-    setStatusFilters(prev => prev.includes(status) ? prev.filter(s => s !== status) : [...prev, status]);
-  };
-
-  const handleTimeToggle = (time: string) => {
-    setTimeFilters(prev => prev.includes(time) ? prev.filter(t => t !== time) : [...prev, time]);
-  };
-
-  const clearFilters = () => {
-    setStatusFilters([]);
-    setTimeFilters([]);
-  };
-
-  const hasActiveFilters = statusFilters.length > 0 || timeFilters.length > 0;
-
-  const SidebarContent = () => (
-    <div className="space-y-8">
-      {hasActiveFilters && (
-        <div className="flex items-center justify-between">
-          <span className="text-[13px] font-bold text-forest">Active Filters</span>
-          <button onClick={clearFilters} className="text-[12px] text-terracotta hover:underline font-semibold">Clear All</button>
-        </div>
-      )}
-
-      <div>
-        <h3 className="font-display font-bold text-forest mb-4 text-[13px] tracking-wide uppercase">Order Status</h3>
-        <div className="space-y-3">
-          {['pending', 'confirmed', 'shipped', 'delivered', 'cancelled'].map((status) => (
-            <label key={status} className="flex items-center gap-3 cursor-pointer group">
-              <div 
-                className={`w-[18px] h-[18px] rounded flex items-center justify-center transition-colors border ${statusFilters.includes(status) ? 'bg-forest border-forest text-white' : 'border-forest/20 group-hover:border-forest/50 bg-white'}`}
-              >
-                {statusFilters.includes(status) && <svg viewBox="0 0 14 14" fill="none" className="w-3.5 h-3.5"><path d="M3 7.5L5.5 10L11 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
-              </div>
-              <span className="text-[14px] text-forest/80 font-medium select-none">
-                {status === 'shipped' ? 'Shipped' : status.charAt(0).toUpperCase() + status.slice(1)}
-              </span>
-              <input type="checkbox" className="sr-only" checked={statusFilters.includes(status)} onChange={() => handleStatusToggle(status)} />
-            </label>
-          ))}
-        </div>
-      </div>
-
-      <div className="w-full h-px bg-forest/5" />
-
-      <div>
-        <h3 className="font-display font-bold text-forest mb-4 text-[13px] tracking-wide uppercase">Order Time</h3>
-        <div className="space-y-3">
-          {['Last 30 days', '2024', '2023', 'Older'].map((time) => (
-            <label key={time} className="flex items-center gap-3 cursor-pointer group">
-              <div 
-                className={`w-[18px] h-[18px] rounded flex items-center justify-center transition-colors border ${timeFilters.includes(time) ? 'bg-forest border-forest text-white' : 'border-forest/20 group-hover:border-forest/50 bg-white'}`}
-              >
-                {timeFilters.includes(time) && <svg viewBox="0 0 14 14" fill="none" className="w-3.5 h-3.5"><path d="M3 7.5L5.5 10L11 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
-              </div>
-              <span className="text-[14px] text-forest/80 font-medium select-none">
-                {time}
-              </span>
-              <input type="checkbox" className="sr-only" checked={timeFilters.includes(time)} onChange={() => handleTimeToggle(time)} />
-            </label>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
+  }, [searchQuery, activeStatus, orderItems]);
 
   return (
-    <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start w-full animate-in fade-in duration-300">
+    <div className="space-y-5 animate-in fade-in duration-200">
       
-      {/* Desktop Sidebar */}
-      <aside className="hidden lg:block w-[240px] shrink-0 sticky top-24 bg-white rounded-2xl border border-forest/10 p-6 shadow-sm">
-        <h2 className="font-display text-2xl font-bold text-forest mb-6 border-b border-forest/5 pb-4">Filters</h2>
-        <SidebarContent />
-      </aside>
-
-      {/* Mobile Filters Overlay */}
-      <AnimatePresence>
-        {showMobileFilters && (
-          <React.Fragment key="mobile-filters">
-            <motion.div 
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-forest/30 backdrop-blur-sm z-40 lg:hidden"
-              onClick={() => setShowMobileFilters(false)}
-            />
-            <motion.div
-              initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-3xl p-6 shadow-2xl lg:hidden max-h-[85vh] overflow-y-auto"
-            >
-              <div className="flex items-center justify-between mb-6 border-b border-forest/5 pb-4">
-                <h2 className="font-display text-xl font-bold text-forest">Filters</h2>
-                <button onClick={() => setShowMobileFilters(false)} className="p-2 bg-cream rounded-full text-forest">
-                  <XIcon size={18} />
-                </button>
-              </div>
-              <SidebarContent />
-              <button 
-                onClick={() => setShowMobileFilters(false)}
-                className="w-full mt-8 bg-forest text-white font-bold py-3.5 rounded-full"
-              >
-                Apply Filters
-              </button>
-            </motion.div>
-          </React.Fragment>
-        )}
-      </AnimatePresence>
-
-      {/* Main Content */}
-      <div className="flex-1 w-full flex flex-col gap-6 min-w-0">
+      {/* Search & Quick Filter Pills */}
+      <div className="flex flex-col gap-3">
         
-        {/* Search Bar & Mobile Filter Toggle */}
-        <div className="flex items-center gap-3 w-full">
-          <div className="relative flex-1 flex items-center bg-white border border-forest/15 rounded-[16px] shadow-sm overflow-hidden focus-within:border-forest/40 transition-colors">
-            <SearchIcon size={18} className="absolute left-4 text-forest/40" />
-            <input 
-              type="text" 
-              placeholder="Search your orders..." 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-transparent py-4 pl-12 pr-4 outline-none text-forest text-[15px] font-medium placeholder:text-muted/60"
-            />
-          </div>
-          <button 
-            onClick={() => setShowMobileFilters(true)}
-            className="lg:hidden shrink-0 h-[54px] w-[54px] flex items-center justify-center bg-white border border-forest/15 rounded-[16px] text-forest shadow-sm"
-          >
-            <FilterIcon size={20} />
-          </button>
-        </div>
-
-        {/* List */}
-        <div className="space-y-4">
-          {isLoading ? (
-            <div className="bg-white border border-forest/10 rounded-[20px] p-12 text-center shadow-sm flex items-center justify-center">
-              <Loader2 size={28} className="animate-spin text-forest" />
-            </div>
-          ) : filteredItems.length === 0 ? (
-            <div className="bg-white border border-forest/10 rounded-[20px] p-12 text-center shadow-sm">
-              <div className="h-24 w-24 mx-auto mb-6 bg-forest/5 rounded-full flex items-center justify-center">
-                <SearchIcon size={32} className="text-forest/30" />
-              </div>
-              <h3 className="font-display text-xl text-forest font-bold mb-2">No orders found</h3>
-              <p className="text-sm text-muted">Try adjusting your filters or search for something else.</p>
-              {hasActiveFilters && (
-                <button onClick={clearFilters} className="mt-6 rounded-full bg-forest/5 px-6 py-2.5 text-sm font-bold text-forest hover:bg-forest hover:text-white transition-colors">
-                  Clear all filters
-                </button>
-              )}
-            </div>
-          ) : (
-            filteredItems.map((item, index) => (
-              <motion.div
-                key={item.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05 }}
-              >
-                <OrderCard 
-                  item={item} 
-                  onClick={() => router.push(`/account/orders/${item.id}`)} 
-                  onReview={(e, productId, productName) => {
-                    e.stopPropagation();
-                    setReviewingProduct({ id: productId, name: productName });
-                  }}
-                />
-              </motion.div>
-            ))
+        {/* Search input */}
+        <div className="relative flex items-center bg-[#FDFBF9] border border-forest/10 rounded-xl overflow-hidden focus-within:border-forest/30 focus-within:bg-white transition-all shadow-2xs">
+          <SearchIcon size={16} className="absolute left-3.5 text-forest/40" />
+          <input 
+            type="text" 
+            placeholder="Search by order ID or item name..." 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-transparent py-2.5 pl-10 pr-9 outline-none text-forest text-[14px] font-medium placeholder:text-muted/60"
+          />
+          {searchQuery && (
+            <button onClick={() => setSearchQuery('')} className="absolute right-3 text-forest/40 hover:text-forest">
+              <XIcon size={14} />
+            </button>
           )}
         </div>
+
+        {/* Status Filter Pills */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+          {STATUS_TABS.map((tab) => {
+            const isActive = activeStatus === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveStatus(tab.id)}
+                className={`shrink-0 rounded-full px-3.5 py-1.5 text-[12px] font-semibold transition-all duration-150 ${
+                  isActive 
+                    ? 'bg-forest text-white shadow-2xs' 
+                    : 'bg-forest/5 text-forest/70 hover:bg-forest/10 hover:text-forest'
+                }`}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Orders List */}
+      <div className="space-y-3">
+        {isLoading ? (
+          <div className="rounded-xl border border-forest/10 bg-white p-12 text-center shadow-2xs flex items-center justify-center">
+            <Loader2 size={24} className="animate-spin text-forest" />
+          </div>
+        ) : filteredItems.length === 0 ? (
+          <div className="rounded-xl border border-forest/8 bg-[#FDFBF9] p-10 text-center">
+            <div className="h-16 w-16 mx-auto mb-4 bg-forest/5 rounded-full flex items-center justify-center">
+              <PackageIcon size={24} className="text-forest/30" />
+            </div>
+            <h3 className="font-display text-lg text-forest font-bold mb-1">No orders found</h3>
+            <p className="text-[13px] text-muted max-w-sm mx-auto">
+              {searchQuery || activeStatus !== 'all' 
+                ? 'Try clearing your search or status filter.' 
+                : 'You have not placed any orders yet.'}
+            </p>
+            {(searchQuery || activeStatus !== 'all') && (
+              <button 
+                onClick={() => { setSearchQuery(''); setActiveStatus('all'); }} 
+                className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-forest/5 px-4 py-2 text-[12px] font-bold text-forest hover:bg-forest hover:text-white transition-colors"
+              >
+                <RefreshCwIcon size={12} /> Clear filters
+              </button>
+            )}
+          </div>
+        ) : (
+          filteredItems.map((item, index) => (
+            <motion.div
+              key={item.id}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.03 }}
+            >
+              <OrderCard 
+                item={item} 
+                onClick={() => router.push(`/account/orders/${item.id}`)} 
+                onReview={(e, productId, productName) => {
+                  e.stopPropagation();
+                  setReviewingProduct({ id: productId, name: productName });
+                }}
+              />
+            </motion.div>
+          ))
+        )}
       </div>
       
       {reviewingProduct && (

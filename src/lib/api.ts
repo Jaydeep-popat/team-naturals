@@ -189,6 +189,20 @@ export const auth = {
   refreshToken() {
     return apiFetch('/api/auth/refresh-token', { method: 'POST', silent401: true } as FetchOptions);
   },
+
+  updateProfile(body: {
+    firstName?: string;
+    lastName?: string;
+    username?: string;
+    phoneNo?: string | null;
+    profilePic?: string | null;
+    dateOfBirth?: string | null;
+  }) {
+    return apiFetch<{ data: { user: import('../types/auth').User } }>('/api/auth/me', {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    });
+  },
 };
 
 // ─── Address endpoints ────────────────────────────────────────────────────────

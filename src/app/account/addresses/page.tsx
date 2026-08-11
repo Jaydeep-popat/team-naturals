@@ -1,4 +1,5 @@
 'use client';
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { PlusIcon, AlertCircleIcon, XIcon, MapPinIcon } from 'lucide-react';
 import { addresses as addressApi, ApiError } from '@/src/lib/api';
@@ -115,21 +116,36 @@ export default function AddressesPage() {
   });
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300 relative">
+    <div className="space-y-5 animate-in fade-in duration-200 relative">
       
+      {/* Top Header Row */}
+      <div className="flex items-center justify-between pb-4 border-b border-forest/8">
+        <div>
+          <h2 className="font-display text-lg font-bold text-forest">Your Addresses</h2>
+          <p className="text-[12px] text-muted">Manage your delivery and billing locations</p>
+        </div>
+        <button
+          onClick={openAdd}
+          className="flex items-center gap-1.5 rounded-full bg-forest px-4 py-2 text-[13px] font-semibold text-white shadow-xs hover:bg-forest/90 transition-all"
+        >
+          <PlusIcon size={14} strokeWidth={2.5} />
+          Add Address
+        </button>
+      </div>
+
       {/* Delete Confirmation Modal */}
       <AnimatePresence>
         {deleteConfirmId && (
           <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-forest/30 backdrop-blur-sm" onClick={() => !isDeleting && setDeleteConfirmId(null)} />
-            <motion.div initial={{ scale: 0.95, opacity: 0, y: 10 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: 10 }} className="relative bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 overflow-hidden">
-              <h3 className="font-display text-xl font-bold text-forest mb-2">Remove Address?</h3>
-              <p className="text-muted text-[14px] mb-6">Are you sure you want to remove this address? This action cannot be undone.</p>
-              <div className="flex gap-3">
-                <button onClick={() => setDeleteConfirmId(null)} disabled={isDeleting} className="flex-1 rounded-full border-2 border-forest/10 py-2.5 font-bold text-forest hover:bg-forest/5 transition-colors disabled:opacity-50">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-forest/30 backdrop-blur-xs" onClick={() => !isDeleting && setDeleteConfirmId(null)} />
+            <motion.div initial={{ scale: 0.95, opacity: 0, y: 10 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: 10 }} className="relative bg-white rounded-2xl shadow-lg w-full max-w-sm p-5 border border-forest/10">
+              <h3 className="font-display text-lg font-bold text-forest mb-1">Remove Address?</h3>
+              <p className="text-muted text-[13px] mb-5">Are you sure you want to remove this address?</p>
+              <div className="flex gap-2">
+                <button onClick={() => setDeleteConfirmId(null)} disabled={isDeleting} className="flex-1 rounded-full border border-forest/15 py-2 text-[13px] font-semibold text-forest hover:bg-forest/5 transition-colors disabled:opacity-50">
                   Cancel
                 </button>
-                <button onClick={() => confirmDelete(deleteConfirmId)} disabled={isDeleting} className="flex-1 rounded-full bg-terracotta py-2.5 font-bold text-white shadow-soft hover:bg-terracotta/90 transition-colors flex items-center justify-center">
+                <button onClick={() => confirmDelete(deleteConfirmId)} disabled={isDeleting} className="flex-1 rounded-full bg-terracotta py-2 text-[13px] font-semibold text-white hover:bg-terracotta/90 transition-colors flex items-center justify-center">
                   {isDeleting ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" /> : 'Remove'}
                 </button>
               </div>
@@ -142,63 +158,63 @@ export default function AddressesPage() {
       <AnimatePresence>
         {isModalOpen && (
           <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:px-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-forest/30 backdrop-blur-sm" onClick={() => !isSubmitting && setIsModalOpen(false)} />
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-forest/30 backdrop-blur-xs" onClick={() => !isSubmitting && setIsModalOpen(false)} />
             <motion.div 
               initial={{ y: '100%', opacity: 1 }} 
               animate={{ y: 0, opacity: 1 }} 
               exit={{ y: '100%', opacity: 1 }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="relative bg-white rounded-t-3xl sm:rounded-2xl shadow-xl w-full max-w-xl max-h-[90vh] overflow-y-auto"
+              className="relative bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-lg max-h-[85vh] overflow-y-auto border border-forest/10"
             >
-              <div className="sticky top-0 bg-white/90 backdrop-blur-md z-10 px-6 py-4 border-b border-forest/5 flex items-center justify-between">
-                <h2 className="font-display text-xl font-bold text-forest">{editingId ? 'Edit Address' : 'Add New Address'}</h2>
-                <button onClick={() => !isSubmitting && setIsModalOpen(false)} className="p-2 rounded-full hover:bg-forest/5 text-forest">
-                  <XIcon size={20} />
+              <div className="sticky top-0 bg-white/95 backdrop-blur-md z-10 px-5 py-3.5 border-b border-forest/8 flex items-center justify-between">
+                <h2 className="font-display text-lg font-bold text-forest">{editingId ? 'Edit Address' : 'Add New Address'}</h2>
+                <button onClick={() => !isSubmitting && setIsModalOpen(false)} className="p-1.5 rounded-full hover:bg-forest/5 text-forest">
+                  <XIcon size={18} />
                 </button>
               </div>
 
-              <div className="p-6">
+              <div className="p-5">
                 {formError && (
-                  <div className="mb-6 flex items-start gap-2.5 rounded-xl bg-terracotta/10 px-4 py-3 text-sm text-terracotta">
-                    <AlertCircleIcon size={16} className="mt-0.5 shrink-0" />{formError}
+                  <div className="mb-4 flex items-start gap-2 rounded-xl bg-terracotta/10 px-3.5 py-2.5 text-[13px] text-terracotta">
+                    <AlertCircleIcon size={15} className="mt-0.5 shrink-0" />{formError}
                   </div>
                 )}
-                <form className="grid gap-5 sm:grid-cols-2" onSubmit={handleSubmit}>
+                <form className="grid gap-3.5 sm:grid-cols-2" onSubmit={handleSubmit}>
                   <Field id="fullName" label="Full Name" placeholder="Rahul Sharma" {...field('fullName')} required />
                   <Field id="phoneNo" label="Phone Number" placeholder="+91 98765 43210" {...field('phoneNo')} required />
                   <div className="sm:col-span-2">
                     <Field id="line1" label="Address Line 1" placeholder="House No, Building, Street" {...field('line1')} required />
                   </div>
                   <div className="sm:col-span-2">
-                    <Field id="line2" label="Address Line 2 (optional)" placeholder="Apartment, suite, landmark" {...field('line2')} />
+                    <Field id="line2" label="Address Line 2 (optional)" placeholder="Apartment, landmark" {...field('line2')} />
                   </div>
                   <Field id="city" label="City" placeholder="Mumbai" {...field('city')} required />
                   <Field id="state" label="State" placeholder="Maharashtra" {...field('state')} required />
                   <Field id="postalCode" label="Postal Code" placeholder="400001" {...field('postalCode')} required />
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold uppercase tracking-wider text-forest/70 pl-1">Country</label>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-forest/60 pl-0.5">Country</label>
                     <input type="text" value="India" disabled
-                      className="w-full rounded-xl border-2 border-forest/5 bg-[#FDFBF9] px-5 py-3.5 text-[15px] font-bold text-muted cursor-not-allowed" />
+                      className="w-full rounded-xl border border-forest/10 bg-[#FDFBF9] px-3.5 py-2 text-[14px] font-medium text-muted cursor-not-allowed" />
                   </div>
 
-                  <div className="sm:col-span-2 flex items-center gap-3 bg-[#FDFBF9] p-4 rounded-xl border border-forest/5 mt-2">
+                  <div className="sm:col-span-2 flex items-center gap-2.5 bg-[#FDFBF9] p-3 rounded-xl border border-forest/8">
                     <input
                       type="checkbox" id="isDefault"
                       checked={formData.isDefault}
                       onChange={(e) => setFormData((prev) => ({ ...prev, isDefault: e.target.checked }))}
-                      className="h-4 w-4 rounded border-forest/30 accent-forest"
+                      className="h-4 w-4 rounded border-forest/30 accent-forest cursor-pointer"
                     />
-                    <label htmlFor="isDefault" className="text-[14px] font-medium text-forest cursor-pointer">
+                    <label htmlFor="isDefault" className="text-[13px] font-medium text-forest cursor-pointer">
                       Make this my default shipping address
                     </label>
                   </div>
 
-                  <div className="pt-4 sm:col-span-2">
+                  <div className="pt-2 sm:col-span-2">
                     <button
                       type="submit" disabled={isSubmitting}
-                      className="w-full rounded-full bg-forest px-8 py-4 text-[15px] font-bold text-white shadow-soft transition-all hover:bg-forest/90 hover:shadow-lg disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      className="w-full rounded-full bg-forest px-6 py-3 text-[14px] font-semibold text-white shadow-xs hover:bg-forest/90 disabled:opacity-60 flex items-center justify-center gap-2"
                     >
-                      {isSubmitting ? <span className="h-5 w-5 animate-spin rounded-full border-2 border-white/40 border-t-white" /> : editingId ? 'Update Address' : 'Save Address'}
+                      {isSubmitting ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" /> : editingId ? 'Update Address' : 'Save Address'}
                     </button>
                   </div>
                 </form>
@@ -208,38 +224,28 @@ export default function AddressesPage() {
         )}
       </AnimatePresence>
 
-      <div className="flex justify-end pb-2">
-        <button
-          onClick={openAdd}
-          className="flex items-center justify-center gap-2 rounded-full bg-forest px-6 py-3 text-[14px] font-bold text-white shadow-soft transition-all hover:bg-forest/90 shrink-0"
-        >
-          <PlusIcon size={18} strokeWidth={2.5} />
-          Add New Address
-        </button>
-      </div>
-
       {isLoading ? (
-        <div className="grid gap-6 sm:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-2">
           {[1, 2].map((i) => (
-            <div key={i} className="rounded-[20px] border border-forest/10 p-7 animate-pulse bg-forest/5 h-48" />
+            <div key={i} className="rounded-xl border border-forest/10 p-5 animate-pulse bg-forest/5 h-36" />
           ))}
         </div>
       ) : addressList.length === 0 ? (
-        <div className="bg-white border border-forest/10 rounded-[20px] p-12 text-center shadow-sm max-w-xl mx-auto mt-8">
-          <div className="h-24 w-24 mx-auto mb-6 bg-forest/5 rounded-full flex items-center justify-center">
-            <MapPinIcon size={32} className="text-forest/30" />
+        <div className="rounded-xl border border-forest/8 bg-[#FDFBF9] p-10 text-center max-w-md mx-auto my-4">
+          <div className="h-16 w-16 mx-auto mb-3 bg-forest/5 rounded-full flex items-center justify-center">
+            <MapPinIcon size={24} className="text-forest/30" />
           </div>
-          <h3 className="font-display text-xl text-forest font-bold mb-2">No saved addresses</h3>
-          <p className="text-sm text-muted">Add your first shipping address to make checkout faster and easier.</p>
+          <h3 className="font-display text-lg text-forest font-bold mb-1">No saved addresses</h3>
+          <p className="text-[13px] text-muted">Add your shipping address for faster checkout.</p>
         </div>
       ) : (
-        <div className="grid gap-6 sm:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-2">
           <AnimatePresence>
             {addressList.map((address, index) => (
               <AddressCard 
                 key={address.addressId}
                 address={address}
-                label={index === 0 ? 'Home' : 'Other'} // Stubbing labels for demo
+                label={index === 0 ? 'Home' : 'Other'}
                 onEdit={openEdit}
                 onDelete={() => setDeleteConfirmId(address.addressId)}
                 isDeleting={isDeleting && deleteConfirmId === address.addressId}
@@ -258,11 +264,11 @@ function Field({ id, label, placeholder, value, onChange, required = false }: {
   required?: boolean;
 }) {
   return (
-    <div className="space-y-1.5">
-      <label htmlFor={id} className="text-[11px] font-bold uppercase tracking-wider text-forest/70 pl-1">{label}</label>
+    <div className="space-y-1">
+      <label htmlFor={id} className="text-[10px] font-bold uppercase tracking-wider text-forest/60 pl-0.5">{label}</label>
       <input
         id={id} type="text" placeholder={placeholder} value={value} onChange={onChange} required={required}
-        className="w-full rounded-xl border-2 border-forest/5 bg-[#FDFBF9] px-5 py-3.5 text-[15px] font-bold text-forest outline-none transition-all focus:border-forest/20 focus:bg-white focus:shadow-sm placeholder:text-muted/50"
+        className="w-full rounded-xl border border-forest/15 bg-white px-3.5 py-2 text-[14px] font-medium text-forest outline-none transition-all focus:border-forest placeholder:text-muted/50"
       />
     </div>
   );

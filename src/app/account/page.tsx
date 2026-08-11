@@ -1,182 +1,413 @@
 'use client';
-import React, { useState } from 'react';
-import { CameraIcon, CheckIcon, XIcon, Edit2Icon, Loader2Icon } from 'lucide-react';
+
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  PencilIcon,
+  CheckIcon,
+  XIcon,
+  Loader2Icon,
+  CalendarIcon,
+  PhoneIcon,
+  AtSignIcon,
+  UserIcon,
+  ShieldCheckIcon,
+  ClockIcon,
+  AlertCircleIcon,
+} from 'lucide-react';
 import { useAuth } from '@/src/contexts/AuthContext';
+import { ApiError } from '@/src/lib/api';
 import { motion, AnimatePresence } from 'framer-motion';
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function formatDOB(iso: string | null): string {
+  if (!iso) return '';
+  // Return YYYY-MM-DD for <input type="date">
+  return new Date(iso).toISOString().split('T')[0];
+}
+
+function displayDOB(iso: string | null): string {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
+
 export default function PersonalInfoPage() {
-  const { user } = useAuth();
-  const [toastMessage, setToastMessage] = useState('');
+  const { user, updateProfile } = useAuth();
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
+
+  // Form state — synced from user on each edit session open
+  const [form, setForm] = useState({
+    firstName: '',
+    lastName: '',
+    username: '',
+    phoneNo: '',
+    dateOfBirth: '',
+  });
+  const [formError, setFormError] = useState('');
+
+  const firstFieldRef = useRef<HTMLInputElement>(null);
+
+  // Keep form in sync when user data loads or changes
+  useEffect(() => {
+    if (user) {
+      setForm({
+        firstName: user.firstName ?? '',
+        lastName: user.lastName ?? '',
+        username: user.username ?? '',
+        phoneNo: user.phoneNo ?? '',
+        dateOfBirth: formatDOB(user.dateOfBirth),
+      });
+    }
+  }, [user]);
 
   if (!user) return null;
 
   const initials = `${user.firstName?.[0] ?? ''}${user.lastName?.[0] ?? ''}`.toUpperCase();
 
-  const showToast = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(''), 3000);
+  const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3500);
   };
 
-  const simulateUpload = () => {
-    showToast('Profile photo updated');
+  const handleEditOpen = () => {
+    setFormError('');
+    setIsEditing(true);
+    setTimeout(() => firstFieldRef.current?.focus(), 80);
   };
+
+  const handleCancel = () => {
+    // Reset form to current user values
+    setForm({
+      firstName: user.firstName ?? '',
+      lastName: user.lastName ?? '',
+      username: user.username ?? '',
+      phoneNo: user.phoneNo ?? '',
+      dateOfBirth: formatDOB(user.dateOfBirth),
+    });
+    setFormError('');
+    setIsEditing(false);
+  };
+
+  const handleSave = async () => {
+    setFormError('');
+
+    if (!form.firstName.trim()) { setFormError('First name is required.'); return; }
+    if (!form.lastName.trim()) { setFormError('Last name is required.'); return; }
+    if (!form.username.trim()) { setFormError('Username is required.'); return; }
+
+    setIsSaving(true);
+    try {
+      await updateProfile({
+        firstName: form.firstName.trim(),
+        lastName: form.lastName.trim(),
+        username: form.username.trim(),
+        phoneNo: form.phoneNo.trim() || null,
+        dateOfBirth: form.dateOfBirth || null,
+      });
+      setIsEditing(false);
+      showToast('Profile updated successfully');
+    } catch (err) {
+      const msg = err instanceof ApiError ? err.message : 'Failed to save. Please try again.';
+      setFormError(msg);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const field = (key: keyof typeof form, val: string) =>
+    setForm((f) => ({ ...f, [key]: val }));
+
+  // ─── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-2 duration-300 relative">
-      
-      {/* Toast Notification */}
+    <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 relative">
+
+      {/* ── Toast ── */}
       <AnimatePresence>
-        {toastMessage && (
+        {toast && (
           <motion.div
-            initial={{ opacity: 0, y: -20, x: '-50%' }}
+            initial={{ opacity: 0, y: -16, x: '-50%' }}
             animate={{ opacity: 1, y: 0, x: '-50%' }}
-            exit={{ opacity: 0, y: -20, x: '-50%' }}
-            className="fixed top-24 left-1/2 z-50 rounded-full bg-forest px-6 py-3 text-sm font-bold text-white shadow-lg flex items-center gap-2"
+            exit={{ opacity: 0, y: -16, x: '-50%' }}
+            className={`fixed top-24 left-1/2 z-50 flex items-center gap-2 rounded-full px-6 py-3 text-sm font-semibold shadow-lg
+              ${toast.type === 'success' ? 'bg-forest text-white' : 'bg-terracotta text-white'}`}
           >
-            <CheckIcon size={16} className="text-white" />
-            {toastMessage}
+            {toast.type === 'success'
+              ? <CheckIcon size={16} />
+              : <AlertCircleIcon size={16} />}
+            {toast.msg}
           </motion.div>
         )}
       </AnimatePresence>
 
-      <section>
-        <h2 className="font-display text-xl font-bold text-forest mb-6">Identity</h2>
-        {/* Avatar row */}
-        <div className="flex flex-col sm:flex-row sm:items-center gap-6 pb-8 border-b border-forest/5">
-          <button 
-            onClick={simulateUpload}
-            className="relative h-24 w-24 shrink-0 overflow-hidden rounded-[24px] border border-forest/10 bg-gradient-to-br from-forest/5 to-forest/10 flex items-center justify-center text-forest text-3xl font-display font-bold group shadow-sm transition-all hover:shadow-md hover:border-forest/30"
-          >
-            {user.profilePic ? (
-              <img src={user.profilePic} alt="Profile" className="h-full w-full object-cover" />
-            ) : (
-              <span>{initials}</span>
-            )}
-            <div className="absolute inset-0 flex items-center justify-center bg-forest/40 opacity-0 transition-opacity group-hover:opacity-100 backdrop-blur-sm">
-              <CameraIcon className="text-white" size={24} />
-            </div>
-          </button>
-          <div className="flex-1">
-            <p className="font-display font-bold text-forest text-2xl">{user.firstName} {user.lastName}</p>
-            <p className="text-[14px] text-muted mt-1 font-medium">@{user.username}</p>
+      {/* ── Avatar + Name header ── */}
+      <div className="flex items-center gap-5 pb-6 border-b border-forest/8">
+        <div className="relative h-16 w-16 shrink-0">
+          <div className="h-full w-full rounded-2xl bg-gradient-to-br from-forest/10 to-forest/20 flex items-center justify-center text-forest text-xl font-display font-bold border border-forest/10 shadow-sm overflow-hidden">
+            {user.profilePic
+              ? <img src={user.profilePic} alt="Profile" className="h-full w-full object-cover" />
+              : <span>{initials}</span>
+            }
+          </div>
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="font-display font-bold text-forest text-xl leading-tight truncate">
+            {user.firstName} {user.lastName}
+          </p>
+          <p className="text-[13px] text-muted mt-0.5">@{user.username}</p>
+          <div className="mt-2">
             {user.emailVerifiedAt ? (
-              <span className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-[#E8F3EB] px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-[#1B4D2E]">
-                ✓ Email Verified
+              <span className="inline-flex items-center gap-1 rounded-full bg-[#E8F3EB] px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#1B4D2E]">
+                <ShieldCheckIcon size={10} /> Verified
               </span>
             ) : (
-              <span className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-terracotta/10 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-terracotta">
-                Email Not Verified
+              <span className="inline-flex items-center gap-1 rounded-full bg-terracotta/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-terracotta">
+                Email not verified
               </span>
             )}
           </div>
         </div>
 
-        {/* Editable Info fields */}
-        <div className="grid gap-6 sm:grid-cols-2 mt-8">
-          <EditableField label="First Name" initialValue={user.firstName} onSave={() => showToast('Profile updated')} />
-          <EditableField label="Last Name" initialValue={user.lastName} onSave={() => showToast('Profile updated')} />
-          <EditableField label="Username" initialValue={user.username} onSave={() => showToast('Profile updated')} prefix="@" />
-          <EditableField label="Email Address" initialValue={user.email} onSave={() => showToast('Profile updated')} />
-          <EditableField label="Phone Number" initialValue={user.phoneNo || ''} onSave={() => showToast('Profile updated')} placeholder="Add phone number" />
-          <EditableField label="Date of Birth" initialValue={user.dateOfBirth ? new Date(user.dateOfBirth).toISOString().split('T')[0] : ''} onSave={() => showToast('Profile updated')} type="date" />
+        {/* Edit / Save / Cancel buttons */}
+        <div className="flex items-center gap-2 shrink-0">
+          {!isEditing ? (
+            <button
+              onClick={handleEditOpen}
+              id="edit-profile-btn"
+              className="flex items-center gap-1.5 rounded-full border border-forest/20 bg-white px-4 py-2 text-[13px] font-semibold text-forest hover:bg-forest hover:text-white hover:border-forest transition-all duration-200 shadow-sm"
+            >
+              <PencilIcon size={13} strokeWidth={2.2} />
+              Edit
+            </button>
+          ) : (
+            <>
+              <button
+                onClick={handleSave}
+                disabled={isSaving}
+                id="save-profile-btn"
+                className="flex items-center gap-1.5 rounded-full bg-forest px-4 py-2 text-[13px] font-semibold text-white hover:bg-forest/90 disabled:opacity-60 transition-all duration-200 shadow-sm"
+              >
+                {isSaving
+                  ? <Loader2Icon size={13} className="animate-spin" />
+                  : <CheckIcon size={13} strokeWidth={2.5} />}
+                Save
+              </button>
+              <button
+                onClick={handleCancel}
+                disabled={isSaving}
+                id="cancel-edit-btn"
+                className="flex items-center gap-1.5 rounded-full border border-forest/15 bg-white px-4 py-2 text-[13px] font-semibold text-forest/70 hover:bg-forest/5 disabled:opacity-60 transition-all duration-200"
+              >
+                <XIcon size={13} strokeWidth={2.2} />
+                Cancel
+              </button>
+            </>
+          )}
         </div>
-      </section>
-
-      <section>
-        <h2 className="font-display text-xl font-bold text-forest mb-6">Account Status</h2>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <StatCard label="Current Status" value={user.userStatus.charAt(0).toUpperCase() + user.userStatus.slice(1)} highlight={user.userStatus === 'active'} />
-          <StatCard label="Member Since" value={new Date(user.createdAt).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })} />
-        </div>
-      </section>
-
-      <section>
-        <h2 className="font-display text-xl font-bold text-forest mb-6">Security</h2>
-        <div className="rounded-2xl border border-forest/10 bg-white p-5 flex items-center justify-between shadow-sm">
-          <div>
-            <p className="font-bold text-forest text-[15px]">Password</p>
-            <p className="text-[13px] text-muted mt-0.5">Change your password to keep your account secure.</p>
-          </div>
-          <button className="rounded-full bg-forest/5 px-5 py-2 text-[13px] font-bold text-forest hover:bg-forest hover:text-white transition-colors">
-            Update
-          </button>
-        </div>
-      </section>
-    </div>
-  );
-}
-
-function EditableField({ label, initialValue, onSave, prefix, type = 'text', placeholder }: { label: string; initialValue: string; onSave: (val: string) => void; prefix?: string; type?: string; placeholder?: string }) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [value, setValue] = useState(initialValue);
-  const [isSaving, setIsSaving] = useState(false);
-
-  const handleSave = () => {
-    setIsSaving(true);
-    // Simulate API call
-    setTimeout(() => {
-      setIsSaving(false);
-      setIsEditing(false);
-      onSave(value);
-    }, 600);
-  };
-
-  const handleCancel = () => {
-    setValue(initialValue);
-    setIsEditing(false);
-  };
-
-  return (
-    <div className="space-y-1.5 group">
-      <label className="text-[11px] font-bold uppercase tracking-wider text-forest/70 pl-1">{label}</label>
-      
-      {isEditing ? (
-        <div className="flex items-center gap-2">
-          <div className="relative flex-1 flex items-center bg-white border-2 border-forest rounded-xl overflow-hidden shadow-sm">
-            {prefix && <span className="pl-4 text-forest/50 font-medium">{prefix}</span>}
-            <input
-              type={type}
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
-              placeholder={placeholder}
-              autoFocus
-              className="w-full bg-transparent px-4 py-3 text-[15px] font-bold text-forest outline-none"
-            />
-          </div>
-          <button onClick={handleSave} disabled={isSaving} className="h-12 w-12 shrink-0 flex items-center justify-center rounded-xl bg-forest text-white hover:bg-forest-deep transition-colors disabled:opacity-50">
-            {isSaving ? <Loader2Icon size={18} className="animate-spin" /> : <CheckIcon size={20} />}
-          </button>
-          <button onClick={handleCancel} disabled={isSaving} className="h-12 w-12 shrink-0 flex items-center justify-center rounded-xl bg-forest/5 text-forest hover:bg-forest/10 transition-colors disabled:opacity-50">
-            <XIcon size={20} />
-          </button>
-        </div>
-      ) : (
-        <div 
-          onClick={() => setIsEditing(true)}
-          className="group/field relative w-full rounded-xl border-2 border-forest/5 bg-[#FDFBF9] px-5 py-3.5 text-[15px] font-bold text-forest transition-colors hover:border-forest/20 hover:bg-white cursor-text flex items-center"
-        >
-          <span className={!value ? 'text-muted font-normal' : ''}>
-            {prefix && value ? prefix : ''}{value || placeholder || '—'}
-          </span>
-          <div className="absolute right-4 text-forest/0 group-hover/field:text-forest/40 transition-colors">
-            <Edit2Icon size={16} />
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function StatCard({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
-  return (
-    <div className="rounded-2xl border border-forest/10 bg-white p-5 shadow-sm">
-      <p className="text-[11px] font-bold uppercase tracking-wider text-forest/70">{label}</p>
-      <div className="mt-2 flex items-center gap-2">
-        {highlight && <span className="h-2 w-2 rounded-full bg-[#348C31]" />}
-        <p className={`font-display text-xl font-bold ${highlight ? 'text-forest' : 'text-forest'}`}>
-          {value}
-        </p>
       </div>
+
+      {/* ── Inline error (edit mode) ── */}
+      <AnimatePresence>
+        {formError && isEditing && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="mt-4 flex items-start gap-2.5 rounded-xl bg-terracotta/10 px-4 py-3 text-sm text-terracotta overflow-hidden"
+          >
+            <AlertCircleIcon size={15} className="mt-0.5 shrink-0" />
+            {formError}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Profile fields grid ── */}
+      <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+        {/* First Name */}
+        <ProfileField
+          id="firstName"
+          label="First Name"
+          icon={<UserIcon size={14} />}
+          value={isEditing ? form.firstName : user.firstName}
+          editing={isEditing}
+          inputRef={firstFieldRef}
+          onChange={(v) => field('firstName', v)}
+          placeholder="Enter first name"
+        />
+
+        {/* Last Name */}
+        <ProfileField
+          id="lastName"
+          label="Last Name"
+          icon={<UserIcon size={14} />}
+          value={isEditing ? form.lastName : user.lastName}
+          editing={isEditing}
+          onChange={(v) => field('lastName', v)}
+          placeholder="Enter last name"
+        />
+
+        {/* Username */}
+        <ProfileField
+          id="username"
+          label="Username"
+          icon={<AtSignIcon size={14} />}
+          value={isEditing ? form.username : user.username}
+          editing={isEditing}
+          onChange={(v) => field('username', v)}
+          placeholder="your_username"
+          prefix="@"
+        />
+
+        {/* Email — always read-only */}
+        <ProfileField
+          id="email"
+          label="Email Address"
+          icon={<AtSignIcon size={14} />}
+          value={user.email}
+          editing={false}
+          onChange={() => {}}
+          readonlyNote="Contact support to change email"
+        />
+
+        {/* Phone */}
+        <ProfileField
+          id="phoneNo"
+          label="Phone Number"
+          icon={<PhoneIcon size={14} />}
+          value={isEditing ? form.phoneNo : (user.phoneNo ?? '')}
+          editing={isEditing}
+          onChange={(v) => field('phoneNo', v)}
+          placeholder="Add phone number"
+          inputMode="tel"
+        />
+
+        {/* Date of Birth */}
+        <ProfileField
+          id="dateOfBirth"
+          label="Date of Birth"
+          icon={<CalendarIcon size={14} />}
+          value={isEditing ? form.dateOfBirth : ''}
+          displayValue={isEditing ? undefined : displayDOB(user.dateOfBirth)}
+          editing={isEditing}
+          onChange={(v) => field('dateOfBirth', v)}
+          type="date"
+          placeholder="Select date"
+        />
+      </div>
+
+      {/* ── Account meta strip ── */}
+      <div className="mt-6 grid grid-cols-2 gap-3">
+        <div className="rounded-2xl border border-forest/8 bg-[#FDFBF9] px-4 py-3 flex items-center gap-3">
+          <div className="h-8 w-8 shrink-0 rounded-xl bg-forest/8 flex items-center justify-center text-forest">
+            <ClockIcon size={15} />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted/70">Member Since</p>
+            <p className="text-[13px] font-semibold text-forest mt-0.5 truncate">
+              {new Date(user.createdAt).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}
+            </p>
+          </div>
+        </div>
+        <div className="rounded-2xl border border-forest/8 bg-[#FDFBF9] px-4 py-3 flex items-center gap-3">
+          <div className={`h-8 w-8 shrink-0 rounded-xl flex items-center justify-center ${user.userStatus === 'active' ? 'bg-[#E8F3EB] text-[#1B4D2E]' : 'bg-terracotta/10 text-terracotta'}`}>
+            <ShieldCheckIcon size={15} />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted/70">Account Status</p>
+            <p className="text-[13px] font-semibold text-forest mt-0.5 truncate capitalize">
+              {user.userStatus}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── ProfileField ─────────────────────────────────────────────────────────────
+
+interface ProfileFieldProps {
+  id: string;
+  label: string;
+  icon: React.ReactNode;
+  value: string;
+  displayValue?: string;     // Override display when not editing
+  editing: boolean;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  prefix?: string;
+  type?: string;
+  inputMode?: React.HTMLAttributes<HTMLInputElement>['inputMode'];
+  readonlyNote?: string;
+  inputRef?: React.RefObject<HTMLInputElement | null>;
+}
+
+function ProfileField({
+  id, label, icon, value, displayValue, editing, onChange,
+  placeholder, prefix, type = 'text', inputMode, readonlyNote, inputRef,
+}: ProfileFieldProps) {
+  const shown = displayValue !== undefined ? displayValue : (value || placeholder || '—');
+  const isEmpty = !displayValue && !value;
+
+  return (
+    <div className="space-y-1.5">
+      <label
+        htmlFor={editing ? id : undefined}
+        className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-forest/60 pl-0.5"
+      >
+        <span className="text-forest/40">{icon}</span>
+        {label}
+      </label>
+
+      <AnimatePresence mode="wait">
+        {editing ? (
+          <motion.div
+            key="input"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.1 }}
+            className={`flex items-center rounded-xl border-2 border-forest bg-white shadow-sm overflow-hidden transition-shadow focus-within:shadow-md ${readonlyNote ? 'opacity-60 pointer-events-none border-forest/20' : ''}`}
+          >
+            {prefix && (
+              <span className="pl-3.5 text-forest/50 font-medium text-sm select-none">{prefix}</span>
+            )}
+            <input
+              ref={inputRef as React.RefObject<HTMLInputElement>}
+              id={id}
+              type={type}
+              inputMode={inputMode}
+              value={value}
+              onChange={(e) => onChange(e.target.value)}
+              placeholder={placeholder}
+              readOnly={!!readonlyNote}
+              className="w-full bg-transparent px-3.5 py-2.5 text-[14px] font-semibold text-forest outline-none placeholder:text-muted/50 placeholder:font-normal"
+            />
+          </motion.div>
+        ) : (
+          <motion.div
+            key="display"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.1 }}
+            className="flex items-center rounded-xl border border-forest/8 bg-[#FDFBF9] px-3.5 py-2.5 min-h-[42px]"
+          >
+            <span className={`text-[14px] font-semibold leading-tight ${isEmpty ? 'text-muted/50 font-normal' : 'text-forest'}`}>
+              {prefix && !isEmpty ? prefix : ''}{shown}
+            </span>
+            {readonlyNote && (
+              <span className="ml-auto text-[10px] text-muted/50 font-normal shrink-0 pl-2">{readonlyNote}</span>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
