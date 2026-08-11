@@ -8,7 +8,7 @@ import { ArrowRightIcon, LeafIcon, EyeIcon, EyeOffIcon, AlertCircleIcon } from '
 import { storyImage } from '@/src/data/products';
 import { auth, ApiError } from '@/src/lib/api';
 import { useAuth } from '@/src/contexts/AuthContext';
-import { isNotEmpty } from '@/src/utils/validation';
+import { isNotEmpty, isValidEmail } from '@/src/utils/validation';
 import { useEffect } from 'react';
 
 function LoginForm() {
@@ -55,12 +55,28 @@ function LoginForm() {
       const isApiError = err instanceof ApiError || err?.name === 'ApiError';
       if (isApiError) {
         if (err.message.toLowerCase().includes('verify your email')) {
-          try {
-            await auth.resendVerification({ email: emailOrUsername });
-          } catch (e) {
-            console.error('Failed to auto-resend OTP', e);
+          // Only auto-resend if the user typed an email (not a username)
+          // — we need an actual email address to call resendVerification.
+          const isEmail = isValidEmail(emailOrUsername.trim());
+          if (isEmail) {
+            try {
+              await auth.resendVerification({ email: emailOrUsername.trim() });
+            } catch (e) {
+              console.error('Failed to auto-resend OTP', e);
+            }
           }
-          router.push(`/register?step=2&email=${encodeURIComponent(emailOrUsername)}&message=${encodeURIComponent('Your account is not verified. A new OTP has been sent to your email.')}`);
+
+          if (isEmail) {
+            router.push(
+              `/register?step=2&email=${encodeURIComponent(emailOrUsername.trim())}&message=${encodeURIComponent('Your account is not verified. A new OTP has been sent to your email.')}`
+            );
+          } else {
+            // Username login — we don't know their email, send them to step 2
+            // so they can enter their email and hit "Resend" themselves.
+            router.push(
+              `/register?step=2&message=${encodeURIComponent('Your account is not verified. Please enter your email and request a new OTP.')}`
+            );
+          }
           return;
         } else if (err.statusCode === 401 || err.message === 'Invalid credentials') {
           setError('Password incorrect or Email incorrect/not found. Please register if you don\'t have an account.');

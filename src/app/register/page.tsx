@@ -12,12 +12,20 @@ import {
   EyeIcon,
   EyeOffIcon,
   AlertCircleIcon,
+  InfoIcon,
 } from 'lucide-react';
 import { storyImage } from '@/src/data/products';
 import { GuestOnlyRoute } from '@/src/components/AuthGuard';
 import { useAuth } from '@/src/contexts/AuthContext';
 import { auth as authApi, ApiError, addresses } from '@/src/lib/api';
 import { isValidEmail, isValidUsername, isValidPhone, isValidPassword, isNotEmpty } from '@/src/utils/validation';
+
+/** Derives a username suggestion from a display name. */
+function generateUsername(name: string): string {
+  const base = name.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 14) || 'user';
+  const suffix = Math.floor(100 + Math.random() * 900); // 3-digit suffix
+  return `${base}${suffix}`;
+}
 
 const variants = {
   enter: (direction: number) => ({ x: direction > 0 ? 50 : -50, opacity: 0 }),
@@ -37,12 +45,15 @@ function RegisterForm() {
   const [step, setStep] = useState(initialStep);
   const [direction, setDirection] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState(initialMessage);
+  const [error, setError] = useState('');
+  // Info message shown as a green/neutral banner (e.g. redirect from login)
+  const [infoMessage, setInfoMessage] = useState(initialStep === 2 ? initialMessage : '');
 
   // Step 1 fields
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [username, setUsername] = useState('');
+  const [isUsernameManuallyEdited, setIsUsernameManuallyEdited] = useState(false);
   const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -76,17 +87,32 @@ function RegisterForm() {
     }
   }, [isLoading, isAuthenticated, router, step]);
 
+  // Auto-generate username from firstName unless the user has already edited it
+  useEffect(() => {
+    if (!isUsernameManuallyEdited && firstName.trim()) {
+      setUsername(generateUsername(firstName.trim()));
+    }
+    if (!firstName.trim() && !isUsernameManuallyEdited) {
+      setUsername('');
+    }
+  }, [firstName, isUsernameManuallyEdited]);
+
   const next = () => { setDirection(1); setStep((s) => s + 1); };
   const prev = () => { setDirection(-1); setStep((s) => s - 1); setError(''); };
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    if (!isNotEmpty(firstName) || !isNotEmpty(lastName) || !isNotEmpty(username) || !isNotEmpty(email) || !isNotEmpty(password)) {
+
+    if (!isNotEmpty(firstName) || !isNotEmpty(lastName) || !isNotEmpty(email) || !isNotEmpty(password)) {
       setError('Please fill in all required fields.');
       return;
     }
-    if (!isValidUsername(username)) {
+
+    // Ensure a username exists — generate one if the user left it blank
+    const finalUsername = isNotEmpty(username) ? username : generateUsername(firstName.trim());
+
+    if (!isValidUsername(finalUsername)) {
       setError('Username must be 3-20 characters (letters, numbers, underscores).');
       return;
     }
@@ -105,7 +131,7 @@ function RegisterForm() {
 
     setIsSubmitting(true);
     try {
-      await register({ firstName, lastName, username, email, password });
+      await register({ firstName, lastName, username: finalUsername, email, password });
       next();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Registration failed. Please try again.');
@@ -256,8 +282,27 @@ function RegisterForm() {
                       <Field id="firstName" label="First Name" placeholder="Rahul" value={firstName} onChange={(e) => { setFirstName(e.target.value); setError(''); }} />
                       <Field id="lastName" label="Last Name" placeholder="Sharma" value={lastName} onChange={(e) => { setLastName(e.target.value); setError(''); }} />
                     </div>
-                    
-                    <Field id="username" label="Username" placeholder="rahul_sharma" value={username} onChange={(e) => { setUsername(e.target.value); setError(''); }} />
+
+                    <div>
+                      <Field
+                        id="username"
+                        label="Username (optional)"
+                        placeholder="auto-generated from your name"
+                        required={false}
+                        value={username}
+                        onChange={(e) => {
+                          setUsername(e.target.value);
+                          setIsUsernameManuallyEdited(true);
+                          setError('');
+                        }}
+                      />
+                      {!isUsernameManuallyEdited && username && (
+                        <p className="mt-1 text-[11px] text-muted/70">
+                          Suggested from your name — feel free to change it
+                        </p>
+                      )}
+                    </div>
+
                     <Field id="email" label="Email" type="email" placeholder="you@example.com" value={email} onChange={(e) => { setEmail(e.target.value); setError(''); }} />
 
                     <div>
@@ -324,6 +369,15 @@ function RegisterForm() {
                   <p className="mt-3 text-[15px] text-muted">
                     We&apos;ve sent a 6-digit code to <strong>{email}</strong>. Enter it below.
                   </p>
+
+                  {/* Info banner — shown when redirected from login (not an error) */}
+                  {infoMessage && !error && (
+                    <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
+                      className="mt-4 flex items-start gap-2.5 rounded-xl bg-[#E8F3EB] px-4 py-3 text-sm text-[#1B4D2E]"
+                    >
+                      <InfoIcon size={16} className="mt-0.5 shrink-0" />{infoMessage}
+                    </motion.div>
+                  )}
 
                   {error && (
                     <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
