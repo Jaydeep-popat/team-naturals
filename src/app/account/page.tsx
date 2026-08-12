@@ -47,6 +47,7 @@ export default function PersonalInfoPage() {
     username: '',
     phoneNo: '',
     dateOfBirth: '',
+    profilePic: '',
   });
   const [formError, setFormError] = useState('');
 
@@ -61,6 +62,7 @@ export default function PersonalInfoPage() {
         username: user.username ?? '',
         phoneNo: user.phoneNo ?? '',
         dateOfBirth: formatDOB(user.dateOfBirth),
+        profilePic: user.profilePic ?? '',
       });
     }
   }, [user]);
@@ -88,6 +90,7 @@ export default function PersonalInfoPage() {
       username: user.username ?? '',
       phoneNo: user.phoneNo ?? '',
       dateOfBirth: formatDOB(user.dateOfBirth),
+      profilePic: user.profilePic ?? '',
     });
     setFormError('');
     setIsEditing(false);
@@ -108,6 +111,7 @@ export default function PersonalInfoPage() {
         username: form.username.trim(),
         phoneNo: form.phoneNo.trim() || null,
         dateOfBirth: form.dateOfBirth || null,
+        profilePic: form.profilePic || null,
       });
       setIsEditing(false);
       showToast('Profile updated successfully');
@@ -147,13 +151,47 @@ export default function PersonalInfoPage() {
 
       {/* ── Avatar + Name header ── */}
       <div className="flex items-center gap-5 pb-6 border-b border-forest/8">
-        <div className="relative h-16 w-16 shrink-0">
-          <div className="h-full w-full rounded-2xl bg-gradient-to-br from-forest/10 to-forest/20 flex items-center justify-center text-forest text-xl font-display font-bold border border-forest/10 shadow-sm overflow-hidden">
-            {user.profilePic
-              ? <img src={user.profilePic} alt="Profile" className="h-full w-full object-cover" />
+        <div className="relative h-16 w-16 shrink-0 group">
+          <div className="h-full w-full rounded-2xl bg-gradient-to-br from-forest/10 to-forest/20 flex items-center justify-center text-forest text-xl font-display font-bold border border-forest/10 shadow-sm overflow-hidden relative">
+            {(isEditing ? form.profilePic : user.profilePic)
+              ? <img src={(isEditing ? form.profilePic : user.profilePic)!} alt="Profile" className="h-full w-full object-cover" />
               : <span>{initials}</span>
             }
+            {isEditing && (
+              <label className="absolute inset-0 flex items-center justify-center bg-black/40 text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                <PencilIcon size={16} />
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  className="hidden" 
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      if (file.size > 2 * 1024 * 1024) {
+                        setFormError('Image must be less than 2MB');
+                        return;
+                      }
+                      const reader = new FileReader();
+                      reader.onloadend = () => {
+                        field('profilePic', reader.result as string);
+                        setFormError('');
+                      };
+                      reader.readAsDataURL(file);
+                    }
+                  }}
+                />
+              </label>
+            )}
           </div>
+          {isEditing && form.profilePic && (
+            <button
+              onClick={() => field('profilePic', '')}
+              className="absolute -top-1.5 -right-1.5 bg-terracotta text-white rounded-full p-0.5 shadow-sm hover:bg-terracotta/90 z-10"
+              title="Remove photo"
+            >
+              <XIcon size={12} strokeWidth={3} />
+            </button>
+          )}
         </div>
         <div className="flex-1 min-w-0">
           <p className="font-display font-bold text-forest text-xl leading-tight truncate">
