@@ -2,6 +2,9 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { CartProvider } from '@/src/contexts/CartContext';
 import { AuthProvider } from '@/src/contexts/AuthContext';
+import { JsonLd } from '@/src/components/JsonLd';
+import { buildOrganizationJsonLd } from '@/src/lib/seo';
+import { getSiteUrl } from '@/src/lib/site';
 
 import dynamic from 'next/dynamic';
 import { LayoutWrapper } from '@/src/components/LayoutWrapper';
@@ -17,12 +20,12 @@ export const metadata: Metadata = {
   description:
     'Cold-processed soaps and a clay face wash, built from ingredients you can actually pronounce. Handmade in small batches. Cruelty-free. No harsh chemicals.',
   keywords: ['natural skincare', 'handmade soap', 'neem soap', 'multani mitti', 'face wash', 'cruelty free', 'cold processed soap', 'natural soap india'],
-  metadataBase: new URL('https://teamnaturals.in'),
+  metadataBase: new URL(getSiteUrl()),
   openGraph: {
     title: 'Team Naturals — Handmade Natural Skincare',
     description: 'Rooted in Nature. Made with Care. Cold-processed soaps and a clay face wash from small batches — cruelty-free, no harsh chemicals.',
     type: 'website',
-    url: 'https://teamnaturals.in',
+    url: getSiteUrl(),
     images: [
       {
         url: '/6ecc3cac-18f0-4044-856c-cc50daf9ac26.webp',
@@ -60,6 +63,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
+        <JsonLd data={buildOrganizationJsonLd()} />
         <AuthProvider>
           <CartProvider>
             <Preloader />

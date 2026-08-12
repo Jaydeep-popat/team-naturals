@@ -10,6 +10,8 @@ import { useCart } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
 import { StarRating } from './StarRating';
 import { AuthModal } from './AuthModal';
+import { OptimizedImage } from './OptimizedImage';
+import { extractProductImageAlt } from '@/src/lib/seo';
 
 // True hover guard: returns true only on pointer-fine (mouse) devices
 const canHover = typeof window !== 'undefined' && window.matchMedia('(hover: hover) and (pointer: fine)').matches;
@@ -42,10 +44,14 @@ export function ProductCard({ product }: { product: Product }) {
     }, 1800);
   }
 
-  const images = (product.images || []).map((img) => (typeof img === 'string' ? img : ((img as any)?.url || '/placeholder.png')));
+  const rawImages = product.images || [];
+  const images = rawImages.map((img) =>
+    typeof img === 'string' ? img : ((img as any)?.url || '/placeholder.png')
+  );
   const primaryImage = images[0] || '/placeholder.png';
   const hasMultipleImages = images.length > 1;
   const activeImage = images[activeImageIndex] || primaryImage;
+  const imageAlt = extractProductImageAlt(rawImages, activeImageIndex, product.name);
 
   const startHoverSwap = () => {
     // Only run on true pointer-capable (mouse) devices
@@ -111,20 +117,24 @@ export function ProductCard({ product }: { product: Product }) {
         tabIndex={0}
       >
         <AnimatePresence mode="wait" initial={false}>
-          <motion.img
+          <motion.div
             key={activeImage}
-            src={activeImage}
-            alt={`${product.name} — handmade natural ${categoryLabel.toLowerCase()} by Team Naturals`}
-            loading="lazy"
             initial={hasMultipleImages ? { opacity: 0, x: 36, scale: 1.02 } : { opacity: 0, scale: 1.04, x: 0 }}
             animate={{ opacity: 1, scale: 1, x: 0 }}
             exit={hasMultipleImages ? { opacity: 0, x: -28 } : { opacity: 0, scale: 1.01, x: 0 }}
             transition={{ duration: hasMultipleImages ? 0.38 : 0.55, ease: 'easeOut' }}
-            className={`absolute inset-0 h-full w-full object-cover object-[58%_42%] transition-transform duration-700 ease-out ${
-              // Only scale on hover for true pointer devices
-              canHover ? (hasMultipleImages ? 'group-hover:scale-115' : 'group-hover:scale-[1.14]') : ''
-            }`}
-          />
+            className="absolute inset-0"
+          >
+            <OptimizedImage
+              src={activeImage}
+              alt={imageAlt}
+              fill
+              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 260px"
+              className={`object-cover object-[58%_42%] transition-transform duration-700 ease-out ${
+                canHover ? (hasMultipleImages ? 'group-hover:scale-115' : 'group-hover:scale-[1.14]') : ''
+              }`}
+            />
+          </motion.div>
         </AnimatePresence>
 
         {/* Carousel Indicators (Bottom of image) */}

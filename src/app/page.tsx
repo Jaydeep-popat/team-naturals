@@ -30,6 +30,7 @@ const FAQAccordion = dynamic(() => import("@/src/components/FAQAccordion").then(
 import { Reveal, staggerContainer, staggerItem } from "@/src/components/Reveal";
 import { ProductGridSkeleton, ProductCardSkeleton } from "@/src/components/Skeletons";
 import { FirstTimeLoginPrompt } from "@/src/components/FirstTimeLoginPrompt";
+import { OptimizedImage } from "@/src/components/OptimizedImage";
 
 // JSON-LD structured data for best sellers (disabled temporarily for live data)
 function ProductJsonLd() {
@@ -131,10 +132,12 @@ export default function HomePage() {
                   <div className="flex cursor-default flex-col items-center gap-3 opacity-50">
                     <div className="relative h-28 w-28 sm:h-36 sm:w-36 lg:h-44 lg:w-44">
                       <div className="h-full w-full overflow-hidden rounded-full border-2 border-dashed border-forest/20 bg-cream-soft">
-                        <img
+                        <OptimizedImage
                           src={catImage}
                           alt=""
                           aria-hidden="true"
+                          width={176}
+                          height={176}
                           className="h-full w-full object-cover grayscale"
                         />
                       </div>
@@ -159,10 +162,11 @@ export default function HomePage() {
                       className="relative h-28 w-28 sm:h-36 sm:w-36 lg:h-44 lg:w-44"
                     >
                       <div className="h-full w-full overflow-hidden rounded-full border-2 border-forest/10 bg-cream shadow-soft transition-shadow duration-300 group-hover:border-forest/30 group-hover:shadow-lift">
-                        <img
+                        <OptimizedImage
                           src={catImage}
                           alt={`${catLabel} category — handmade natural skincare`}
-                          loading="lazy"
+                          width={176}
+                          height={176}
                           className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
                         />
                       </div>
@@ -538,18 +542,23 @@ function Hero() {
         >
           {/* Main large image (Arch shape) */}
           <div className="relative ml-auto w-[85%] overflow-hidden rounded-t-[140px] rounded-b-[40px] border-[6px] border-white shadow-xl">
-            <img
+            <OptimizedImage
               src="/facewash/wash_1.webp"
               alt="Team Naturals facewash styled"
+              width={360}
+              height={480}
+              priority
               className="aspect-[3/4] w-full object-cover transition-transform duration-700 hover:scale-105"
             />
           </div>
           
           {/* Secondary overlapping image (Circle) */}
           <div className="absolute -bottom-6 left-0 w-[45%] overflow-hidden rounded-full border-[6px] border-white shadow-2xl">
-            <img
+            <OptimizedImage
               src="/facewash/wash_2.webp"
               alt="Team Naturals facewash alternate styling"
+              width={162}
+              height={162}
               className="aspect-square w-full object-cover transition-transform duration-700 hover:scale-105"
             />
           </div>
