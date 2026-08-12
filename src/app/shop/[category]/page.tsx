@@ -51,7 +51,13 @@ export default async function CategoryShopPage({ params }: PageProps) {
           { name: categoryName },
         ])}
       />
-      <ShopPageClient />
+      <ShopPageClient
+        categoryMeta={{
+          name: categoryName,
+          slug,
+          description: (category.description as string | null | undefined) ?? null,
+        }}
+      />
     </>
   );
 }

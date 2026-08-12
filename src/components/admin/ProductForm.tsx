@@ -20,6 +20,7 @@ export function ProductForm({ initialData, isEdit }: ProductFormProps) {
   
   const [formData, setFormData] = useState({
     name: initialData?.name || '',
+    slug: initialData?.slug || '',
     sku: initialData?.sku || '',
     categoryId: initialData?.categoryId?.toString() || '',
     price: initialData?.price || '',
@@ -28,7 +29,10 @@ export function ProductForm({ initialData, isEdit }: ProductFormProps) {
     status: initialData?.status || 'draft',
     size: initialData?.size || '',
     scent: initialData?.scent || '',
+    shortDescription: initialData?.shortDescription || '',
     description: initialData?.description || '',
+    metaTitle: initialData?.metaTitle || '',
+    metaDescription: initialData?.metaDescription || '',
   });
 
   useEffect(() => {
@@ -50,6 +54,10 @@ export function ProductForm({ initialData, isEdit }: ProductFormProps) {
         price: parseFloat(formData.price),
         compareAtPrice: formData.compareAtPrice ? parseFloat(formData.compareAtPrice) : undefined,
         stockQty: !isEdit ? parseInt(formData.stockQty, 10) : undefined,
+        slug: formData.slug.trim() || undefined,
+        shortDescription: formData.shortDescription.trim() || undefined,
+        metaTitle: formData.metaTitle.trim() || undefined,
+        metaDescription: formData.metaDescription.trim() || undefined,
       };
 
       let productId = initialData?.productId?.toString();
@@ -189,14 +197,66 @@ export function ProductForm({ initialData, isEdit }: ProductFormProps) {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-forest mb-1.5">Description</label>
+              <label className="block text-sm font-medium text-forest mb-1.5">Short Description</label>
+              <textarea
+                name="shortDescription"
+                value={formData.shortDescription}
+                onChange={handleChange}
+                rows={2}
+                maxLength={300}
+                className="w-full px-4 py-2.5 bg-[#FDFBF9] border border-forest/10 rounded-xl text-forest focus:outline-none focus:ring-2 focus:ring-forest/20 resize-none"
+                placeholder="Brief summary for listings (max 300 chars)"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-forest mb-1.5">Full Description</label>
               <textarea
                 name="description"
                 value={formData.description}
                 onChange={handleChange}
                 rows={4}
                 className="w-full px-4 py-2.5 bg-[#FDFBF9] border border-forest/10 rounded-xl text-forest focus:outline-none focus:ring-2 focus:ring-forest/20 resize-none"
-                placeholder="Product description..."
+                placeholder="Full product description..."
+              />
+            </div>
+          </div>
+
+          {/* SEO */}
+          <div className="bg-white rounded-2xl border border-forest/10 p-6 space-y-4 shadow-sm">
+            <h2 className="font-bold text-forest text-lg">SEO</h2>
+            <div>
+              <label className="block text-sm font-medium text-forest mb-1.5">URL Slug</label>
+              <input
+                name="slug"
+                value={formData.slug}
+                onChange={handleChange}
+                maxLength={220}
+                className="w-full px-4 py-2.5 bg-[#FDFBF9] border border-forest/10 rounded-xl text-forest focus:outline-none focus:ring-2 focus:ring-forest/20"
+                placeholder="auto-generated from name if empty"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-forest mb-1.5">Meta Title</label>
+              <input
+                name="metaTitle"
+                value={formData.metaTitle}
+                onChange={handleChange}
+                maxLength={160}
+                className="w-full px-4 py-2.5 bg-[#FDFBF9] border border-forest/10 rounded-xl text-forest focus:outline-none focus:ring-2 focus:ring-forest/20"
+                placeholder="Page title for search engines (max 160 chars)"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-forest mb-1.5">Meta Description</label>
+              <textarea
+                name="metaDescription"
+                value={formData.metaDescription}
+                onChange={handleChange}
+                rows={2}
+                maxLength={300}
+                className="w-full px-4 py-2.5 bg-[#FDFBF9] border border-forest/10 rounded-xl text-forest focus:outline-none focus:ring-2 focus:ring-forest/20 resize-none"
+                placeholder="Search snippet description (max 300 chars)"
               />
             </div>
           </div>

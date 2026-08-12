@@ -1,7 +1,7 @@
 import { ApiError } from './api';
-import { REVALIDATE_SECONDS } from './seo';
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://127.0.0.1:8000';
+const REVALIDATE_SECONDS = 3600;
 
 async function serverFetch<T>(path: string): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`, {
@@ -30,10 +30,21 @@ export async function fetchProductBySlug(slug: string) {
 }
 
 export async function fetchAllProducts() {
-  const res = await serverFetch<{ data: { products: Array<Record<string, unknown>> } }>(
-    '/api/products?limit=500'
-  );
-  return res.data.products;
+  const products: Array<Record<string, unknown>> = [];
+  let page = 1;
+  let totalPages = 1;
+
+  do {
+    const res = await serverFetch<{
+      data: { products: Array<Record<string, unknown>>; pagination: { totalPages: number } };
+    }>(`/api/products?limit=100&page=${page}`);
+
+    products.push(...res.data.products);
+    totalPages = res.data.pagination?.totalPages ?? 1;
+    page += 1;
+  } while (page <= totalPages);
+
+  return products;
 }
 
 export async function fetchAllCategories() {
@@ -44,6 +55,15 @@ export async function fetchAllCategories() {
 }
 
 export async function fetchCategoryBySlug(slug: string) {
-  const categories = await fetchAllCategories();
-  return categories.find((category) => category.slug === slug) ?? null;
+  try {
+    const res = await serverFetch<{ data: { category: Record<string, unknown> } }>(
+      `/api/categories/${encodeURIComponent(slug)}`
+    );
+    return res.data.category;
+  } catch (error) {
+    if (error instanceof ApiError && error.statusCode === 404) {
+      return null;
+    }
+    throw error;
+  }
 }

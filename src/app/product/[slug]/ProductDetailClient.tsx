@@ -268,9 +268,9 @@ export default function ProductDetailClient() {
           </div>
 
           <div className="mt-3 flex items-center gap-2">
-            <StarRating rating={product.rating || 5} size={15} />
+            <StarRating rating={product.avgRating || product.rating || 5} size={15} />
             <span className="text-sm text-muted">
-              {product.rating || 5} ({product.reviewCount || 0} reviews)
+              {product.avgRating || product.rating || 5} ({product.reviewCount || 0} reviews)
             </span>
           </div>
 
@@ -384,7 +384,7 @@ export default function ProductDetailClient() {
           </div>
 
           <p className="mt-7 border-t border-forest/8 pt-6 text-sm leading-relaxed text-muted">
-            {product.fullDescription}
+            {product.description}
           </p>
         </div>
       </div>

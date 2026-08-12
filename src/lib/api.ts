@@ -270,37 +270,37 @@ export const products = {
     return apiFetch<{ data: { product: any } }>(`/api/products/${slug}`);
   },
 
-  // Admin methods
+  // Admin methods (preferred /api/admin/* routes per backend API docs)
   adminList(query: Record<string, string> = {}) {
     const q = new URLSearchParams(query).toString();
-    return apiFetch<{ data: { products: any[], pagination: any } }>(`/api/products/admin?${q}`);
+    return apiFetch<{ data: { products: any[]; pagination: any } }>(`/api/admin/products?${q}`);
   },
 
   adminGet(productId: string) {
-    return apiFetch<{ data: { product: any } }>(`/api/products/admin/${productId}`);
+    return apiFetch<{ data: { product: any } }>(`/api/admin/products/${productId}`);
   },
 
   create(body: any) {
-    return apiFetch<{ data: { product: any } }>('/api/products', {
+    return apiFetch<{ data: { product: any } }>('/api/admin/products', {
       method: 'POST',
       body: JSON.stringify(body),
     });
   },
 
   update(productId: string, body: any) {
-    return apiFetch<{ data: { product: any } }>(`/api/products/${productId}`, {
+    return apiFetch<{ data: { product: any } }>(`/api/admin/products/${productId}`, {
       method: 'PATCH',
       body: JSON.stringify(body),
     });
   },
 
   delete(productId: string) {
-    return apiFetch<{ data: any }>(`/api/products/${productId}`, { method: 'DELETE' });
+    return apiFetch<{ data: any }>(`/api/admin/products/${productId}`, { method: 'DELETE' });
   },
 
-  // Image upload method (FormData)
+  // Image upload method (FormData) — equivalent admin path
   uploadImages(productId: string, formData: FormData) {
-    return fetch(`${BASE_URL}/api/products/${productId}/images`, {
+    return fetch(`${BASE_URL}/api/admin/products/${productId}/images`, {
       method: 'POST',
       body: formData,
       credentials: 'include',
@@ -321,23 +321,46 @@ export const categories = {
   list() {
     return apiFetch<{ data: { categories: any[] } }>('/api/categories');
   },
-  
-  create(body: FormData | { name: string; slug?: string; description?: string }) {
-    return apiFetch<{ data: { category: any } }>('/api/categories', {
+
+  getBySlug(slug: string) {
+    return apiFetch<{ data: { category: any } }>(`/api/categories/${encodeURIComponent(slug)}`);
+  },
+
+  adminList() {
+    return apiFetch<{ data: { categories: any[] } }>('/api/admin/categories');
+  },
+
+  create(body: FormData | {
+    name: string;
+    slug?: string;
+    description?: string;
+    metaTitle?: string;
+    metaDescription?: string;
+  }) {
+    return apiFetch<{ data: { category: any } }>('/api/admin/categories', {
       method: 'POST',
       body: body instanceof FormData ? body : JSON.stringify(body),
     });
   },
 
-  update(categoryId: string, body: FormData | { name?: string; slug?: string; description?: string }) {
-    return apiFetch<{ data: { category: any } }>(`/api/categories/${categoryId}`, {
+  update(
+    categoryId: string,
+    body: FormData | {
+      name?: string;
+      slug?: string;
+      description?: string;
+      metaTitle?: string | null;
+      metaDescription?: string | null;
+    }
+  ) {
+    return apiFetch<{ data: { category: any } }>(`/api/admin/categories/${categoryId}`, {
       method: 'PATCH',
       body: body instanceof FormData ? body : JSON.stringify(body),
     });
   },
 
   delete(categoryId: string) {
-    return apiFetch(`/api/categories/${categoryId}`, { method: 'DELETE' });
+    return apiFetch(`/api/admin/categories/${categoryId}`, { method: 'DELETE' });
   },
 };
 

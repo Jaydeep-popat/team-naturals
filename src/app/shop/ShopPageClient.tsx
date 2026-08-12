@@ -22,7 +22,11 @@ const priceBands = [
   { label: 'Above ₹250', min: 251, max: Infinity },
 ];
 
-export default function ShopPageClient() {
+export default function ShopPageClient({
+  categoryMeta,
+}: {
+  categoryMeta?: { name: string; slug: string; description?: string | null };
+} = {}) {
   const params = useParams();
   const category = params?.category as string | undefined;
   const loading = usePageLoad(700);
@@ -47,7 +51,9 @@ export default function ShopPageClient() {
       .finally(() => setLoadingProducts(false));
   }, []);
 
-  const activeCategory = categories.find((c) => c.slug === category);
+  const activeCategory = categoryMeta
+    ? { slug: categoryMeta.slug, label: categoryMeta.name }
+    : categories.find((c) => c.slug === category);
 
   const results = useMemo(() => {
     let list = liveProducts.filter((p) =>
