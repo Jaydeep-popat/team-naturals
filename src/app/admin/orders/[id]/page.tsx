@@ -64,7 +64,9 @@ export default function AdminOrderDetailPage() {
             city: data.shipping.city,
             state: data.shipping.state,
             postalCode: data.shipping.postalCode,
-            country: data.shipping.country
+            country: data.shipping.country,
+            latitude: data.shipping.latitude,
+            longitude: data.shipping.longitude,
           } : null,
           items: data.items.map((item: any) => ({
             id: item.productId,
@@ -245,14 +247,29 @@ export default function AdminOrderDetailPage() {
 
           {/* Shipping address */}
           {order.shippingAddress && (
-            <div className="rounded-2xl border border-forest/10 bg-white p-5 shadow-sm">
+            <div className="rounded-2xl border border-forest/10 bg-white p-5 shadow-sm relative">
               <h2 className="font-semibold text-forest mb-3">Shipping Address</h2>
-              <address className="not-italic text-sm text-forest/70 leading-relaxed">
+              <address className="not-italic text-sm text-forest/70 leading-relaxed pr-10">
                 {order.shippingAddress.line1}<br />
                 {order.shippingAddress.line2 && <>{order.shippingAddress.line2}<br /></>}
                 {order.shippingAddress.city}, {order.shippingAddress.state} {order.shippingAddress.postalCode}<br />
                 {order.shippingAddress.country}
               </address>
+              
+              <button
+                onClick={() => {
+                  if (order.shippingAddress?.latitude && order.shippingAddress?.longitude) {
+                    window.open(`https://www.google.com/maps?q=${order.shippingAddress.latitude},${order.shippingAddress.longitude}`, '_blank');
+                  } else {
+                    const query = `${order.shippingAddress?.line1}, ${order.shippingAddress?.city}, ${order.shippingAddress?.state} ${order.shippingAddress?.postalCode}`;
+                    window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`, '_blank');
+                  }
+                }}
+                className="absolute top-5 right-5 h-8 w-8 rounded-full bg-forest/5 flex items-center justify-center text-forest hover:bg-forest/10 transition-colors"
+                title="View on Map"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+              </button>
             </div>
           )}
 

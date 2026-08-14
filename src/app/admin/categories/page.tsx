@@ -134,14 +134,14 @@ export default function AdminCategoriesPage() {
     { key: 'productCount', header: 'Products', render: (c) => <span className="text-forest/70">{c._count?.products || 0}</span> },
     { key: 'actions', header: '',
       render: (c) => (
-        <div className="flex items-center gap-1 justify-end">
+        <div className="flex items-center gap-2 justify-end">
           <button onClick={(e) => { e.stopPropagation(); handleEdit(c); }}
-            className="p-1.5 rounded-lg text-forest/30 hover:text-forest hover:bg-forest/5 transition-colors">
-            <Pencil size={14} />
+            className="p-2 rounded-lg text-forest/40 hover:text-forest hover:bg-forest/5 transition-colors">
+            <Pencil size={18} />
           </button>
           <button onClick={(e) => { e.stopPropagation(); setDeleteTarget(c); }}
-            className="p-1.5 rounded-lg text-forest/30 hover:text-terracotta hover:bg-terracotta/5 transition-colors">
-            <Trash2 size={14} />
+            className="p-2 rounded-lg text-forest/40 hover:text-terracotta hover:bg-terracotta/5 transition-colors">
+            <Trash2 size={18} />
           </button>
         </div>
       )},

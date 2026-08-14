@@ -54,7 +54,7 @@ export default function AccountLayoutClient({ children }: { children: React.Reac
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-[#FDFBF9] px-4 pt-16 pb-12 sm:pt-20 lg:px-8">
+      <div className="min-h-screen bg-[#FDFBF9] px-4 pt-4 pb-12 sm:pt-8 lg:px-8">
         <div className="mx-auto w-full max-w-[1360px]">
           
           {/* Header Banner - Compact & Clean */}

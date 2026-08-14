@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
-import { LeafIcon, LockIcon, HeartIcon, ChevronLeftIcon, ChevronRightIcon, PackageX, Loader2, XIcon, ZoomInIcon } from 'lucide-react';
+import { LeafIcon, LockIcon, HeartIcon, ChevronLeftIcon, ChevronRightIcon, PackageX, Loader2, XIcon, ZoomInIcon, StarIcon, ChevronDown, ChevronUp, TagIcon, CheckCircle2 } from 'lucide-react';
 import { products as productsApi, reviews as reviewsApi } from "@/src/lib/api";
 import { useCart } from "@/src/contexts/CartContext";
 import toast from 'react-hot-toast';
@@ -14,6 +14,7 @@ import { QtyStepper } from "@/src/components/QtyStepper";
 import dynamic from 'next/dynamic';
 const PromiseBanner = dynamic(() => import("@/src/components/PromiseBanner").then(mod => mod.PromiseBanner), { ssr: true });
 import { ProductCard } from "@/src/components/ProductCard";
+import { ReviewModal } from '@/src/components/account/ReviewModal';
 const AuthModal = dynamic(() => import("@/src/components/AuthModal").then(mod => mod.AuthModal), { ssr: false });
 import { useAuth } from "@/src/contexts/AuthContext";
 import { ProductDetailSkeleton, ProductCardSkeleton } from "@/src/components/Skeletons";
@@ -21,6 +22,7 @@ import { Reveal } from "@/src/components/Reveal";
 import { usePageLoad } from "@/src/hooks/usePageLoad";
 import { OptimizedImage } from '@/src/components/OptimizedImage';
 import { extractProductImageAlt } from '@/src/lib/seo';
+import { useAvailableDiscounts } from '@/src/hooks/useAvailableDiscounts';
 
 const GALLERY_AUTOPLAY_MS = 6000;
 
@@ -35,6 +37,10 @@ export default function ProductDetailClient() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
   const [loadingRelated, setLoadingRelated] = useState(true);
+  
+  const [selectedCoupon, setSelectedCoupon] = useState<any>(null);
+  const [offersExpanded, setOffersExpanded] = useState(false);
+  const { getCouponsForProduct } = useAvailableDiscounts();
 
   const { addToCart, wishlist, toggleWishlist } = useCart();
   const { isAuthenticated, user } = useAuth();
@@ -101,6 +107,11 @@ export default function ProductDetailClient() {
   const categoryUrl = typeof product.category === 'object' && product.category !== null 
     ? product.category.slug 
     : product.category;
+  
+  const categoryId = typeof product.category === 'object' && product.category !== null 
+    ? (product.category as any).categoryId || (product.category as any).id 
+    : undefined;
+  const applicableCoupons = getCouponsForProduct(product.productId || product.id, categoryId);
 
   const buyNow = () => {
     if (!isAuthenticated) {
@@ -175,48 +186,194 @@ export default function ProductDetailClient() {
             </span>
           </div>
 
-          <div className="mt-5 flex items-baseline gap-3">
+          <div className="mt-5 flex flex-col gap-1">
             {(() => {
               const activeDiscount = (product as any).activeDiscount;
-              const originalPrice = Number(product.price || 0);
-              const compareAtPrice = product.compareAtPrice ? Number(product.compareAtPrice) : null;
+              const mrp = product.compareAtPrice ? Number(product.compareAtPrice) : Number(product.price || 0);
+              const productSellingPrice = Number(product.price || 0);
+              const productDiscountPercent = mrp > productSellingPrice ? Math.round(((mrp - productSellingPrice) / mrp) * 100) : 0;
               
-              let finalPrice = originalPrice;
-              let discountLabel = '';
+              let eventPrice = productSellingPrice;
               
               if (activeDiscount) {
                 if (activeDiscount.type === 'percent') {
-                  finalPrice = originalPrice - (originalPrice * Number(activeDiscount.value) / 100);
-                  discountLabel = `${activeDiscount.value}% off`;
+                  eventPrice = productSellingPrice - (productSellingPrice * Number(activeDiscount.value) / 100);
                 } else if (activeDiscount.type === 'flat') {
-                  finalPrice = Math.max(0, originalPrice - Number(activeDiscount.value));
-                  discountLabel = `₹${activeDiscount.value} off`;
+                  eventPrice = Math.max(0, productSellingPrice - Number(activeDiscount.value));
+                }
+              }
+              
+              let finalPrice = eventPrice;
+              if (selectedCoupon) {
+                if (selectedCoupon.type === 'percent' || selectedCoupon.discountType === 'percent') {
+                  const val = Number(selectedCoupon.value || selectedCoupon.discountValue);
+                  const maxDisc = selectedCoupon.maxDiscount ? Number(selectedCoupon.maxDiscount) : Infinity;
+                  const disc = Math.min((eventPrice * val) / 100, maxDisc);
+                  finalPrice = Math.max(0, eventPrice - disc);
+                } else if (selectedCoupon.type !== 'buy_x') {
+                  const val = Number(selectedCoupon.value || selectedCoupon.discountValue);
+                  finalPrice = Math.max(0, eventPrice - val);
                 }
               }
 
+              const applicableCoupons = getCouponsForProduct(
+                product.productId,
+                product.categoryId
+              );
+
               return (
-                <>
-                  <span className="font-display text-3xl text-forest">₹{finalPrice.toFixed(2)}</span>
-                  {(activeDiscount || (compareAtPrice && compareAtPrice > originalPrice)) && (
-                    <>
-                      <span className="text-lg text-muted line-through">₹{compareAtPrice || originalPrice}</span>
-                      <span className="text-lg font-semibold text-[#388E3C]">
-                        {activeDiscount ? discountLabel : `${Math.round((((compareAtPrice || originalPrice) - originalPrice) / (compareAtPrice || originalPrice)) * 100)}% off`}
-                      </span>
-                    </>
+                <div className="flex flex-col gap-3 w-full">
+                  <div className="flex items-baseline gap-3">
+                    <span className="font-display text-3xl text-forest">₹{finalPrice.toFixed(2)}</span>
+                    {productDiscountPercent > 0 && (
+                      <>
+                        <span className="text-lg text-muted line-through">₹{mrp}</span>
+                        <span className="text-lg font-semibold text-[#388E3C]">
+                          {productDiscountPercent}% OFF
+                        </span>
+                      </>
+                    )}
+                  </div>
+                  
+                  {(() => {
+                    const bogoCoupon = applicableCoupons.find(c => c.type === 'buy_x');
+                    if (!bogoCoupon) return null;
+                    return (
+                      <div className="flex items-center text-xs font-bold text-blue-700 bg-blue-50 border border-blue-100/50 px-2 py-1 rounded w-fit uppercase tracking-wide">
+                        <span className="mr-1.5">🎁</span> BUY {bogoCoupon.minQuantity || 1} GET {bogoCoupon.getQuantity || 1} {Number(bogoCoupon.value) === 100 ? 'FREE' : `AT ${Number(bogoCoupon.value)}% OFF`}
+                      </div>
+                    );
+                  })()}
+                  
+                  {activeDiscount && (
+                    <div className="flex flex-col rounded-lg border border-blue-100 bg-blue-50/40 p-3 mt-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg leading-none">🎁</span>
+                        <span className="font-semibold text-blue-900 truncate">
+                          {activeDiscount.event}
+                        </span>
+                      </div>
+                      <div className="mt-1 pl-7 text-sm font-medium text-blue-800">
+                        Extra {activeDiscount.type === 'percent' ? `${activeDiscount.value}%` : `₹${activeDiscount.value}`} OFF
+                      </div>
+                    </div>
                   )}
-                </>
+
+                  {applicableCoupons.length > 0 && (
+                    <div className="mt-4 rounded-xl border-none overflow-hidden transition-all duration-300 bg-[#f4f7f6]">
+                      <button 
+                        type="button" 
+                        onClick={() => setOffersExpanded(!offersExpanded)}
+                        className={`w-full flex items-center justify-between p-3.5 transition-colors ${offersExpanded ? 'bg-forest rounded-t-xl' : 'bg-forest rounded-xl'} text-cream`}
+                      >
+                        <div className="flex items-center gap-2.5 font-semibold text-sm">
+                          <span className="bg-cream text-forest text-[9px] font-black italic px-1.5 py-0.5 rounded uppercase tracking-wider leading-none">Deal</span>
+                          Apply offers for maximum savings
+                        </div>
+                        {offersExpanded ? <ChevronUp size={18} className="text-cream" /> : <ChevronDown size={18} className="text-cream" />}
+                      </button>
+                      
+                      <AnimatePresence>
+                        {offersExpanded && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            className="overflow-hidden"
+                          >
+                            <div className="p-4 space-y-3.5">
+                              <div className="text-xl font-bold text-forest">
+                                Buy at ₹{finalPrice.toFixed(0)}
+                              </div>
+                              
+                              <div className="space-y-3">
+                                {applicableCoupons.map((coupon) => {
+                                  const isSelected = selectedCoupon?.discountId === coupon.discountId;
+                                  
+                                  const couponVal = Number(coupon.value);
+                                  const maxDisc = coupon.maxDiscount ? Number(coupon.maxDiscount) : Infinity;
+                                  let saveAmt = 0;
+                                  if (coupon.type === 'percent') {
+                                    saveAmt = Math.min((eventPrice * couponVal) / 100, maxDisc);
+                                  } else if (coupon.type === 'flat') {
+                                    saveAmt = couponVal;
+                                  }
+                                  saveAmt = Math.min(saveAmt, eventPrice);
+                                  
+                                  const couponTitle = coupon.type === 'percent'
+                                    ? `${couponVal}% off`
+                                    : coupon.type === 'flat'
+                                    ? `₹${couponVal} off`
+                                    : `Buy ${coupon.minQuantity ?? 1} Get ${coupon.getQuantity ?? 1} ${couponVal === 100 ? 'Free' : `at ${couponVal}% Off`}`;
+                                  
+                                  const couponDesc = coupon.minOrderAmount > 0
+                                    ? `On orders above ₹${coupon.minOrderAmount} >`
+                                    : `Save extra with this coupon >`;
+
+                                  return (
+                                    <div key={coupon.discountId} className={`flex flex-col gap-3 p-3.5 rounded-xl bg-white shadow-sm border transition-colors ${isSelected ? 'border-forest ring-1 ring-forest' : 'border-transparent hover:border-forest/20'}`}>
+                                      <div className="flex justify-between items-center">
+                                        <span className="text-xs font-semibold text-forest/60 uppercase tracking-wider">
+                                          {coupon.minOrderAmount > eventPrice ? 'Buy More Save More' : 'Coupons'}
+                                        </span>
+                                        <button 
+                                          type="button"
+                                          onClick={() => {
+                                            if (isSelected) {
+                                              setSelectedCoupon(null);
+                                            } else {
+                                              setSelectedCoupon(coupon);
+                                              if (coupon.type === 'buy_x') {
+                                                const requiredQty = (coupon.minQuantity || 1) + (coupon.getQuantity || 1);
+                                                if (qty < requiredQty) {
+                                                  setQty(requiredQty);
+                                                }
+                                              }
+                                            }
+                                          }}
+                                          className={`text-sm font-bold transition-colors ${isSelected ? 'text-terracotta' : 'text-blue-600 hover:text-blue-800'}`}
+                                        >
+                                          {isSelected ? 'Remove' : 'Apply'}
+                                        </button>
+                                      </div>
+                                      
+                                      <div className="flex gap-3 items-start">
+                                        <div className="mt-0.5 text-forest/70">
+                                          <TagIcon size={20} className="text-forest" />
+                                        </div>
+                                        <div className="flex flex-col">
+                                          <span className="text-[15px] font-bold text-forest leading-tight">
+                                            {couponTitle} <span className="font-mono text-xs font-normal text-forest/50 ml-1">({coupon.code})</span>
+                                          </span>
+                                          <span className="text-[13px] text-forest/80 mt-1">{couponDesc}</span>
+                                        </div>
+                                      </div>
+                                      
+                                      {isSelected && (saveAmt > 0 || coupon.type === 'buy_x') && (
+                                        <div className="text-[13px] font-medium text-[#388E3C] bg-[#388E3C]/10 px-3 py-1.5 rounded-md self-start">
+                                          {coupon.type === 'buy_x' 
+                                            ? qty >= ((coupon.minQuantity || 1) + (coupon.getQuantity || 1))
+                                              ? `✓ Offer activated! You will get ${coupon.getQuantity || 1} item(s) ${Number(coupon.value) === 100 ? 'free' : `at ${Number(coupon.value)}% off`}`
+                                              : `✓ Add ${((coupon.minQuantity || 1) + (coupon.getQuantity || 1)) - qty} more item(s) to get the offer`
+                                            : `✓ You save ₹${saveAmt.toFixed(2)} with this coupon`}
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  )}
+                </div>
               );
             })()}
           </div>
-          {product.activeDiscount && (
-            <div className="mt-2">
-              <span className="inline-block bg-[#FFC5C5] text-forest font-bold text-xs px-3 py-1 rounded-full uppercase tracking-wider shadow-sm">
-                {product.activeDiscount.event}
-              </span>
-            </div>
-          )}
-          <p className="mt-1 text-xs text-muted">MRP incl. of all taxes · {product.weight || product.size || '100g'}</p>
+          
+          <p className="mt-2 text-xs text-muted">MRP incl. of all taxes · {product.weight || product.size || '100g'}</p>
 
           <p className="mt-5 text-[15px] leading-relaxed text-muted">{product.shortDescription || product.description || ''}</p>
 
@@ -689,10 +846,7 @@ function Reviews({ product }: { product: any }) {
   const { isAuthenticated } = useAuth();
   const [reviewsList, setReviewsList] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  
-  const [rating, setRating] = useState(5);
-  const [comment, setComment] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showReviewModal, setShowReviewModal] = useState(false);
 
   const fetchReviews = React.useCallback(async () => {
     try {
@@ -712,28 +866,7 @@ function Reviews({ product }: { product: any }) {
     fetchReviews();
   }, [fetchReviews]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!isAuthenticated) {
-      toast.error('Please login to submit a review.');
-      return;
-    }
-    if (!comment.trim()) return;
-
-    setIsSubmitting(true);
-    try {
-      await reviewsApi.add(product.productId || product.id, { rating, comment });
-      toast.success('Review submitted successfully!');
-      setComment('');
-      setRating(5);
-      fetchReviews(); // Refetch to show the review immediately
-    } catch (error: any) {
-      console.error('Failed to submit review:', error);
-      toast.error(error.message || 'Failed to submit review');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+  // handle submit is managed by ReviewModal now
 
   const distribution = [5, 4, 3, 2, 1].map((star) => ({
     star,
@@ -747,9 +880,23 @@ function Reviews({ product }: { product: any }) {
   return (
     <section className="mx-auto max-w-6xl px-5 pt-16 lg:px-8" aria-labelledby="reviews-heading">
       <Reveal>
-        <h2 id="reviews-heading" className="font-display text-2xl text-forest">
-          Reviews
-        </h2>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <h2 id="reviews-heading" className="font-display text-2xl text-forest">
+            Reviews
+          </h2>
+          <button
+            onClick={() => {
+              if (!isAuthenticated) {
+                toast.error('Please login to write a review.');
+              } else {
+                setShowReviewModal(true);
+              }
+            }}
+            className="flex items-center justify-center gap-2 rounded-full bg-forest px-6 py-2.5 text-sm font-bold text-cream transition-all hover:bg-forest-deep sm:w-auto hover:shadow-md"
+          >
+            <StarIcon size={16} className="fill-cream/30" /> Write a Review
+          </button>
+        </div>
 
         <div className="mt-6 grid gap-8 rounded-3xl border border-forest/8 bg-cream-soft p-6 sm:grid-cols-[180px_1fr] sm:p-8">
           <div className="text-center sm:text-left">
@@ -809,6 +956,16 @@ function Reviews({ product }: { product: any }) {
             )))}
           </ul>
         )}
+        
+        <ReviewModal
+          isOpen={showReviewModal}
+          onClose={() => {
+            setShowReviewModal(false);
+            fetchReviews(); // Refresh reviews when modal closes
+          }}
+          productId={product.productId || product.id}
+          productName={product.name}
+        />
       </Reveal>
     </section>
   );

@@ -35,10 +35,6 @@ export default function MobileAccountMenuPage() {
       transition={{ duration: 0.2 }}
       className="space-y-4 pb-20 sm:hidden"
     >
-      <div>
-        <h2 className="font-display text-xl font-bold text-forest">Account Overview</h2>
-        <p className="text-[12px] text-muted">Manage your profile and orders</p>
-      </div>
 
       <div className="rounded-2xl border border-forest/10 bg-white overflow-hidden shadow-xs">
         <div className="bg-[#FDFBF9] border-b border-forest/10 p-3">

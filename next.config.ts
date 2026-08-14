@@ -1,6 +1,66 @@
 import type { NextConfig } from 'next';
+import withPWAInit from '@ducanh2912/next-pwa';
+
+const withPWA = withPWAInit({
+  dest: 'public',
+  disable: process.env.NODE_ENV === 'development',
+  workboxOptions: {
+    runtimeCaching: [
+      {
+        urlPattern: /^\/_next\/static\/.*/i,
+        handler: 'CacheFirst',
+        options: {
+          cacheName: 'static-assets',
+          expiration: {
+            maxEntries: 200,
+            maxAgeSeconds: 30 * 24 * 60 * 60, // 30 days
+          },
+        },
+      },
+      {
+        urlPattern: /\.(?:png|jpg|jpeg|svg|webp|gif|ico)$/i,
+        handler: 'StaleWhileRevalidate',
+        options: {
+          cacheName: 'images',
+          expiration: {
+            maxEntries: 100,
+            maxAgeSeconds: 30 * 24 * 60 * 60, // 30 days
+          },
+        },
+      },
+      {
+        urlPattern: /\/api\/(?:products|categories).*/i,
+        handler: 'StaleWhileRevalidate',
+        options: {
+          cacheName: 'catalog-api',
+          expiration: {
+            maxEntries: 50,
+            maxAgeSeconds: 60 * 60, // 1 hour
+          },
+        },
+      },
+      {
+        urlPattern: /\/api\/(?:cart|auth|checkout|orders|admin).*/i,
+        handler: 'NetworkOnly',
+      },
+      {
+        urlPattern: /^https?.*/,
+        handler: 'NetworkFirst',
+        options: {
+          cacheName: 'html-pages',
+          networkTimeoutSeconds: 3,
+          expiration: {
+            maxEntries: 50,
+            maxAgeSeconds: 24 * 60 * 60,
+          },
+        },
+      },
+    ],
+  },
+});
 
 const nextConfig: NextConfig = {
+  transpilePackages: ['maplibre-gl'],
   images: {
     remotePatterns: [
       {
@@ -27,4 +87,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withPWA(nextConfig);

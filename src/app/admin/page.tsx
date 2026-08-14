@@ -30,16 +30,19 @@ const STATUS_STYLES: Record<Order['status'], string> = {
 };
 
 const ORDER_COLUMNS: Column<Order>[] = [
-  { key: 'number', header: 'Order', sortable: true,
-    render: (o) => <span className="font-mono text-[13px] font-medium text-forest">{o.number}</span> },
-  { key: 'customer', header: 'Customer', sortable: true },
-  { key: 'date', header: 'Placed', sortable: false,
-    render: (o) => <span className="text-forest/60">{o.date}</span> },
-  { key: 'total', header: 'Total', sortable: true,
-    render: (o) => <span className="font-semibold text-forest">{o.total}</span> },
+  { key: 'customer', header: 'Customer', sortable: true,
+    render: (o) => (
+      <div className="flex flex-col">
+        <span className="font-semibold text-[13px] text-forest">{o.customer}</span>
+        <span className="text-[11px] text-forest/50 font-medium mt-0.5">{o.date}</span>
+      </div>
+    )
+  },
+  { key: 'total', header: 'Amount', sortable: true,
+    render: (o) => <span className="font-bold text-forest">{o.total}</span> },
   { key: 'status', header: 'Status',
     render: (o) => (
-      <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[12px] font-semibold capitalize ${STATUS_STYLES[o.status]}`}>
+      <span className={`inline-flex items-center justify-center rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${STATUS_STYLES[o.status]}`}>
         {o.status}
       </span>
     )},

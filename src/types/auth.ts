@@ -27,6 +27,8 @@ export interface Address {
   postalCode: string;
   country: string;
   isDefault: boolean;
+  latitude?: number | null;
+  longitude?: number | null;
   createdAt: string;
   updatedAt: string;
 }

@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { CartProvider } from '@/src/contexts/CartContext';
 import { AuthProvider } from '@/src/contexts/AuthContext';
@@ -12,7 +12,20 @@ import { LayoutWrapper } from '@/src/components/LayoutWrapper';
 const Preloader = dynamic(() => import('@/src/components/Preloader').then(mod => mod.Preloader));
 const Toaster = dynamic(() => import('react-hot-toast').then(mod => mod.Toaster));
 const BackToTop = dynamic(() => import('@/src/components/BackToTop').then(mod => mod.BackToTop));
+const InstallPrompt = dynamic(() => import('@/src/components/pwa/InstallPrompt'));
+
+export const viewport: Viewport = {
+  themeColor: "#1F3D2B",
+};
+
 export const metadata: Metadata = {
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Team Naturals",
+  },
+
   title: {
     default: 'Team Naturals — Handmade Natural Skincare',
     template: '%s | Team Naturals',
@@ -49,9 +62,15 @@ export const metadata: Metadata = {
     googleBot: { index: true, follow: true },
   },
   icons: {
-    icon: '/favicon-trimmed.png',
+    icon: [
+      { url: '/favicon-trimmed.png' },
+      { url: '/icons/manifest-icon-192.maskable.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icons/manifest-icon-512.maskable.png', sizes: '512x512', type: 'image/png' },
+    ],
     shortcut: '/favicon-trimmed.png',
-    apple: '/favicon-trimmed.png',
+    apple: [
+      { url: '/icons/apple-icon-180.png', sizes: '180x180', type: 'image/png' },
+    ],
   },
 };
 
@@ -70,6 +89,7 @@ export default function RootLayout({
             <LayoutWrapper>
               {children}
             </LayoutWrapper>
+            <InstallPrompt />
             <Toaster position="top-right" />
             <BackToTop />
           </CartProvider>

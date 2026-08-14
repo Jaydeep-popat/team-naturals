@@ -370,15 +370,15 @@ function BestSellersCarousel({
       <div
         ref={trackRef}
         onScroll={updateState}
-        className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-4 scrollbar-none"
-        style={{ paddingLeft: 'max(20px, calc((100vw - min(1280px, 100vw)) / 2 + 20px))', paddingRight: 20, WebkitOverflowScrolling: 'touch' } as React.CSSProperties}
+        className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-4 scrollbar-none px-5 lg:px-10"
+        style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}
       >
         {loading
-          ? Array.from({ length: 6 }).map((_, i) => (
+          ? Array.from({ length: 4 }).map((_, i) => (
               <div
                 key={`skel-${i}`}
                 data-card=""
-                className="w-[80vw] flex-none snap-start sm:w-[260px] lg:w-[calc((100%-48px)/4)]"
+                className="w-[160px] flex-none snap-start sm:w-[200px] lg:w-[calc((100%-36px)/4)]"
               >
                 <ProductCardSkeleton />
               </div>
@@ -399,7 +399,7 @@ function BestSellersCarousel({
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: i * 0.07, ease: [0.22, 1, 0.36, 1] }}
-                className="w-[80vw] flex-none snap-start sm:w-[260px] lg:w-[calc((100%-48px)/4)]"
+                className="w-[160px] flex-none snap-start sm:w-[200px] lg:w-[calc((100%-36px)/4)]"
               >
                 <ProductCard product={p} />
               </motion.div>

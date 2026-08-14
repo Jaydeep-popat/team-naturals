@@ -17,6 +17,7 @@ import {
 import { useAuth } from '@/src/contexts/AuthContext';
 import { ApiError } from '@/src/lib/api';
 import { motion, AnimatePresence } from 'framer-motion';
+import { CustomDatePicker } from '@/src/components/CustomDatePicker';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -39,6 +40,7 @@ export default function PersonalInfoPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
+  const [profilePicFile, setProfilePicFile] = useState<File | null>(null);
 
   // Form state — synced from user on each edit session open
   const [form, setForm] = useState({
@@ -92,6 +94,7 @@ export default function PersonalInfoPage() {
       dateOfBirth: formatDOB(user.dateOfBirth),
       profilePic: user.profilePic ?? '',
     });
+    setProfilePicFile(null);
     setFormError('');
     setIsEditing(false);
   };
@@ -105,14 +108,26 @@ export default function PersonalInfoPage() {
 
     setIsSaving(true);
     try {
+      let finalProfilePicUrl = form.profilePic || null;
+
+      // If a new file was selected, upload it first
+      if (profilePicFile) {
+        const { auth } = await import('@/src/lib/api');
+        const formData = new FormData();
+        formData.append('profilePic', profilePicFile);
+        const res = await auth.uploadProfilePic(formData);
+        finalProfilePicUrl = res.data.user.profilePic || null;
+      }
+
       await updateProfile({
         firstName: form.firstName.trim(),
         lastName: form.lastName.trim(),
         username: form.username.trim(),
         phoneNo: form.phoneNo.trim() || null,
         dateOfBirth: form.dateOfBirth || null,
-        profilePic: form.profilePic || null,
+        profilePic: finalProfilePicUrl,
       });
+      setProfilePicFile(null);
       setIsEditing(false);
       showToast('Profile updated successfully');
     } catch (err) {
@@ -171,6 +186,7 @@ export default function PersonalInfoPage() {
                         setFormError('Image must be less than 2MB');
                         return;
                       }
+                      setProfilePicFile(file);
                       const reader = new FileReader();
                       reader.onloadend = () => {
                         field('profilePic', reader.result as string);
@@ -185,7 +201,7 @@ export default function PersonalInfoPage() {
           </div>
           {isEditing && form.profilePic && (
             <button
-              onClick={() => field('profilePic', '')}
+              onClick={() => { field('profilePic', ''); setProfilePicFile(null); }}
               className="absolute -top-1.5 -right-1.5 bg-terracotta text-white rounded-full p-0.5 shadow-sm hover:bg-terracotta/90 z-10"
               title="Remove photo"
             >
@@ -334,7 +350,7 @@ export default function PersonalInfoPage() {
           displayValue={isEditing ? undefined : displayDOB(user.dateOfBirth)}
           editing={isEditing}
           onChange={(v) => field('dateOfBirth', v)}
-          type="date"
+          type="date-custom"
           placeholder="Select date"
         />
       </div>
@@ -411,22 +427,31 @@ function ProfileField({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.1 }}
-            className={`flex items-center rounded-xl border-2 border-forest bg-white shadow-sm overflow-hidden transition-shadow focus-within:shadow-md ${readonlyNote ? 'opacity-60 pointer-events-none border-forest/20' : ''}`}
+            className={`flex items-center rounded-xl border-2 border-forest bg-white shadow-sm transition-shadow focus-within:shadow-md ${readonlyNote ? 'opacity-60 pointer-events-none border-forest/20' : ''}`}
           >
             {prefix && (
               <span className="pl-3.5 text-forest/50 font-medium text-sm select-none">{prefix}</span>
             )}
-            <input
-              ref={inputRef as React.RefObject<HTMLInputElement>}
-              id={id}
-              type={type}
-              inputMode={inputMode}
-              value={value}
-              onChange={(e) => onChange(e.target.value)}
-              placeholder={placeholder}
-              readOnly={!!readonlyNote}
-              className="w-full bg-transparent px-3.5 py-2.5 text-[14px] font-semibold text-forest outline-none placeholder:text-muted/50 placeholder:font-normal"
-            />
+            {type === 'date-custom' ? (
+              <CustomDatePicker
+                value={value}
+                onChange={(v) => onChange(v)}
+                placeholder={placeholder}
+                disabled={!!readonlyNote}
+              />
+            ) : (
+              <input
+                ref={inputRef as React.RefObject<HTMLInputElement>}
+                id={id}
+                type={type}
+                inputMode={inputMode}
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
+                placeholder={placeholder}
+                readOnly={!!readonlyNote}
+                className={`w-full bg-transparent px-3.5 py-2.5 text-[14px] font-semibold text-forest outline-none placeholder:text-muted/50 placeholder:font-normal ${type === 'date' ? 'cursor-pointer uppercase tracking-wide' : ''}`}
+              />
+            )}
           </motion.div>
         ) : (
           <motion.div
@@ -435,13 +460,13 @@ function ProfileField({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.1 }}
-            className="flex items-center rounded-xl border border-forest/8 bg-[#FDFBF9] px-3.5 py-2.5 min-h-[42px]"
+            className="flex items-center rounded-xl border border-forest/8 bg-[#FDFBF9] px-3.5 py-2.5 min-h-[42px] overflow-hidden"
           >
-            <span className={`text-[14px] font-semibold leading-tight ${isEmpty ? 'text-muted/50 font-normal' : 'text-forest'}`}>
+            <span className={`text-[14px] font-semibold leading-tight truncate ${isEmpty ? 'text-muted/50 font-normal' : 'text-forest'}`}>
               {prefix && !isEmpty ? prefix : ''}{shown}
             </span>
             {readonlyNote && (
-              <span className="ml-auto text-[10px] text-muted/50 font-normal shrink-0 pl-2">{readonlyNote}</span>
+              <span className="ml-auto text-[10px] text-muted/50 font-normal shrink-0 pl-2 truncate">{readonlyNote}</span>
             )}
           </motion.div>
         )}

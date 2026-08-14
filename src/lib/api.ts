@@ -132,6 +132,13 @@ export const auth = {
     return apiFetch('/api/auth/me', { silent401: true });
   },
 
+  uploadProfilePic(formData: FormData): Promise<{ data: { user: import('../types/auth').User } }> {
+    return apiFetch('/api/auth/me/profile-pic', {
+      method: 'PUT',
+      body: formData,
+    });
+  },
+
   login(body: { emailOrUsername: string; password: string }) {
     return apiFetch<{ data: { user: import('../types/auth').User } }>('/api/auth/login', {
       method: 'POST',
@@ -205,6 +212,27 @@ export const auth = {
   },
 };
 
+// ─── Admin Users endpoints ──────────────────────────────────────────────────
+
+export const adminUsers = {
+  list(params?: { page?: number; limit?: number; search?: string }) {
+    const searchParams = new URLSearchParams();
+    if (params?.page) searchParams.append('page', String(params.page));
+    if (params?.limit) searchParams.append('limit', String(params.limit));
+    if (params?.search) searchParams.append('search', params.search);
+    
+    const query = searchParams.toString() ? `?${searchParams.toString()}` : '';
+    return apiFetch<{ data: { users: import('../types/auth').User[], pagination: any } }>(`/api/auth/admin/users${query}`);
+  },
+
+  promote(email: string) {
+    return apiFetch<{ data: { user: import('../types/auth').User } }>('/api/auth/promote-admin', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+  }
+};
+
 // ─── Address endpoints ────────────────────────────────────────────────────────
 
 export const addresses = {
@@ -222,6 +250,8 @@ export const addresses = {
     postalCode: string;
     country?: string;
     isDefault?: boolean;
+    latitude?: number | null;
+    longitude?: number | null;
   }) {
     return apiFetch<{ data: { address: import('../types/auth').Address } }>('/api/addresses', {
       method: 'POST',
@@ -241,6 +271,8 @@ export const addresses = {
       postalCode: string;
       country: string;
       isDefault: boolean;
+      latitude: number | null;
+      longitude: number | null;
     }>
   ) {
     return apiFetch<{ data: { address: import('../types/auth').Address } }>(
@@ -298,6 +330,13 @@ export const products = {
     return apiFetch<{ data: any }>(`/api/admin/products/${productId}`, { method: 'DELETE' });
   },
 
+  adjustStock(productId: string, body: { newQty?: number; delta?: number; reason?: string }) {
+    return apiFetch<{ data: any }>(`/api/admin/products/${productId}/stock`, {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    });
+  },
+
   // Image upload method (FormData) — equivalent admin path
   uploadImages(productId: string, formData: FormData) {
     return fetch(`${BASE_URL}/api/admin/products/${productId}/images`, {
@@ -311,6 +350,19 @@ export const products = {
         throw new ApiError(res.status, err?.message || 'Failed to upload images');
       }
       return res.json();
+    });
+  },
+
+  reorderImages(productId: string, body: { images: { imageId: string | number, sortOrder: number }[] }) {
+    return apiFetch<{ data: any }>(`/api/admin/products/${productId}/images/reorder`, {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    });
+  },
+
+  setPrimaryImage(productId: string, imageId: string | number) {
+    return apiFetch<{ data: any }>(`/api/admin/products/${productId}/images/${imageId}/primary`, {
+      method: 'PATCH',
     });
   },
 };

@@ -18,6 +18,7 @@ type Product = {
   category: { name: string } | null;
   price: string;
   stockQty: number;
+  initialStockQty: number;
   status: ProductStatus;
   images?: any[];
 };
@@ -108,7 +109,7 @@ export default function AdminProductsPage() {
           p.stockQty < 10 ? 'bg-[#D99A3D]/10 text-[#D99A3D]' : 
           'bg-forest/10 text-forest'
         }`}>
-          {p.stockQty === 0 ? 'Out of stock' : `${p.stockQty} units`}
+          {p.stockQty === 0 ? 'Out of stock' : `${p.stockQty} / ${p.initialStockQty || p.stockQty}`}
         </span>
       )},
     { key: 'status', header: 'Status',
@@ -119,20 +120,20 @@ export default function AdminProductsPage() {
       )},
     { key: 'actions', header: '',
       render: (p) => (
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
           <button
             onClick={(e) => { e.stopPropagation(); router.push(`/admin/products/${p.productId}`); }}
-            className="p-1.5 rounded-lg text-forest/40 hover:text-forest hover:bg-forest/5 transition-colors"
+            className="p-2 rounded-lg text-forest/40 hover:text-forest hover:bg-forest/5 transition-colors"
             title="Edit"
           >
-            <Pencil size={14} />
+            <Pencil size={18} />
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); setDeleteTarget(p); }}
-            className="p-1.5 rounded-lg text-forest/40 hover:text-terracotta hover:bg-terracotta/5 transition-colors"
+            className="p-2 rounded-lg text-forest/40 hover:text-terracotta hover:bg-terracotta/5 transition-colors"
             title="Delete"
           >
-            <Trash2 size={14} />
+            <Trash2 size={18} />
           </button>
         </div>
       )},

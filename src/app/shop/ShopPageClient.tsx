@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
@@ -181,7 +181,7 @@ export default function ShopPageClient({
               variants={staggerContainer}
               initial="hidden"
               animate="visible"
-              className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:gap-6"
+              className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:gap-5"
             >
               {results.map((p) => {
                 const productId = (p as any).productId || p.id;
