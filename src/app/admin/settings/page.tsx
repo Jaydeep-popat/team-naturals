@@ -12,7 +12,7 @@ interface StoreSettings {
 }
 
 const INITIAL: StoreSettings = {
-  storeName: 'Team Naturals', email: 'hello@teamnaturals.in', phone: '+91 98765 00000',
+  storeName: 'Team Naturals', email: 'info@teamnaturals.com', phone: '+91 93130 10084',
   line1: '123, Green Valley, Pune', city: 'Pune', state: 'Maharashtra', postalCode: '411001',
   shippingFreeThreshold: '499', shippingFlatRate: '49',
   taxRate: '18', taxLabel: 'GST',

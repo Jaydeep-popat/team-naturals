@@ -181,7 +181,7 @@ export default function AddressesPage() {
                 )}
                 <form className="grid gap-3.5 sm:grid-cols-2" onSubmit={handleSubmit}>
                   <Field id="fullName" label="Full Name" placeholder="Rahul Sharma" {...field('fullName')} required />
-                  <Field id="phoneNo" label="Phone Number" placeholder="+91 98765 43210" {...field('phoneNo')} required />
+                  <Field id="phoneNo" label="Phone Number" placeholder="+91 93130 10084" {...field('phoneNo')} required />
                   <div className="sm:col-span-2">
                     <Field id="line1" label="Address Line 1" placeholder="House No, Building, Street" {...field('line1')} required />
                   </div>

@@ -7,19 +7,51 @@ import {
   ClockIcon,
   MailIcon,
   MapPinIcon,
-  MessageCircleIcon,
   PhoneIcon,
 } from 'lucide-react';
-import { Breadcrumb } from "@/src/components/Breadcrumb";
-import { Reveal } from "@/src/components/Reveal";
-import { usePageLoad } from "@/src/hooks/usePageLoad";
-import { PageSkeleton } from "@/src/components/Skeletons";
+import { Breadcrumb } from '@/src/components/Breadcrumb';
+import { Reveal } from '@/src/components/Reveal';
+import { usePageLoad } from '@/src/hooks/usePageLoad';
+import { PageSkeleton } from '@/src/components/Skeletons';
+import { WhatsAppIcon } from '@/src/components/icons/WhatsAppIcon';
+import {
+  SITE_CONTACT,
+  SOCIAL_LINKS,
+  getEmailMailtoUrl,
+  getPhoneTelUrl,
+  getWhatsAppChatUrl,
+} from '@/src/lib/site-contact';
 
 const channels = [
-  { icon: PhoneIcon, label: 'Call us', value: '+91 98765 43210' },
-  { icon: MailIcon, label: 'Email', value: 'hello@teamnaturals.in' },
-  { icon: MessageCircleIcon, label: 'WhatsApp', value: 'Chat 9am – 7pm IST' },
-  { icon: ClockIcon, label: 'Response time', value: 'Usually within a day' },
+  {
+    icon: PhoneIcon,
+    label: 'Call us',
+    value: SITE_CONTACT.phoneDisplay,
+    href: getPhoneTelUrl(),
+    external: false,
+  },
+  {
+    icon: MailIcon,
+    label: 'Email',
+    value: SITE_CONTACT.email,
+    href: getEmailMailtoUrl(),
+    external: false,
+  },
+  {
+    icon: WhatsAppIcon,
+    label: 'WhatsApp',
+    value: 'Chat with us — 9am – 7pm IST',
+    href: getWhatsAppChatUrl(),
+    external: true,
+    isWhatsApp: true,
+  },
+  {
+    icon: ClockIcon,
+    label: 'Response time',
+    value: 'Usually within a day',
+    href: null,
+    external: false,
+  },
 ];
 
 export default function ContactPage() {
@@ -56,8 +88,16 @@ export default function ContactPage() {
               </motion.span>
               <h2 className="mt-5 font-display text-2xl text-forest">Message sent</h2>
               <p className="mt-3 max-w-xs text-sm leading-relaxed text-muted">
-                Demo form — nothing was actually delivered, but this is where the confirmation would
-                live.
+                Demo form — nothing was actually delivered. For a faster reply,{' '}
+                <a
+                  href={getWhatsAppChatUrl()}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-forest underline-offset-2 hover:underline"
+                >
+                  message us on WhatsApp
+                </a>
+                .
               </p>
               <button
                 type="button"
@@ -76,6 +116,12 @@ export default function ContactPage() {
               }}
             >
               <h2 className="font-display text-xl text-forest">Send us a message</h2>
+              <p className="text-sm text-muted">
+                Or email{' '}
+                <a href={getEmailMailtoUrl()} className="font-medium text-forest hover:underline">
+                  {SITE_CONTACT.email}
+                </a>
+              </p>
               <div className="grid gap-4 sm:grid-cols-2">
                 <ContactField id="c-name" label="Name" placeholder="Your name" />
                 <ContactField
@@ -111,25 +157,78 @@ export default function ContactPage() {
 
         <Reveal delay={0.1} className="space-y-4">
           <ul className="space-y-3 rounded-3xl border border-forest/8 bg-cream-soft p-6">
-            {channels.map(({ icon: Icon, label, value }) => (
+            {channels.map(({ icon: Icon, label, value, href, external, isWhatsApp }) => (
               <li key={label} className="flex items-start gap-3">
                 <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-white text-forest">
-                  <Icon size={16} strokeWidth={1.5} />
+                  <Icon size={isWhatsApp ? 18 : 16} strokeWidth={isWhatsApp ? undefined : 1.5} />
                 </span>
                 <span>
                   <span className="block text-xs text-muted">{label}</span>
-                  <span className="block text-sm text-forest">{value}</span>
+                  {href ? (
+                    <a
+                      href={href}
+                      {...(external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+                      className="block text-sm text-forest transition-colors hover:text-forest-soft"
+                    >
+                      {value}
+                    </a>
+                  ) : (
+                    <span className="block text-sm text-forest">{value}</span>
+                  )}
                 </span>
               </li>
             ))}
           </ul>
 
+          <a
+            href={SOCIAL_LINKS.whatsappChannel.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-3 rounded-3xl border border-forest/8 bg-[#25D366]/10 p-5 transition-colors hover:bg-[#25D366]/15"
+          >
+            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#25D366] text-white">
+              <WhatsAppIcon size={20} />
+            </span>
+            <div>
+              <p className="text-sm font-semibold text-forest">WhatsApp Channel</p>
+              <p className="text-xs text-muted">Updates, restocks & behind-the-scenes</p>
+            </div>
+          </a>
+
+          <a
+            href={SOCIAL_LINKS.instagram.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-3 rounded-3xl border border-forest/8 bg-white p-5 transition-colors hover:bg-cream-soft"
+          >
+            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-forest-mist text-forest">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width={18}
+                height={18}
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={1.5}
+                aria-hidden="true"
+              >
+                <rect width="20" height="20" x="2" y="2" rx="5" ry="5" />
+                <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+                <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
+              </svg>
+            </span>
+            <div>
+              <p className="text-sm font-semibold text-forest">{SOCIAL_LINKS.instagram.handle}</p>
+              <p className="text-xs text-muted">Follow on Instagram</p>
+            </div>
+          </a>
+
           <div className="overflow-hidden rounded-3xl border border-forest/8">
-            <div className="flex aspect-[4/3] flex-col items-center justify-center gap-2 bg-forest-mist text-center">
+            <div className="flex aspect-[4/3] flex-col items-center justify-center gap-2 bg-forest-mist text-center p-6">
               <MapPinIcon size={26} strokeWidth={1.3} className="text-forest" />
-              <p className="text-sm text-forest">Bengaluru, Karnataka</p>
-              <p className="max-w-[200px] text-xs text-muted">
-                Map placeholder — studio visits by appointment only.
+              <p className="text-sm font-medium text-forest">Morbi, Gujarat</p>
+              <p className="max-w-[220px] text-xs text-muted">
+                Handmade at our farmhouse. [NEEDS INPUT: full street address for visits]
               </p>
             </div>
           </div>

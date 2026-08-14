@@ -44,7 +44,7 @@ export function BackToTop() {
           // Desktop: normal bottom-right, no tab bar or floating pill
           className="fixed right-4 z-[110] h-11 w-11 flex items-center justify-center rounded-full bg-forest text-cream shadow-xl ring-2 ring-forest/20 hover:bg-[#1a3d28] active:scale-95 transition-colors focus:outline-none
             bottom-[11.5rem]
-            lg:bottom-8 lg:right-8 lg:h-12 lg:w-12"
+            lg:bottom-24 lg:right-8 lg:h-12 lg:w-12"
         >
           <ArrowUp size={19} strokeWidth={2.5} />
         </motion.button>

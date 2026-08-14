@@ -8,6 +8,7 @@ const Header = dynamic(() => import('./Header').then((mod) => mod.Header), { ssr
 const Footer = dynamic(() => import('./Footer').then((mod) => mod.Footer), { ssr: true });
 const MobileTabBar = dynamic(() => import('./MobileTabBar').then((mod) => mod.MobileTabBar), { ssr: false });
 const CartFloatingPill = dynamic(() => import('./CartFloatingPill').then((mod) => mod.CartFloatingPill), { ssr: false });
+const WhatsAppFloat = dynamic(() => import('./WhatsAppFloat').then((mod) => mod.WhatsAppFloat), { ssr: false });
 
 export function LayoutWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -22,6 +23,7 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
       {!hideChrome && <Footer />}
       {!hideChrome && <MobileTabBar />}
       {!hideChrome && <CartFloatingPill />}
+      {!hideChrome && <WhatsAppFloat />}
     </div>
   );
 }
