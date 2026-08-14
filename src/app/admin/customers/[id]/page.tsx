@@ -25,6 +25,7 @@ export default function AdminCustomerDetailPage() {
           name: `${data.firstName || ''} ${data.lastName || ''}`.trim() || data.username,
           email: data.email,
           phone: data.phoneNo || 'N/A',
+          profilePic: data.profilePic,
           joinedAt: new Date(data.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
           totalOrders: data.orderCount || data.orders?.length || 0,
           totalSpend: `₹${data.totalSpent || 0}`,
@@ -140,7 +141,19 @@ export default function AdminCustomerDetailPage() {
 
         <div className="space-y-4">
           <div className="rounded-2xl border border-forest/10 bg-white p-5 shadow-sm space-y-4">
-            <h2 className="font-semibold text-forest">Profile</h2>
+            <div className="flex items-center gap-4 pb-4 border-b border-forest/5">
+              {customer.profilePic ? (
+                <img src={customer.profilePic} alt={customer.name} className="w-16 h-16 rounded-full object-cover border border-forest/10 shrink-0" />
+              ) : (
+                <div className="w-16 h-16 rounded-full bg-forest/10 flex items-center justify-center text-forest font-display text-2xl font-bold shrink-0">
+                  {customer.name.charAt(0).toUpperCase()}
+                </div>
+              )}
+              <div className="min-w-0">
+                 <h2 className="font-semibold text-forest text-lg truncate">{customer.name}</h2>
+                 <p className="text-xs text-forest/50 mt-0.5">Joined {customer.joinedAt}</p>
+              </div>
+            </div>
             {[
               { icon: Mail, val: customer.email },
               { icon: Phone, val: customer.phone },

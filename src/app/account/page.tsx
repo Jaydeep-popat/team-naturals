@@ -165,70 +165,72 @@ export default function PersonalInfoPage() {
       </AnimatePresence>
 
       {/* ── Avatar + Name header ── */}
-      <div className="flex items-center gap-5 pb-6 border-b border-forest/8">
-        <div className="relative h-16 w-16 shrink-0 group">
-          <div className="h-full w-full rounded-2xl bg-gradient-to-br from-forest/10 to-forest/20 flex items-center justify-center text-forest text-xl font-display font-bold border border-forest/10 shadow-sm overflow-hidden relative">
-            {(isEditing ? form.profilePic : user.profilePic)
-              ? <img src={(isEditing ? form.profilePic : user.profilePic)!} alt="Profile" className="h-full w-full object-cover" />
-              : <span>{initials}</span>
-            }
-            {isEditing && (
-              <label className="absolute inset-0 flex items-center justify-center bg-black/40 text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
-                <PencilIcon size={16} />
-                <input 
-                  type="file" 
-                  accept="image/*" 
-                  className="hidden" 
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      if (file.size > 2 * 1024 * 1024) {
-                        setFormError('Image must be less than 2MB');
-                        return;
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-forest/8">
+        <div className="flex items-center gap-4">
+          <div className="relative h-16 w-16 shrink-0 group">
+            <div className="h-full w-full rounded-2xl bg-gradient-to-br from-forest/10 to-forest/20 flex items-center justify-center text-forest text-xl font-display font-bold border border-forest/10 shadow-sm overflow-hidden relative">
+              {(isEditing ? form.profilePic : user.profilePic)
+                ? <img src={(isEditing ? form.profilePic : user.profilePic)!} alt="Profile" className="h-full w-full object-cover" />
+                : <span>{initials}</span>
+              }
+              {isEditing && (
+                <label className="absolute inset-0 flex items-center justify-center bg-black/40 text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                  <PencilIcon size={16} />
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    className="hidden" 
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        if (file.size > 2 * 1024 * 1024) {
+                          setFormError('Image must be less than 2MB');
+                          return;
+                        }
+                        setProfilePicFile(file);
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                          field('profilePic', reader.result as string);
+                          setFormError('');
+                        };
+                        reader.readAsDataURL(file);
                       }
-                      setProfilePicFile(file);
-                      const reader = new FileReader();
-                      reader.onloadend = () => {
-                        field('profilePic', reader.result as string);
-                        setFormError('');
-                      };
-                      reader.readAsDataURL(file);
-                    }
-                  }}
-                />
-              </label>
+                    }}
+                  />
+                </label>
+              )}
+            </div>
+            {isEditing && form.profilePic && (
+              <button
+                onClick={() => { field('profilePic', ''); setProfilePicFile(null); }}
+                className="absolute -top-1.5 -right-1.5 bg-terracotta text-white rounded-full p-0.5 shadow-sm hover:bg-terracotta/90 z-10"
+                title="Remove photo"
+              >
+                <XIcon size={12} strokeWidth={3} />
+              </button>
             )}
           </div>
-          {isEditing && form.profilePic && (
-            <button
-              onClick={() => { field('profilePic', ''); setProfilePicFile(null); }}
-              className="absolute -top-1.5 -right-1.5 bg-terracotta text-white rounded-full p-0.5 shadow-sm hover:bg-terracotta/90 z-10"
-              title="Remove photo"
-            >
-              <XIcon size={12} strokeWidth={3} />
-            </button>
-          )}
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="font-display font-bold text-forest text-xl leading-tight truncate">
-            {user.firstName} {user.lastName}
-          </p>
-          <p className="text-[13px] text-muted mt-0.5">@{user.username}</p>
-          <div className="mt-2">
-            {user.emailVerifiedAt ? (
-              <span className="inline-flex items-center gap-1 rounded-full bg-[#E8F3EB] px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#1B4D2E]">
-                <ShieldCheckIcon size={10} /> Verified
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1 rounded-full bg-terracotta/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-terracotta">
-                Email not verified
-              </span>
-            )}
+          <div className="flex-1 min-w-0">
+            <p className="font-display font-bold text-forest text-xl leading-tight truncate">
+              {user.firstName} {user.lastName}
+            </p>
+            <p className="text-[13px] text-muted mt-0.5 truncate">@{user.username}</p>
+            <div className="mt-2">
+              {user.emailVerifiedAt ? (
+                <span className="inline-flex items-center gap-1 rounded-full bg-[#E8F3EB] px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#1B4D2E]">
+                  <ShieldCheckIcon size={10} /> Verified
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 rounded-full bg-terracotta/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-terracotta">
+                  Email not verified
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
         {/* Edit / Save / Cancel buttons */}
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto pl-[80px] sm:pl-0 mt-2 sm:mt-0">
           {!isEditing ? (
             <button
               onClick={handleEditOpen}

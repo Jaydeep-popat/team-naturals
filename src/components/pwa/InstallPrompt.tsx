@@ -56,21 +56,34 @@ export default function InstallPrompt() {
     };
     window.addEventListener('appinstalled', handleAppInstalled);
 
-    const handleForceShow = () => {
-      if (!deferredPrompt && !isIOS) {
-        toast.error("Install prompt not available. Your browser might not support it, or you may have already installed the app.");
-        return;
-      }
-      setShowPrompt(true);
-    };
-    window.addEventListener('show-pwa-install', handleForceShow);
-
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       window.removeEventListener('appinstalled', handleAppInstalled);
-      window.removeEventListener('show-pwa-install', handleForceShow);
     };
   }, []);
+
+  // Separate effect for the custom event to avoid stale closures
+  useEffect(() => {
+    const handleForceShow = () => {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then(({ outcome }) => {
+          if (outcome === 'accepted') {
+            localStorage.setItem('pwa-installed', 'true');
+          }
+          setDeferredPrompt(null);
+          setShowPrompt(false);
+        });
+      } else {
+        setShowPrompt(true);
+      }
+    };
+    
+    window.addEventListener('show-pwa-install', handleForceShow);
+    return () => {
+      window.removeEventListener('show-pwa-install', handleForceShow);
+    };
+  }, [deferredPrompt, isIOS]);
 
   // Track page views and trigger prompt
   useEffect(() => {
@@ -107,7 +120,7 @@ export default function InstallPrompt() {
     localStorage.setItem('pwa-install-dismissed-at', Date.now().toString());
   };
 
-  const handleInstall = async () => {
+  const handleInstall = React.useCallback(async () => {
     if (!deferredPrompt) return;
     deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
@@ -116,7 +129,7 @@ export default function InstallPrompt() {
     }
     setShowPrompt(false);
     setDeferredPrompt(null);
-  };
+  }, [deferredPrompt]);
 
   useEffect(() => {
     if (pathname?.startsWith('/checkout')) {
@@ -124,7 +137,7 @@ export default function InstallPrompt() {
       return;
     }
 
-    if (showPrompt && (deferredPrompt || isIOS)) {
+    if (showPrompt) {
       toast.custom(
         (t) => (
           <div
@@ -160,7 +173,9 @@ export default function InstallPrompt() {
               ) : (
                 <button
                   onClick={() => {
-                    handleInstall();
+                    if (deferredPrompt) {
+                      handleInstall();
+                    }
                     toast.dismiss(t.id);
                   }}
                   className="flex-1 bg-forest text-white text-sm font-semibold py-2.5 rounded-xl hover:bg-forest-deep transition-colors shadow-soft flex items-center justify-center gap-2"
@@ -177,7 +192,7 @@ export default function InstallPrompt() {
     } else {
       toast.dismiss('pwa-install');
     }
-  }, [showPrompt, deferredPrompt, isIOS, pathname]);
+  }, [showPrompt, deferredPrompt, isIOS, pathname, handleInstall]);
 
   return null;
 }

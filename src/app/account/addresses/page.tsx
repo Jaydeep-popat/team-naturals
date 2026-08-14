@@ -41,6 +41,7 @@ export default function AddressesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showMapModal, setShowMapModal] = useState(false);
+  const [isManualEntry, setIsManualEntry] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [formData, setFormData] = useState<AddressFormData>(emptyForm);
   const [formError, setFormError] = useState('');
@@ -84,6 +85,7 @@ export default function AddressesPage() {
     });
     setFormError('');
     setEditingId(address.addressId);
+    setIsManualEntry(true);
     setIsModalOpen(true);
   };
 
@@ -128,23 +130,7 @@ export default function AddressesPage() {
   });
 
   return (
-    <div className="space-y-5 animate-in fade-in duration-200 relative">
-      
-      {/* Top Header Row */}
-      <div className="flex items-center justify-between pb-4 border-b border-forest/8">
-        <div>
-          <h2 className="font-display text-lg font-bold text-forest">Your Addresses</h2>
-          <p className="text-[12px] text-muted">Manage your delivery and billing locations</p>
-        </div>
-        <button
-          onClick={openAdd}
-          className="flex items-center gap-1.5 rounded-full bg-forest px-4 py-2 text-[13px] font-semibold text-white shadow-xs hover:bg-forest/90 transition-all"
-        >
-          <PlusIcon size={14} strokeWidth={2.5} />
-          Add Address
-        </button>
-      </div>
-
+    <div className="animate-in fade-in duration-200 relative">
       {/* Delete Confirmation Modal */}
       <AnimatePresence>
         {deleteConfirmId && (
@@ -169,9 +155,19 @@ export default function AddressesPage() {
       {/* Map Picker Modal */}
       {showMapModal && (
         <LocationPickerModal
-          onClose={() => setShowMapModal(false)}
+          onClose={() => {
+            setShowMapModal(false);
+            setIsManualEntry(true);
+            setIsModalOpen(true);
+          }}
+          onManualEntry={() => {
+            setShowMapModal(false);
+            setIsManualEntry(true);
+            setIsModalOpen(true);
+          }}
           onConfirm={(data: LocationData) => {
             setShowMapModal(false);
+            setIsManualEntry(false);
             setFormData(prev => ({
               ...prev,
               line1: data.line1,
@@ -187,45 +183,44 @@ export default function AddressesPage() {
         />
       )}
 
-      {/* Add/Edit Modal */}
-      <AnimatePresence>
-        {isModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:px-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => !isSubmitting && setIsModalOpen(false)} />
-            <motion.div 
-              initial={{ y: '100%', opacity: 1 }} 
-              animate={{ y: 0, opacity: 1 }} 
-              exit={{ y: '100%', opacity: 1 }}
-              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="relative bg-white sm:rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
-            >
-              <div className="sticky top-0 bg-white z-10 px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-                <h2 className="text-lg font-bold text-gray-900">{editingId ? 'Edit Address' : 'Deliver To'}</h2>
-                <button onClick={() => !isSubmitting && setIsModalOpen(false)} className="p-1.5 text-gray-500 hover:text-black transition-colors">
-                  <XIcon size={22} />
-                </button>
-              </div>
+      {/* Main Content Area */}
+      {isModalOpen && !showMapModal ? (
+        <div className="space-y-6 bg-white border border-gray-200 rounded-2xl p-6 lg:p-8 mt-2">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-bold text-gray-900">{editingId ? 'Edit Address' : 'Add New Address'}</h2>
+          </div>
 
-              <div className="p-5">
-                {/* Warning Banner */}
-                <div className="mb-6 flex items-start gap-2 rounded-lg bg-orange-50 px-4 py-3 border border-orange-100">
-                  <AlertCircleIcon size={18} className="text-orange-500 mt-0.5 shrink-0" />
-                  <p className="text-[13px] text-orange-800 font-medium leading-relaxed">
-                    Ensure your address details are accurate for a smooth delivery experience
-                  </p>
-                </div>
+          {/* Warning Banner */}
+          <div className="mb-6 flex items-start gap-2 rounded-lg bg-orange-50 px-4 py-3 border border-orange-100">
+            <AlertCircleIcon size={18} className="text-orange-500 mt-0.5 shrink-0" />
+            <p className="text-[13px] text-orange-800 font-medium leading-relaxed">
+              Ensure your address details are accurate for a smooth delivery experience
+            </p>
+          </div>
 
-                {formError && (
-                  <div className="mb-4 flex items-start gap-2 rounded-lg bg-red-50 px-4 py-3 text-[13px] text-red-600 border border-red-100">
-                    <AlertCircleIcon size={16} className="mt-0.5 shrink-0" />{formError}
+          {formError && (
+            <div className="mb-4 flex items-start gap-2 rounded-lg bg-red-50 px-4 py-3 text-[13px] text-red-600 border border-red-100">
+              <AlertCircleIcon size={16} className="mt-0.5 shrink-0" />{formError}
+            </div>
+          )}
+          
+          <form className="space-y-5" onSubmit={handleSubmit}>
+            <div className="grid gap-5 sm:grid-cols-2">
+              <FloatingField id="line1" label="Flat/House/building name" value={formData.line1} onChange={(e) => { setFormData(prev => ({...prev, line1: e.target.value})); setFormError(''); }} required />
+              
+              {/* Area / Sector / Locality Card */}
+              <div className="sm:col-span-2">
+                {isManualEntry ? (
+                  <div className="space-y-5">
+                    <FloatingField id="line2" label="Area / Sector / Locality" value={formData.line2} onChange={(e) => { setFormData(prev => ({...prev, line2: e.target.value})); setFormError(''); }} required />
+                    <div className="grid grid-cols-2 gap-5">
+                      <FloatingField id="city" label="City" value={formData.city} onChange={(e) => { setFormData(prev => ({...prev, city: e.target.value})); setFormError(''); }} required />
+                      <FloatingField id="state" label="State" value={formData.state} onChange={(e) => { setFormData(prev => ({...prev, state: e.target.value})); setFormError(''); }} required />
+                    </div>
+                    <FloatingField id="postalCode" label="Pincode" value={formData.postalCode} onChange={(e) => { setFormData(prev => ({...prev, postalCode: e.target.value})); setFormError(''); }} required />
                   </div>
-                )}
-                
-                <form className="space-y-5" onSubmit={handleSubmit}>
-                  <FloatingField id="line1" label="Flat/House/building name" value={formData.line1} onChange={(e) => { setFormData(prev => ({...prev, line1: e.target.value})); setFormError(''); }} required />
-                  
-                  {/* Area / Sector / Locality Card */}
-                  <div>
+                ) : (
+                  <>
                     <label className="block text-[12px] font-bold text-gray-500 mb-1.5 uppercase tracking-wide">Area / Sector / Locality</label>
                     <div className="flex items-start justify-between gap-3 bg-gray-50 rounded-xl p-4 border border-gray-100">
                       <div className="flex-1">
@@ -247,90 +242,112 @@ export default function AddressesPage() {
                         Change
                       </button>
                     </div>
-                  </div>
-
-                  <FloatingField id="fullName" label="Enter your full name" value={formData.fullName} onChange={(e) => { setFormData(prev => ({...prev, fullName: e.target.value})); setFormError(''); }} required />
-                  
-                  <FloatingField id="phoneNo" label="10-digit mobile number" value={formData.phoneNo} onChange={(e) => { setFormData(prev => ({...prev, phoneNo: e.target.value})); setFormError(''); }} required type="tel" />
-                  
-                  <FloatingField id="line2" label="Alternate phone number (Optional)" value={formData.line2} onChange={(e) => { setFormData(prev => ({...prev, line2: e.target.value})); setFormError(''); }} type="tel" />
-                  
-                  {/* Type of Address */}
-                  <div className="pt-2">
-                    <label className="block text-[13px] text-gray-500 mb-2">Type of address</label>
-                    <div className="flex gap-3">
-                      <button 
-                        type="button" 
-                        className="flex items-center gap-2 px-4 py-2 rounded-full border border-gray-200 text-gray-700 font-medium text-[14px] hover:border-gray-300 bg-white"
-                      >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-                        Home
-                      </button>
-                      <button 
-                        type="button" 
-                        className="flex items-center gap-2 px-4 py-2 rounded-full border border-gray-200 text-gray-700 font-medium text-[14px] hover:border-gray-300 bg-white"
-                      >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="16" height="20" x="4" y="2" rx="2" ry="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M12 6h.01"/><path d="M12 10h.01"/><path d="M12 14h.01"/><path d="M16 10h.01"/><path d="M16 14h.01"/><path d="M8 10h.01"/><path d="M8 14h.01"/></svg>
-                        Work
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2.5 pt-2">
-                    <input
-                      type="checkbox" id="isDefault"
-                      checked={formData.isDefault}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, isDefault: e.target.checked }))}
-                      className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-600 cursor-pointer"
-                    />
-                    <label htmlFor="isDefault" className="text-[14px] text-gray-700 cursor-pointer">
-                      Make this my default shipping address
-                    </label>
-                  </div>
-
-                  <div className="pt-4">
-                    <button
-                      type="submit" disabled={isSubmitting}
-                      className="w-full rounded-xl bg-[#1D4ED8] hover:bg-blue-700 py-4 text-[16px] font-bold text-white shadow-sm disabled:opacity-60 flex items-center justify-center gap-2 transition-colors"
-                    >
-                      {isSubmitting ? <span className="h-5 w-5 animate-spin rounded-full border-2 border-white/40 border-t-white" /> : editingId ? 'Update Address' : 'Save address'}
-                    </button>
-                  </div>
-                </form>
+                  </>
+                )}
               </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
 
-      {isLoading ? (
-        <div className="grid gap-4 sm:grid-cols-2">
-          {[1, 2].map((i) => (
-            <div key={i} className="rounded-xl border border-forest/10 p-5 animate-pulse bg-forest/5 h-36" />
-          ))}
-        </div>
-      ) : addressList.length === 0 ? (
-        <div className="rounded-xl border border-forest/8 bg-[#FDFBF9] p-10 text-center max-w-md mx-auto my-4">
-          <div className="h-16 w-16 mx-auto mb-3 bg-forest/5 rounded-full flex items-center justify-center">
-            <MapPinIcon size={24} className="text-forest/30" />
-          </div>
-          <h3 className="font-display text-lg text-forest font-bold mb-1">No saved addresses</h3>
-          <p className="text-[13px] text-muted">Add your shipping address for faster checkout.</p>
+              <FloatingField id="fullName" label="Enter your full name" value={formData.fullName} onChange={(e) => { setFormData(prev => ({...prev, fullName: e.target.value})); setFormError(''); }} required />
+              
+              <FloatingField id="phoneNo" label="10-digit mobile number" value={formData.phoneNo} onChange={(e) => { setFormData(prev => ({...prev, phoneNo: e.target.value})); setFormError(''); }} required type="tel" />
+            </div>
+            
+            {/* Type of Address */}
+            <div className="pt-2">
+              <label className="block text-[13px] text-gray-500 mb-2">Type of address</label>
+              <div className="flex gap-3">
+                <button 
+                  type="button" 
+                  className="flex items-center gap-2 px-4 py-2 rounded-full border border-gray-200 text-gray-700 font-medium text-[14px] hover:border-gray-300 bg-white"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                  Home
+                </button>
+                <button 
+                  type="button" 
+                  className="flex items-center gap-2 px-4 py-2 rounded-full border border-gray-200 text-gray-700 font-medium text-[14px] hover:border-gray-300 bg-white"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="16" height="20" x="4" y="2" rx="2" ry="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M12 6h.01"/><path d="M12 10h.01"/><path d="M12 14h.01"/><path d="M16 10h.01"/><path d="M16 14h.01"/><path d="M8 10h.01"/><path d="M8 14h.01"/></svg>
+                  Work
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2.5 pt-2">
+              <input
+                type="checkbox" id="isDefault"
+                checked={formData.isDefault}
+                onChange={(e) => setFormData((prev) => ({ ...prev, isDefault: e.target.checked }))}
+                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-600 cursor-pointer"
+              />
+              <label htmlFor="isDefault" className="text-[14px] text-gray-700 cursor-pointer">
+                Make this my default shipping address
+              </label>
+            </div>
+
+            <div className="pt-4 flex flex-col sm:flex-row gap-3 mt-6 border-t border-gray-100 pt-6">
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                className="flex-1 sm:flex-none rounded-xl border border-gray-200 px-6 py-4 text-[15px] font-medium text-gray-700 transition-colors hover:bg-gray-50 bg-white"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit" disabled={isSubmitting}
+                className="flex-[2] sm:flex-none rounded-xl bg-[#1D4ED8] hover:bg-blue-700 px-8 py-4 text-[16px] font-bold text-white shadow-sm disabled:opacity-60 flex items-center justify-center gap-2 transition-colors"
+              >
+                {isSubmitting ? <span className="h-5 w-5 animate-spin rounded-full border-2 border-white/40 border-t-white" /> : editingId ? 'Update Address' : 'Save address'}
+              </button>
+            </div>
+          </form>
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2">
-          <AnimatePresence>
-            {addressList.map((address, index) => (
-              <AddressCard 
-                key={address.addressId}
-                address={address}
-                label={index === 0 ? 'Home' : 'Other'}
-                onEdit={openEdit}
-                onDelete={() => setDeleteConfirmId(address.addressId)}
-                isDeleting={isDeleting && deleteConfirmId === address.addressId}
-              />
-            ))}
-          </AnimatePresence>
+        <div className="space-y-5">
+          {/* Top Header Row */}
+          <div className="flex items-center justify-between pb-4 border-b border-forest/8">
+            <div>
+              <h2 className="font-display text-lg font-bold text-forest">Your Addresses</h2>
+              <p className="text-[12px] text-muted">Manage your delivery and billing locations</p>
+            </div>
+            <button
+              onClick={openAdd}
+              className="flex items-center gap-1.5 rounded-full bg-forest px-4 py-2 text-[13px] font-semibold text-white shadow-xs hover:bg-forest/90 transition-all"
+            >
+              <PlusIcon size={14} strokeWidth={2.5} />
+              Add Address
+            </button>
+          </div>
+
+          {isLoading ? (
+            <div className="grid gap-4 sm:grid-cols-2">
+              {[1, 2].map((i) => (
+                <div key={i} className="rounded-xl border border-forest/10 p-5 animate-pulse bg-forest/5 h-36" />
+              ))}
+            </div>
+          ) : addressList.length === 0 ? (
+            <div className="rounded-xl border border-forest/8 bg-[#FDFBF9] p-10 text-center max-w-md mx-auto my-4">
+              <div className="h-16 w-16 mx-auto mb-3 bg-forest/5 rounded-full flex items-center justify-center">
+                <MapPinIcon size={24} className="text-forest/30" />
+              </div>
+              <h3 className="font-display text-lg text-forest font-bold mb-1">No saved addresses</h3>
+              <p className="text-[13px] text-muted">Add your shipping address for faster checkout.</p>
+            </div>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <AnimatePresence>
+                {addressList.map((address, index) => (
+                  <AddressCard 
+                    key={address.addressId}
+                    address={address}
+                    label={index === 0 ? 'Home' : 'Other'}
+                    onEdit={openEdit}
+                    onDelete={() => setDeleteConfirmId(address.addressId)}
+                    isDeleting={isDeleting && deleteConfirmId === address.addressId}
+                  />
+                ))}
+              </AnimatePresence>
+            </div>
+          )}
         </div>
       )}
     </div>

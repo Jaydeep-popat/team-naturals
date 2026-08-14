@@ -23,9 +23,22 @@ export async function GET(request: Request) {
     url.searchParams.set('lang', 'en');
     url.searchParams.set('limit', '7');
     url.searchParams.set('format', 'geojson');
-    // Bias results toward India
+    const searchLat = searchParams.get('lat');
+    const searchLon = searchParams.get('lon');
+    const bbox = searchParams.get('bbox'); // west,south,east,north
+
+    // Filter results to India
     url.searchParams.set('filter', 'countrycode:in');
-    url.searchParams.set('bias', 'countrycode:in');
+    
+    let biasStr = 'countrycode:in';
+    
+    if (searchLat && searchLon) {
+      biasStr = `proximity:${searchLon},${searchLat}|${biasStr}`;
+    } else if (bbox) {
+      biasStr = `rect:${bbox}|${biasStr}`;
+    }
+    
+    url.searchParams.set('bias', biasStr);
 
     const res = await fetch(url.toString(), {
       headers: { Accept: 'application/json' },

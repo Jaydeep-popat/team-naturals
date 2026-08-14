@@ -6,10 +6,6 @@ import React, {
   useState,
   useCallback,
 } from 'react';
-// maplibre-gl is dynamically imported inside initMap to avoid Webpack/Next.js
-// SSR issues where the static import resolves to undefined at runtime.
-// The type-only import below is erased at build time; it only satisfies the
-// TypeScript compiler so that `maplibregl.Map` resolves as a known namespace.
 import type * as maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import {
@@ -31,6 +27,7 @@ import type { LocationData, GeoapifySearchResult } from '@/src/lib/location/type
 interface LocationPickerModalProps {
   onClose: () => void;
   onConfirm: (data: LocationData) => void;
+  onManualEntry?: () => void;
 }
 
 type MapStatus = 'loading' | 'ready' | 'error';
@@ -40,49 +37,51 @@ type UIState = 'idle' | 'gps_loading' | 'map_moving' | 'geocoding' | 'success' |
 // Constants
 // ─────────────────────────────────────────────────────────────────────────────
 
-// OSM Raster tiles — dead-simple, always works, no API key, no CORS issues.
-// We fall back from the vector CartoDb style to this when style fails.
-const MAPTILER_STYLE = 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json';
-// OSM raster style — works everywhere, no API key, fast in India
-const OSM_STYLE = {
+// CartoDB Voyager Raster tiles — clean, modern, Google Maps-like UI.
+const GOOGLE_LIKE_STYLE = {
   version: 8 as const,
   sources: {
-    osm: {
+    carto: {
       type: 'raster' as const,
-      tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+      tiles: ['https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png'],
       tileSize: 256,
-      attribution: '© OpenStreetMap contributors',
+      attribution: '© OpenStreetMap contributors, © CARTO',
       maxzoom: 19,
     },
   },
   layers: [
     {
-      id: 'osm-tiles',
+      id: 'carto-tiles',
       type: 'raster' as const,
-      source: 'osm',
+      source: 'carto',
       minzoom: 0,
       maxzoom: 19,
     },
   ],
 };
 
-// CartoDB vector style — prettier but requires CDN font/sprite fetch (may fail in some regions)
-const CARTO_VECTOR_STYLE = MAPTILER_STYLE;
-
-// Default center is India; only used before GPS/search
 const DEFAULT_CENTER: [number, number] = [72.8777, 19.076]; // Mumbai
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Component
 // ─────────────────────────────────────────────────────────────────────────────
 
-export function LocationPickerModal({ onClose, onConfirm }: LocationPickerModalProps) {
+export function LocationPickerModal({ onClose, onConfirm, onManualEntry }: LocationPickerModalProps) {
   // Refs
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const geocodeDebounce = useRef<NodeJS.Timeout | null>(null);
   const isMounted = useRef(true);
-  const isGpsMoving = useRef(false); // Prevents moveend during flyTo from double-geocoding
+  const isGpsMoving = useRef(false);
+
+  // Caches & Abort controllers
+  const reverseCache = useRef(new Map<string, LocationData>());
+  const searchCache = useRef(new Map<string, GeoapifySearchResult[]>());
+  const searchAbortController = useRef<AbortController | null>(null);
+  const searchDebounce = useRef<NodeJS.Timeout | null>(null);
+
+  // Single source of truth for location
+  const [selectedLocation, setSelectedLocation] = useState<{ lat: number; lng: number } | null>(null);
 
   // State
   const [mapStatus, setMapStatus] = useState<MapStatus>('loading');
@@ -92,24 +91,35 @@ export function LocationPickerModal({ onClose, onConfirm }: LocationPickerModalP
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<GeoapifySearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
-  const searchDebounce = useRef<NodeJS.Timeout | null>(null);
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
 
   // ── Reverse geocode ─────────────────────────────────────────────────────────
   const reverseGeocode = useCallback(async (lat: number, lng: number) => {
     if (!isMounted.current) return;
+
+    const cacheKey = `${lat.toFixed(4)}_${lng.toFixed(4)}`;
+    if (reverseCache.current.has(cacheKey)) {
+      setAddressData(reverseCache.current.get(cacheKey)!);
+      setUiState('success');
+      return;
+    }
+
     setUiState('geocoding');
+    setErrorMsg(null);
 
     try {
       const res = await fetch(`/api/location/reverse?lat=${lat}&lon=${lng}`);
       const data = await res.json();
 
       if (!res.ok) throw new Error(data.error || 'Geocoding failed');
-      if (!data?.address) throw new Error('No address data in response');
+      if (data.error) throw new Error(data.error);
 
       if (!isMounted.current) return;
       
-      // The API now returns fully parsed/normalized LocationData
-      setAddressData(data as LocationData);
+      const locData = data as LocationData;
+      reverseCache.current.set(cacheKey, locData);
+      setAddressData(locData);
       setUiState('success');
     } catch (err) {
       console.error('[LocationPicker] Reverse geocode failed:', err);
@@ -119,142 +129,31 @@ export function LocationPickerModal({ onClose, onConfirm }: LocationPickerModalP
     }
   }, []);
 
-  // ── Initialize map ──────────────────────────────────────────────────────────
-  const initMap = useCallback(
-    (useFallback = false) => {
-      const container = mapContainerRef.current;
-      if (!container) return;
-      if (mapRef.current) return; // Already initialized
-
-      // Wait one rAF so the DOM has painted and container has real dimensions
-      requestAnimationFrame(async () => {
-        if (!isMounted.current || !mapContainerRef.current) return;
-
-        console.log('[LocationPicker] Initializing map, container dimensions:',
-          container.offsetWidth, 'x', container.offsetHeight);
-
-        // Dynamic import avoids Next.js/Webpack SSR issues with maplibre-gl's
-        // CommonJS default export resolving to undefined on static import.
-        const maplibregl = await import('maplibre-gl');
-
-        if (!isMounted.current || !mapContainerRef.current) return;
-
-        // Use OSM raster as it is extremely reliable and has no CORS/CDN issues.
-        const style = OSM_STYLE;
-
-        const MapClass = maplibregl.Map ?? (maplibregl as any).default?.Map;
-        if (!MapClass) {
-          console.error('[LocationPicker] maplibre-gl Map class not found');
-          setMapStatus('error');
-          return;
-        }
-
-        const map = new MapClass({
-          container: mapContainerRef.current,
-          style,
-          center: DEFAULT_CENTER,
-          zoom: 12,
-          attributionControl: false,
-        });
-
-        mapRef.current = map;
-
-        // ── Style / load errors ─────────────────────────────────────────────
-        map.on('error', (e) => {
-          console.error('[LocationPicker] MapLibre error:', e.error);
-          if (isMounted.current) setMapStatus('error');
-        });
-
-        // ── Map loaded ──────────────────────────────────────────────────────
-        map.on('load', () => {
-          if (!isMounted.current) return;
-          console.log('[LocationPicker] Map loaded successfully');
-
-          // Force resize so the map fills the container properly, slightly delayed to guarantee DOM paint
-          setTimeout(() => {
-            if (mapRef.current) {
-               mapRef.current.resize();
-            }
-          }, 100);
-          
-          setMapStatus('ready');
-
-          // Auto-request GPS on first load
-          requestCurrentLocation();
-        });
-
-        // ── Track map movement ──────────────────────────────────────────────
-        map.on('dragstart', () => {
-          if (!isMounted.current) return;
-          if (geocodeDebounce.current) clearTimeout(geocodeDebounce.current);
-          setUiState('map_moving');
-        });
-
-        map.on('moveend', () => {
-          if (!isMounted.current) return;
-          if (isGpsMoving.current) return; // GPS flyTo in progress — handled separately
-
-          const c = map.getCenter();
-          if (geocodeDebounce.current) clearTimeout(geocodeDebounce.current);
-          geocodeDebounce.current = setTimeout(() => {
-            reverseGeocode(c.lat, c.lng);
-          }, 600);
-        });
-
-        // ── ResizeObserver ensures map fills container on layout changes ────
-        const resizeObserver = new ResizeObserver(() => {
-          if (mapRef.current) {
-            mapRef.current.resize();
-          }
-        });
-        resizeObserver.observe(mapContainerRef.current);
-
-        // Also listen to window resize
-        const onWindowResize = () => {
-          if (mapRef.current) mapRef.current.resize();
-        };
-        window.addEventListener('resize', onWindowResize);
-
-        // Store cleanup in the map instance so we can access it on unmount
-        (map as any)._cleanupFns = () => {
-          resizeObserver.disconnect();
-          window.removeEventListener('resize', onWindowResize);
-        };
-      });
-    },
-    [reverseGeocode],
-  );
-
-  // ── Mount / unmount ─────────────────────────────────────────────────────────
+  // ── Selected Location synchronization ───────────────────────────────────────
   useEffect(() => {
-    isMounted.current = true;
-    initMap(false);
-
-    return () => {
-      isMounted.current = false;
-      if (geocodeDebounce.current) clearTimeout(geocodeDebounce.current);
-      if (searchDebounce.current) clearTimeout(searchDebounce.current);
-
-      const map = mapRef.current;
-      if (map) {
-        (map as any)._cleanupFns?.();
-        map.remove();
-        mapRef.current = null;
-      }
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // ── Retry if map failed ─────────────────────────────────────────────────────
-  const retryMap = () => {
-    if (mapRef.current) {
-      (mapRef.current as any)._cleanupFns?.();
-      mapRef.current.remove();
-      mapRef.current = null;
+    if (!selectedLocation) return;
+    
+    const { lat, lng } = selectedLocation;
+    const map = mapRef.current;
+    
+    if (map) {
+       const center = map.getCenter();
+       // Fly only if map is not already very close to the selected coordinates
+       if (Math.abs(center.lat - lat) > 0.0001 || Math.abs(center.lng - lng) > 0.0001) {
+          isGpsMoving.current = true;
+          map.flyTo({ center: [lng, lat], zoom: 17, essential: true });
+          map.once('moveend', () => {
+            isGpsMoving.current = false;
+            if (!isMounted.current) return;
+            reverseGeocode(lat, lng);
+          });
+       } else {
+          reverseGeocode(lat, lng);
+       }
+    } else {
+       reverseGeocode(lat, lng);
     }
-    setMapStatus('loading');
-    initMap(false);
-  };
+  }, [selectedLocation, reverseGeocode]);
 
   // ── Current Location ────────────────────────────────────────────────────────
   const requestCurrentLocation = useCallback(() => {
@@ -270,29 +169,10 @@ export function LocationPickerModal({ onClose, onConfirm }: LocationPickerModalP
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         if (!isMounted.current) return;
-        const { latitude, longitude } = pos.coords;
-
-        const map = mapRef.current;
-        if (map) {
-          isGpsMoving.current = true;
-
-          map.flyTo({ center: [longitude, latitude], zoom: 17, essential: true });
-
-          // Once the flyTo animation ends, geocode that position
-          map.once('moveend', () => {
-            isGpsMoving.current = false;
-            if (!isMounted.current) return;
-            reverseGeocode(latitude, longitude);
-          });
-        } else {
-          // Map not yet ready — just geocode
-          reverseGeocode(latitude, longitude);
-        }
+        setSelectedLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
       },
       (err) => {
         if (!isMounted.current) return;
-        console.error('[LocationPicker] GPS error:', err);
-
         if (err.code === GeolocationPositionError.PERMISSION_DENIED) {
           setErrorMsg('Location permission denied. Drag the map to your delivery address.');
         } else if (err.code === GeolocationPositionError.TIMEOUT) {
@@ -302,33 +182,179 @@ export function LocationPickerModal({ onClose, onConfirm }: LocationPickerModalP
         }
         setUiState('error');
       },
-      { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 },
     );
-  }, [reverseGeocode]);
+  }, []);
+
+  // ── Initialize map ──────────────────────────────────────────────────────────
+  const initMap = useCallback(
+    () => {
+      const container = mapContainerRef.current;
+      if (!container) return;
+      if (mapRef.current) return;
+
+      requestAnimationFrame(async () => {
+        if (!isMounted.current || !mapContainerRef.current) return;
+
+        const maplibregl = await import('maplibre-gl');
+        if (!isMounted.current || !mapContainerRef.current) return;
+
+        const style = GOOGLE_LIKE_STYLE;
+        const MapClass = maplibregl.Map ?? (maplibregl as any).default?.Map;
+        
+        if (!MapClass) {
+          setMapStatus('error');
+          return;
+        }
+
+        const map = new MapClass({
+          container: mapContainerRef.current,
+          style,
+          center: DEFAULT_CENTER,
+          zoom: 12,
+          attributionControl: false,
+        });
+
+        mapRef.current = map;
+
+        map.on('error', (e) => {
+          console.error('[LocationPicker] MapLibre error:', e.error);
+          if (isMounted.current) setMapStatus('error');
+        });
+
+        map.on('load', () => {
+          if (!isMounted.current) return;
+
+          setTimeout(() => {
+            if (mapRef.current) mapRef.current.resize();
+          }, 100);
+          
+          setMapStatus('ready');
+          requestCurrentLocation();
+        });
+
+        map.on('dragstart', () => {
+          if (!isMounted.current) return;
+          if (geocodeDebounce.current) clearTimeout(geocodeDebounce.current);
+          setUiState('map_moving');
+        });
+
+        map.on('moveend', () => {
+          if (!isMounted.current) return;
+          if (isGpsMoving.current) return; 
+
+          const c = map.getCenter();
+          if (geocodeDebounce.current) clearTimeout(geocodeDebounce.current);
+          geocodeDebounce.current = setTimeout(() => {
+            setSelectedLocation({ lat: c.lat, lng: c.lng });
+          }, 600);
+        });
+
+        const resizeObserver = new ResizeObserver(() => {
+          if (mapRef.current) mapRef.current.resize();
+        });
+        resizeObserver.observe(mapContainerRef.current);
+
+        const onWindowResize = () => {
+          if (mapRef.current) mapRef.current.resize();
+        };
+        window.addEventListener('resize', onWindowResize);
+
+        (map as any)._cleanupFns = () => {
+          resizeObserver.disconnect();
+          window.removeEventListener('resize', onWindowResize);
+        };
+      });
+    },
+    [requestCurrentLocation] // requestCurrentLocation added back to dependency array
+  );
+
+  // ── Mount / unmount ─────────────────────────────────────────────────────────
+  useEffect(() => {
+    isMounted.current = true;
+    initMap();
+
+    return () => {
+      isMounted.current = false;
+      if (geocodeDebounce.current) clearTimeout(geocodeDebounce.current);
+      if (searchDebounce.current) clearTimeout(searchDebounce.current);
+      if (searchAbortController.current) searchAbortController.current.abort();
+
+      const map = mapRef.current;
+      if (map) {
+        (map as any)._cleanupFns?.();
+        map.remove();
+        mapRef.current = null;
+      }
+    };
+  }, [initMap]);
+
+  const retryMap = () => {
+    if (mapRef.current) {
+      (mapRef.current as any)._cleanupFns?.();
+      mapRef.current.remove();
+      mapRef.current = null;
+    }
+    setMapStatus('loading');
+    initMap();
+  };
 
   // ── Location search ─────────────────────────────────────────────────────────
   const handleSearchChange = (query: string) => {
     setSearchQuery(query);
-    if (searchDebounce.current) clearTimeout(searchDebounce.current);
+    setHighlightedIndex(-1);
+    setIsSearchFocused(true);
 
-    if (!query.trim() || query.length < 3) {
+    if (searchDebounce.current) clearTimeout(searchDebounce.current);
+    if (searchAbortController.current) {
+      searchAbortController.current.abort();
+      searchAbortController.current = null;
+    }
+
+    if (!query.trim() || query.trim().length < 3) {
       setSearchResults([]);
+      return;
+    }
+
+    const cacheKey = query.trim().toLowerCase();
+    if (searchCache.current.has(cacheKey)) {
+      setSearchResults(searchCache.current.get(cacheKey)!);
       return;
     }
 
     searchDebounce.current = setTimeout(async () => {
       setIsSearching(true);
+      searchAbortController.current = new AbortController();
+      
       try {
-        const res = await fetch(`/api/location/search?q=${encodeURIComponent(query)}`);
+        let fetchUrl = `/api/location/search?q=${encodeURIComponent(query)}`;
+        
+        const map = mapRef.current;
+        if (map) {
+          const center = map.getCenter();
+          fetchUrl += `&lat=${center.lat}&lon=${center.lng}`;
+          const bounds = map.getBounds();
+          if (bounds) {
+             const bbox = `${bounds.getWest()},${bounds.getSouth()},${bounds.getEast()},${bounds.getNorth()}`;
+             fetchUrl += `&bbox=${encodeURIComponent(bbox)}`;
+          }
+        }
+
+        const res = await fetch(fetchUrl, { signal: searchAbortController.current.signal });
         if (!res.ok) throw new Error('Search failed');
+        
         const results: GeoapifySearchResult[] = await res.json();
-        if (isMounted.current) setSearchResults(results.slice(0, 5));
-      } catch {
+        const finalResults = results.slice(0, 5);
+        searchCache.current.set(cacheKey, finalResults);
+        
+        if (isMounted.current) setSearchResults(finalResults);
+      } catch (err: any) {
+        if (err.name === 'AbortError') return;
         if (isMounted.current) setSearchResults([]);
       } finally {
         if (isMounted.current) setIsSearching(false);
       }
-    }, 400);
+    }, 350);
   };
 
   const handleSelectSearchResult = (result: GeoapifySearchResult) => {
@@ -337,27 +363,34 @@ export function LocationPickerModal({ onClose, onConfirm }: LocationPickerModalP
 
     setSearchQuery(result.display_name.split(',')[0]);
     setSearchResults([]);
+    setIsSearchFocused(false);
+    setSelectedLocation({ lat, lng });
+  };
 
-    const map = mapRef.current;
-    if (map) {
-      isGpsMoving.current = true;
-      map.flyTo({ center: [lng, lat], zoom: 17, essential: true });
-      map.once('moveend', () => {
-        isGpsMoving.current = false;
-        if (!isMounted.current) return;
-        reverseGeocode(lat, lng);
-      });
-    } else {
-      reverseGeocode(lat, lng);
+  const handleSearchKeyDown = (e: React.KeyboardEvent) => {
+    if (!searchResults.length) return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setHighlightedIndex((prev) => (prev < searchResults.length - 1 ? prev + 1 : prev));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setHighlightedIndex((prev) => (prev > 0 ? prev - 1 : 0));
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (highlightedIndex >= 0 && highlightedIndex < searchResults.length) {
+        handleSelectSearchResult(searchResults[highlightedIndex]);
+      }
+    } else if (e.key === 'Escape') {
+      setIsSearchFocused(false);
     }
   };
 
   // ── Panel label based on state ─────────────────────────────────────────────
   const hasLocation = uiState === 'success' && addressData;
+  const isGenericAddress = addressData?.resultType === 'street' && addressData?.confidence && addressData.confidence < 0.9;
 
   return (
     <div className="fixed inset-0 z-[100] flex flex-col bg-white font-sans overflow-hidden">
-
       {/* ── Global Header ─────────────────────────────────────────────────── */}
       <header className="h-14 shrink-0 flex items-center px-4 md:px-6 bg-white border-b border-gray-200 shadow-sm z-30">
         <button
@@ -396,7 +429,7 @@ export function LocationPickerModal({ onClose, onConfirm }: LocationPickerModalP
           {mapStatus === 'error' && (
             <div className="absolute inset-0 bg-gray-100 flex flex-col items-center justify-center z-20 gap-3">
               <AlertTriangle size={36} className="text-orange-500" />
-              <p className="text-gray-700 font-semibold">Map couldn't be loaded</p>
+              <p className="text-gray-700 font-semibold">Map couldn&apos;t be loaded</p>
               <button
                 onClick={retryMap}
                 className="flex items-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-xl font-medium hover:bg-blue-700 transition-colors"
@@ -415,6 +448,8 @@ export function LocationPickerModal({ onClose, onConfirm }: LocationPickerModalP
                   type="text"
                   value={searchQuery}
                   onChange={(e) => handleSearchChange(e.target.value)}
+                  onKeyDown={handleSearchKeyDown}
+                  onFocus={() => setIsSearchFocused(true)}
                   placeholder="Search by area, name, street…"
                   className="flex-1 bg-transparent border-none outline-none text-[14px] text-gray-700 placeholder-gray-400"
                 />
@@ -422,17 +457,19 @@ export function LocationPickerModal({ onClose, onConfirm }: LocationPickerModalP
               </div>
 
               {/* Search Dropdown */}
-              {searchResults.length > 0 && (
+              {isSearchFocused && searchResults.length > 0 && (
                 <ul className="border-t border-gray-100 max-h-56 overflow-y-auto rounded-b-xl">
-                  {searchResults.map((r) => (
+                  {searchResults.map((r, idx) => (
                     <li key={r.place_id}>
                       <button
                         onClick={() => handleSelectSearchResult(r)}
-                        className="w-full text-left px-4 py-2.5 hover:bg-blue-50 text-[13px] text-gray-800 flex items-start gap-2 border-b border-gray-50 last:border-b-0"
+                        className={`w-full text-left px-4 py-2.5 flex items-start gap-2 border-b border-gray-50 last:border-b-0 transition-colors ${
+                          highlightedIndex === idx ? 'bg-blue-50' : 'hover:bg-blue-50 text-gray-800'
+                        }`}
                       >
                         <MapPin size={14} className="text-blue-500 mt-0.5 shrink-0" />
                         <div className="flex flex-col">
-                          <span className="line-clamp-1 font-medium">{r.display_name}</span>
+                          <span className="line-clamp-1 font-medium text-[13px]">{r.display_name}</span>
                           {r.display_secondary && (
                             <span className="line-clamp-1 text-[11px] text-gray-500">{r.display_secondary}</span>
                           )}
@@ -441,6 +478,11 @@ export function LocationPickerModal({ onClose, onConfirm }: LocationPickerModalP
                     </li>
                   ))}
                 </ul>
+              )}
+              {isSearchFocused && searchQuery.length >= 3 && searchResults.length === 0 && !isSearching && (
+                <div className="border-t border-gray-100 p-4 text-center text-[13px] text-gray-500 rounded-b-xl">
+                  No matching locations found
+                </div>
               )}
             </div>
           </div>
@@ -562,7 +604,7 @@ export function LocationPickerModal({ onClose, onConfirm }: LocationPickerModalP
                     <div className="bg-green-50 p-2 rounded-full shrink-0 mt-0.5">
                       <CheckCircle2 size={18} className="text-green-600" />
                     </div>
-                    <div className="flex-1 min-w-0 pr-12">
+                    <div className="flex-1 min-w-0 pr-1">
                       <p className="text-[11px] font-bold text-green-700 uppercase tracking-wide mb-1">
                         Location detected
                       </p>
@@ -578,8 +620,13 @@ export function LocationPickerModal({ onClose, onConfirm }: LocationPickerModalP
                       {addressData.postalCode && (
                         <p className="text-[13px] font-medium text-gray-700 mt-0.5">{addressData.postalCode}</p>
                       )}
-                      {!addressData.line1?.includes(addressData.line2 || '') && (
-                        <p className="text-[11px] text-gray-400 mt-2 leading-tight">
+                      {isGenericAddress ? (
+                        <p className="text-[12px] font-medium text-orange-600 mt-3 leading-tight flex gap-1.5 items-start">
+                          <AlertTriangle size={14} className="shrink-0 mt-0.5" />
+                          Please review your address before continuing.
+                        </p>
+                      ) : (
+                        <p className="text-[11px] text-gray-400 mt-3 leading-tight">
                           Please review — GPS accuracy may vary slightly.
                         </p>
                       )}
@@ -599,7 +646,7 @@ export function LocationPickerModal({ onClose, onConfirm }: LocationPickerModalP
             </div>
 
             {/* Confirm Button */}
-            <div className="pt-5">
+            <div className="pt-5 space-y-3">
               <button
                 onClick={() => addressData && onConfirm(addressData)}
                 disabled={uiState !== 'success' || !addressData}
@@ -607,6 +654,15 @@ export function LocationPickerModal({ onClose, onConfirm }: LocationPickerModalP
               >
                 {hasLocation ? 'Add address details' : 'Select a location first'}
               </button>
+
+              {onManualEntry && (
+                <button
+                  onClick={onManualEntry}
+                  className="w-full py-3.5 rounded-xl font-bold text-[#1D4ED8] bg-blue-50 hover:bg-blue-100 active:scale-[0.99] transition-all text-[15px]"
+                >
+                  Enter address manually instead
+                </button>
+              )}
             </div>
           </div>
         </aside>
@@ -614,4 +670,3 @@ export function LocationPickerModal({ onClose, onConfirm }: LocationPickerModalP
     </div>
   );
 }
-

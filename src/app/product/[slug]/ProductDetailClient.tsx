@@ -818,20 +818,20 @@ function ProductGallery({
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.98 }}
               transition={{ duration: 0.25 }}
-              className="relative max-h-[85vh] w-full max-w-3xl"
+              className="relative h-[85vh] w-[90vw] max-w-5xl flex flex-col items-center justify-center"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="relative aspect-square overflow-hidden rounded-3xl border border-white/15 bg-cream shadow-2xl sm:aspect-[4/5]">
+              <div className="relative h-full w-full">
                 <OptimizedImage
                   src={images[activeImage]}
                   alt={imageAlts[activeImage]}
                   fill
-                  sizes="(max-width: 768px) 100vw, 768px"
+                  sizes="(max-width: 1024px) 100vw, 1024px"
                   priority
                   className="object-contain"
                 />
               </div>
-              <p className="mt-4 text-center text-sm text-cream/80">
+              <p className="mt-4 text-center text-sm text-cream/80 flex-shrink-0">
                 {activeImage + 1} / {images.length} · {imageAlts[activeImage]}
               </p>
             </motion.div>

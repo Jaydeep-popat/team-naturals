@@ -24,6 +24,7 @@ export default function AddressPage() {
   const [selectedAddressId, setSelectedAddressId] = useState<number | null>(null);
   const [showNewAddressForm, setShowNewAddressForm] = useState(false);
   const [showMapModal, setShowMapModal] = useState(false);
+  const [isManualEntry, setIsManualEntry] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -191,11 +192,17 @@ export default function AddressPage() {
                   <LocationPickerModal 
                     onClose={() => {
                       setShowMapModal(false);
-                      // If they cancel map, fallback to form manually or just close
+                      setIsManualEntry(true);
                       setShowNewAddressForm(true); 
+                    }}
+                    onManualEntry={() => {
+                      setShowMapModal(false);
+                      setIsManualEntry(true);
+                      setShowNewAddressForm(true);
                     }}
                     onConfirm={(data: LocationData) => {
                       setShowMapModal(false);
+                      setIsManualEntry(false);
                       setShowNewAddressForm(true);
                       setForm(prev => ({
                         ...prev,
@@ -229,27 +236,40 @@ export default function AddressPage() {
                       <FloatingField id="address1" label="Flat/House/building name" value={form.address1} onChange={(v) => setForm({ ...form, address1: v })} error={errors.address1} required />
                       
                       <div className="sm:col-span-2">
-                        <label className="block text-[12px] font-bold text-gray-500 mb-1.5 uppercase tracking-wide">Area / Sector / Locality</label>
-                        <div className="flex items-start justify-between gap-3 bg-gray-50 rounded-xl p-4 border border-gray-100">
-                          <div className="flex-1">
-                            <p className="text-[15px] text-gray-800 leading-snug">
-                              {form.address2 ? `${form.address2}, ` : ''}{form.city ? `${form.city}, ` : ''}
-                            </p>
-                            <p className="text-[15px] font-bold text-gray-900 mt-0.5">
-                              {form.city}, {form.state}, {form.pin}
-                            </p>
+                        {isManualEntry ? (
+                          <div className="space-y-5">
+                            <FloatingField id="address2" label="Area / Sector / Locality" value={form.address2} onChange={(v) => setForm({ ...form, address2: v })} error={errors.address2} required />
+                            <div className="grid grid-cols-2 gap-5">
+                              <FloatingField id="city" label="City" value={form.city} onChange={(v) => setForm({ ...form, city: v })} error={errors.city} required />
+                              <FloatingField id="state" label="State" value={form.state} onChange={(v) => setForm({ ...form, state: v })} error={errors.state} required />
+                            </div>
+                            <FloatingField id="pin" label="Pincode" value={form.pin} onChange={(v) => setForm({ ...form, pin: v })} error={errors.pin} required />
                           </div>
-                          <button 
-                            type="button"
-                            onClick={() => {
-                              setShowNewAddressForm(false);
-                              setShowMapModal(true);
-                            }}
-                            className="text-blue-600 font-medium text-[13px] border border-blue-200 px-3 py-1 rounded-md hover:bg-blue-50 transition-colors shrink-0 bg-white"
-                          >
-                            Change
-                          </button>
-                        </div>
+                        ) : (
+                          <>
+                            <label className="block text-[12px] font-bold text-gray-500 mb-1.5 uppercase tracking-wide">Area / Sector / Locality</label>
+                            <div className="flex items-start justify-between gap-3 bg-gray-50 rounded-xl p-4 border border-gray-100">
+                              <div className="flex-1">
+                                <p className="text-[15px] text-gray-800 leading-snug">
+                                  {form.address2 ? `${form.address2}, ` : ''}{form.city ? `${form.city}, ` : ''}
+                                </p>
+                                <p className="text-[15px] font-bold text-gray-900 mt-0.5">
+                                  {form.city}, {form.state}, {form.pin}
+                                </p>
+                              </div>
+                              <button 
+                                type="button"
+                                onClick={() => {
+                                  setShowNewAddressForm(false);
+                                  setShowMapModal(true);
+                                }}
+                                className="text-blue-600 font-medium text-[13px] border border-blue-200 px-3 py-1 rounded-md hover:bg-blue-50 transition-colors shrink-0 bg-white"
+                              >
+                                Change
+                              </button>
+                            </div>
+                          </>
+                        )}
                       </div>
 
                       <FloatingField id="name" label="Enter your full name" value={form.name} onChange={(v) => setForm({ ...form, name: v })} error={errors.name} required />

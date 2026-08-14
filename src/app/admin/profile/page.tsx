@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/src/contexts/AuthContext';
 import { User, Mail, Shield, Camera, Loader2, CheckCircle, Search, ShieldAlert } from 'lucide-react';
 import { adminUsers, auth } from '@/src/lib/api';
+import { ConfirmDialog } from '@/src/components/admin/ConfirmDialog';
 import toast from 'react-hot-toast';
 
 export default function AdminProfilePage() {
@@ -13,8 +14,9 @@ export default function AdminProfilePage() {
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [promotingUserId, setPromotingUserId] = useState<number | null>(null);
+  const [confirmUser, setConfirmUser] = useState<any>(null);
 
-  const fetchUsers = async () => {
+  const fetchUsers = React.useCallback(async () => {
     try {
       setLoadingUsers(true);
       const res = await adminUsers.list({ limit: 50, search: searchQuery });
@@ -24,11 +26,11 @@ export default function AdminProfilePage() {
     } finally {
       setLoadingUsers(false);
     }
-  };
+  }, [searchQuery]);
 
   useEffect(() => {
     fetchUsers();
-  }, [searchQuery]);
+  }, [fetchUsers]);
 
   const handlePicUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -56,18 +58,22 @@ export default function AdminProfilePage() {
     }
   };
 
-  const handlePromote = async (userToPromote: any) => {
-    if (!confirm(`Are you sure you want to promote ${userToPromote.firstName} to Admin?`)) return;
+  const handlePromoteClick = (userToPromote: any) => {
+    setConfirmUser(userToPromote);
+  };
 
-    setPromotingUserId(userToPromote.userId);
+  const confirmPromote = async () => {
+    if (!confirmUser) return;
+    setPromotingUserId(confirmUser.userId);
     try {
-      await adminUsers.promote(userToPromote.email);
-      toast.success(`${userToPromote.firstName} is now an Admin!`);
+      await adminUsers.promote(confirmUser.email);
+      toast.success(`${confirmUser.firstName} is now an Admin!`);
       fetchUsers(); // Refresh list
     } catch (error: any) {
       toast.error(error.message || 'Failed to promote user');
     } finally {
       setPromotingUserId(null);
+      setConfirmUser(null);
     }
   };
 
@@ -179,7 +185,7 @@ export default function AdminProfilePage() {
               ) : usersList.length === 0 ? (
                 <tr>
                   <td colSpan={3} className="px-6 py-12 text-center text-forest/40">
-                    No users found matching "{searchQuery}"
+                    No users found matching &quot;{searchQuery}&quot;
                   </td>
                 </tr>
               ) : (
@@ -203,7 +209,7 @@ export default function AdminProfilePage() {
                     <td className="px-6 py-4 text-right">
                       {u.role !== 'admin' && (
                         <button
-                          onClick={() => handlePromote(u)}
+                          onClick={() => handlePromoteClick(u)}
                           disabled={promotingUserId === u.userId}
                           className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-terracotta/10 px-3 py-1.5 text-xs font-bold text-terracotta hover:bg-terracotta hover:text-white transition-colors disabled:opacity-50"
                         >
@@ -223,6 +229,16 @@ export default function AdminProfilePage() {
           </table>
         </div>
       </div>
+
+      <ConfirmDialog
+        isOpen={!!confirmUser}
+        onClose={() => setConfirmUser(null)}
+        onConfirm={confirmPromote}
+        title="Promote to Admin"
+        message={`Are you sure you want to promote ${confirmUser?.firstName} to Administrator? They will have full access to the admin dashboard.`}
+        confirmText="Promote"
+        isLoading={promotingUserId === confirmUser?.userId}
+      />
     </div>
   );
 }

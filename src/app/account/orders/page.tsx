@@ -29,26 +29,46 @@ const STATUS_TABS = [
 export default function OrdersPage() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [activeStatus, setActiveStatus] = useState('all');
   const [orders, setOrders] = useState<BackendOrder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [reviewingProduct, setReviewingProduct] = useState<{ id: number; name: string } | null>(null);
-
-  const loadOrders = async () => {
-    setIsLoading(true);
-    try {
-      const res = await ordersApi.list({ limit: '100' });
-      setOrders((res.data?.orders || []) as BackendOrder[]);
-    } catch (error) {
-      console.error('Failed to fetch orders:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const limit = 10;
 
   useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    const loadOrders = async () => {
+      setIsLoading(true);
+      try {
+        const query: any = { page: String(page), limit: String(limit) };
+        if (activeStatus !== 'all') query.status = activeStatus;
+        if (debouncedSearch) query.search = debouncedSearch;
+        
+        const res = await ordersApi.list(query);
+        setOrders((res.data?.orders || []) as BackendOrder[]);
+        setTotalPages(res.data?.pagination?.totalPages || 1);
+        setTotalRecords(res.data?.pagination?.total || 0);
+      } catch (error) {
+        console.error('Failed to fetch orders:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
     loadOrders();
-  }, []);
+  }, [page, limit, activeStatus, debouncedSearch]);
 
   const orderItems: OrderItem[] = useMemo(() => {
     return orders.map((order) => {
@@ -70,23 +90,6 @@ export default function OrdersPage() {
       };
     });
   }, [orders]);
-
-  const filteredItems = useMemo(() => {
-    return orderItems.filter((item) => {
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        const matchesName = item.name.toLowerCase().includes(q);
-        const matchesId = item.orderId.toLowerCase().includes(q);
-        if (!matchesName && !matchesId) return false;
-      }
-
-      if (activeStatus !== 'all' && item.status !== activeStatus) {
-        return false;
-      }
-
-      return true;
-    });
-  }, [searchQuery, activeStatus, orderItems]);
 
   return (
     <div className="space-y-5 animate-in fade-in duration-200">
@@ -118,7 +121,7 @@ export default function OrdersPage() {
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveStatus(tab.id)}
+                onClick={() => { setActiveStatus(tab.id); setPage(1); }}
                 className={`shrink-0 rounded-full px-3.5 py-1.5 text-[12px] font-semibold transition-all duration-150 ${
                   isActive 
                     ? 'bg-forest text-white shadow-2xs' 
@@ -138,7 +141,7 @@ export default function OrdersPage() {
           <div className="rounded-xl border border-forest/10 bg-white p-12 text-center shadow-2xs flex items-center justify-center">
             <Loader2 size={24} className="animate-spin text-forest" />
           </div>
-        ) : filteredItems.length === 0 ? (
+        ) : orderItems.length === 0 ? (
           <div className="rounded-xl border border-forest/8 bg-[#FDFBF9] p-10 text-center">
             <div className="h-16 w-16 mx-auto mb-4 bg-forest/5 rounded-full flex items-center justify-center">
               <PackageIcon size={24} className="text-forest/30" />
@@ -151,7 +154,7 @@ export default function OrdersPage() {
             </p>
             {(searchQuery || activeStatus !== 'all') && (
               <button 
-                onClick={() => { setSearchQuery(''); setActiveStatus('all'); }} 
+                onClick={() => { setSearchQuery(''); setActiveStatus('all'); setPage(1); }} 
                 className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-forest/5 px-4 py-2 text-[12px] font-bold text-forest hover:bg-forest hover:text-white transition-colors"
               >
                 <RefreshCwIcon size={12} /> Clear filters
@@ -159,7 +162,7 @@ export default function OrdersPage() {
             )}
           </div>
         ) : (
-          filteredItems.map((item, index) => (
+          orderItems.map((item, index) => (
             <motion.div
               key={item.id}
               initial={{ opacity: 0, y: 8 }}
@@ -178,6 +181,35 @@ export default function OrdersPage() {
           ))
         )}
       </div>
+
+      {/* Pagination */}
+      <div className="flex items-center justify-between border-t border-forest/10 px-4 py-4 mt-6 bg-[#FDFBF9] rounded-b-3xl">
+        <div className="text-sm text-forest/60">
+          {totalRecords > 0 ? (
+            <span>
+              Showing <span className="font-medium text-forest">{Math.min((page - 1) * limit + 1, totalRecords)}</span> to <span className="font-medium text-forest">{Math.min(page * limit, totalRecords)}</span> of <span className="font-medium text-forest">{totalRecords}</span> results
+            </span>
+          ) : (
+            <span>No results</span>
+          )}
+        </div>
+          <div className="flex items-center gap-2">
+            <button
+              disabled={page === 1}
+              onClick={() => setPage((p) => p - 1)}
+              className="rounded-lg border border-forest/10 px-3 py-1.5 text-sm font-medium text-forest disabled:opacity-50 hover:bg-forest/5 transition-colors"
+            >
+              Previous
+            </button>
+            <button
+              disabled={page === totalPages}
+              onClick={() => setPage((p) => p + 1)}
+              className="rounded-lg border border-forest/10 px-3 py-1.5 text-sm font-medium text-forest disabled:opacity-50 hover:bg-forest/5 transition-colors"
+            >
+              Next
+            </button>
+          </div>
+        </div>
       
       {reviewingProduct && (
         <ReviewModal

@@ -49,7 +49,7 @@ export function CustomDatePicker({ value, onChange, placeholder = 'Select Date',
   const displayValue = value ? new Date(value).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
 
   return (
-    <div className="relative w-full" ref={containerRef}>
+    <div className={`relative w-full ${isOpen ? 'z-50' : ''}`} ref={containerRef}>
       <div 
         onClick={() => !disabled && setIsOpen(!isOpen)}
         className={`w-full bg-transparent px-3.5 py-2.5 text-[14px] font-semibold flex items-center justify-between outline-none cursor-pointer ${displayValue ? 'text-forest' : 'text-muted/50'} ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}

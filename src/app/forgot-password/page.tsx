@@ -71,11 +71,19 @@ function ForgotPasswordForm() {
     }
   };
 
-  const handleOtpSubmit = (e: React.FormEvent) => {
+  const handleOtpSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (otp.length !== 6) { setError('Please enter the 6-digit code.'); return; }
     setError('');
-    next();
+    setIsSubmitting(true);
+    try {
+      await authApi.verifyResetOtp({ email, otp });
+      next();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Verification failed. Check the code and try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleReset = async (e: React.FormEvent) => {

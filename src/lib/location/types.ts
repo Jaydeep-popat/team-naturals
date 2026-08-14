@@ -11,6 +11,18 @@ export interface LocationData {
   country: string;
   latitude: number;
   longitude: number;
+  
+  // Extended Geoapify Metadata
+  name?: string;
+  street?: string;
+  houseNumber?: string;
+  district?: string;
+  suburb?: string;
+  neighbourhood?: string;
+  resultType?: string;
+  confidence?: number;
+  placeId?: string;
+  formatted?: string;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -19,17 +19,17 @@ export default function OfflinePage() {
       </h1>
       
       <p className="text-forest/70 max-w-md mx-auto mb-8">
-        It looks like you've lost your internet connection. Some parts of the app are available offline, but you'll need to reconnect to browse new products or checkout.
+        It looks like you&apos;ve lost your internet connection. Some parts of the app are available offline, but you&apos;ll need to reconnect to browse new products or checkout.
       </p>
       
       <div className="flex flex-col sm:flex-row gap-4">
-        <a
+        <Link
           href="/"
           className="bg-forest text-white px-8 py-3 rounded-full font-semibold hover:bg-forest-deep transition-all shadow-soft flex items-center justify-center gap-2"
         >
           <RefreshCcw size={18} />
           Try Again
-        </a>
+        </Link>
         
         <Link
           href="/"

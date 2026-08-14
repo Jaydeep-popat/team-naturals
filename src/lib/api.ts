@@ -186,6 +186,13 @@ export const auth = {
     });
   },
 
+  verifyResetOtp(body: { email: string; otp: string }) {
+    return apiFetch('/api/auth/verify-reset-otp', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+  },
+
   resetPassword(body: { email: string; otp: string; password: string }) {
     return apiFetch('/api/auth/reset-password', {
       method: 'POST',

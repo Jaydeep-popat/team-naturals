@@ -143,5 +143,17 @@ export function parseGeoapifyAddress(
     country,
     latitude,
     longitude,
+    
+    // Metadata preservation
+    name: props.name,
+    street: props.street,
+    houseNumber: props.housenumber,
+    district: props.district,
+    suburb: props.suburb,
+    neighbourhood: props.neighbourhood,
+    resultType: props.result_type,
+    confidence: props.rank?.confidence,
+    placeId: props.place_id,
+    formatted: props.formatted,
   };
 }

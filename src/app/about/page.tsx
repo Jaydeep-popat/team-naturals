@@ -213,9 +213,9 @@ export default function AboutPage() {
     <div className="w-full bg-cream overflow-hidden">
 
       {/* ── 1. HERO — Split layout ─────────────────────────────────────────── */}
-      <section ref={heroRef} className="relative flex min-h-[95vh] w-full overflow-hidden bg-cream pt-16 md:pt-20">
+      <section ref={heroRef} className="relative flex flex-col md:flex-row min-h-[95vh] w-full overflow-hidden bg-cream pt-16 md:pt-20">
       {/* Left text col */}
-        <div className="relative z-10 flex w-full flex-col items-center justify-center px-6 text-center md:w-[48%] md:px-12 lg:px-20 xl:px-28">
+        <div className="relative z-10 flex flex-1 w-full flex-col items-center justify-center px-6 py-10 text-center md:w-[48%] md:px-12 lg:px-20 xl:px-28 md:py-0">
           <motion.p
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
@@ -245,7 +245,7 @@ export default function AboutPage() {
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.8 }}
-            className="mt-10 flex flex-wrap gap-3"
+            className="mt-10 flex flex-wrap justify-center gap-3"
           >
             <Link
               href="/shop"
@@ -262,7 +262,7 @@ export default function AboutPage() {
           </motion.div>
         </div>
 
-        {/* Right photo col */}
+        {/* Right photo col (Desktop) */}
         <div className="absolute inset-y-0 right-0 hidden w-[56%] overflow-hidden md:block">
           <motion.img
             src={heroImage}
@@ -274,15 +274,15 @@ export default function AboutPage() {
         </div>
 
         {/* Mobile hero image strip */}
-        <div className="absolute inset-x-0 bottom-0 h-[38vh] overflow-hidden md:hidden">
+        <div className="relative h-[40vh] w-full shrink-0 overflow-hidden md:hidden mt-auto">
           <img src={heroImage} alt="Artisanal soap" className="h-full w-full object-cover object-top" />
           <div className="absolute inset-0 bg-gradient-to-t from-cream via-cream/40 to-transparent" />
         </div>
 
-        {/* Scroll cue */}
+        {/* Scroll cue (Desktop only, mobile image takes space) */}
         <motion.div
           style={{ opacity: scrollOpacity }}
-          className="absolute bottom-8 left-8 z-20 flex flex-col items-center gap-2 md:left-20 lg:left-28"
+          className="absolute bottom-8 left-8 z-20 hidden md:flex flex-col items-center gap-2 md:left-20 lg:left-28"
         >
           <span className="text-[9px] uppercase tracking-[0.35em] text-forest/40 font-bold">Scroll</span>
           <motion.div
