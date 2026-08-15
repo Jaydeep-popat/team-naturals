@@ -2,33 +2,60 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { motion } from 'framer-motion';
 import { useCart } from "@/src/contexts/CartContext";
 import { CheckoutStepper } from "@/src/components/CheckoutStepper";
 import { CheckoutSummary } from "@/src/components/CheckoutSummary";
-import { ArrowLeftIcon, CreditCardIcon, LockIcon, SmartphoneIcon, LandmarkIcon, TruckIcon } from 'lucide-react';
+import { ArrowLeftIcon, Loader2, LockIcon } from 'lucide-react';
+import { orders } from '@/src/lib/api';
+import toast from 'react-hot-toast';
 
-export default function PaymentPage() {
-  const { lines, subtotal, clearCart } = useCart();
+import { Suspense } from 'react';
+
+const COD_FEE = 30;
+
+function PaymentContent() {
+  const { lines, subtotal, originalSubtotal, promoDiscountAmount, clearCart } = useCart();
   const router = useRouter();
-  const [selectedMethod, setSelectedMethod] = useState('UPI');
+  const searchParams = useSearchParams();
+  const addressId = searchParams.get('addressId');
+  const [loading, setLoading] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<'razorpay' | 'cod'>('cod');
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
-  const shipping = subtotal === 0 || subtotal >= 499 ? 0 : 49;
-  const total = subtotal + shipping;
+  const shipping = originalSubtotal === 0 || originalSubtotal >= 499 ? 0 : 49;
+  const codFee = paymentMethod === 'cod' ? COD_FEE : 0;
+  const total = Math.max(0, subtotal - (promoDiscountAmount || 0)) + shipping + codFee;
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    clearCart();
-    router.push('/order-confirmation');
+  const handlePayment = async () => {
+    setCheckoutError(null);
+    if (!addressId) {
+      toast.error("Please select a delivery address first.");
+      router.push('/checkout/address');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await orders.checkout(Number(addressId), paymentMethod);
+      const { order } = res.data;
+
+      if (paymentMethod === 'cod') {
+        await clearCart();
+        router.push(`/order-confirmation?orderId=${order.orderId}`);
+        return;
+      }
+      toast.error('Online payment is not enabled yet. Please use Cash on Delivery.');
+    } catch (error) {
+      console.error("Checkout failed", error);
+      const message = error instanceof Error ? error.message : 'Failed to initiate checkout. Please try again.';
+      setCheckoutError(message);
+      toast.error(message);
+    } finally {
+      setLoading(false);
+    }
   };
-
-  const methods = [
-    { id: 'UPI', label: 'UPI', icon: SmartphoneIcon },
-    { id: 'Card', label: 'Credit/Debit Card', icon: CreditCardIcon },
-    { id: 'Net Banking', label: 'Net Banking', icon: LandmarkIcon },
-    { id: 'COD', label: 'Cash on Delivery', icon: TruckIcon },
-  ];
 
   return (
     <div className="w-full bg-white pb-16 min-h-[80vh]">
@@ -48,127 +75,88 @@ export default function PaymentPage() {
           <div>
             <h1 className="font-display text-3xl text-forest mb-6">Payment</h1>
 
-            <form onSubmit={handleSubmit} className="space-y-8">
-              <div className="rounded-[24px] border border-forest/8 bg-white shadow-sm overflow-hidden">
-                <div className="p-6 lg:p-8 space-y-4 bg-cream-soft/30 border-b border-forest/8">
-                  <p className="text-[14px] leading-relaxed text-muted font-medium">
-                    Please select your preferred payment method. This is a prototype — no real payment will be processed.
-                  </p>
-                </div>
+            <div className="space-y-8">
+              <div className="rounded-[24px] border border-forest/8 bg-white shadow-sm overflow-hidden p-6 md:p-8 text-left">
+                <h2 className="text-lg font-medium text-forest mb-4">Select Payment Method</h2>
+                
+                <div className="space-y-4 mb-8">
+                  <label className={`flex items-center gap-4 p-4 rounded-2xl border cursor-pointer transition-all ${paymentMethod === 'cod' ? 'border-forest bg-forest/5' : 'border-forest/10 hover:border-forest/30'}`}>
+                    <input 
+                      type="radio" 
+                      name="payment" 
+                      value="cod"
+                      checked={paymentMethod === 'cod'}
+                      onChange={() => setPaymentMethod('cod')}
+                      className="w-5 h-5 text-forest border-forest/30 focus:ring-forest"
+                    />
+                    <div className="flex-1">
+                      <h3 className="font-medium text-forest">Cash on Delivery</h3>
+                      <p className="text-sm text-forest/70">Pay when your order arrives. COD fee: â‚¹{COD_FEE}</p>
+                    </div>
+                  </label>
 
-                <div className="p-6 lg:p-8 flex flex-col gap-4">
-                  {methods.map((m) => {
-                    const isSelected = selectedMethod === m.id;
-                    const Icon = m.icon;
-                    return (
-                      <div
-                        key={m.id}
-                        className={`rounded-2xl border transition-colors overflow-hidden ${
-                          isSelected ? 'border-forest bg-forest/5' : 'border-forest/15 hover:border-forest/30'
-                        }`}
-                      >
-                        <label className="flex cursor-pointer items-center gap-4 p-5">
-                          <input
-                            type="radio"
-                            name="payment_method"
-                            value={m.id}
-                            checked={isSelected}
-                            onChange={() => setSelectedMethod(m.id)}
-                            className="h-[18px] w-[18px] border-forest/30 text-forest focus:ring-forest bg-white"
-                          />
-                          <div className="flex items-center gap-3 text-forest">
-                            <Icon size={20} strokeWidth={1.5} className={isSelected ? 'text-forest' : 'text-forest/60'} />
-                            <span className="text-[15px] font-medium">{m.label}</span>
-                          </div>
-                        </label>
-                        
-                        <AnimatePresence initial={false}>
-                          {isSelected && (
-                            <motion.div
-                              initial={{ height: 0, opacity: 0 }}
-                              animate={{ height: 'auto', opacity: 1 }}
-                              exit={{ height: 0, opacity: 0 }}
-                              transition={{ duration: 0.3, ease: 'easeInOut' }}
-                              className="px-5 pb-5 overflow-hidden"
-                            >
-                              <div className="pt-2 border-t border-forest/10 mt-1">
-                                {m.id === 'UPI' && (
-                                  <div className="mt-4">
-                                    <label htmlFor="upi_id" className="mb-2 block text-[13px] font-medium text-forest/80">UPI ID</label>
-                                    <input type="text" id="upi_id" placeholder="username@upi" className="w-full rounded-xl border border-forest/15 bg-white px-4 py-3 text-[14px] outline-none focus:border-forest" />
-                                  </div>
-                                )}
-                                {m.id === 'Card' && (
-                                  <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                                    <div className="sm:col-span-2">
-                                      <label htmlFor="card_number" className="mb-2 block text-[13px] font-medium text-forest/80">Card Number</label>
-                                      <input type="text" id="card_number" placeholder="0000 0000 0000 0000" className="w-full rounded-xl border border-forest/15 bg-white px-4 py-3 text-[14px] outline-none focus:border-forest" />
-                                    </div>
-                                    <div>
-                                      <label htmlFor="card_expiry" className="mb-2 block text-[13px] font-medium text-forest/80">Expiry (MM/YY)</label>
-                                      <input type="text" id="card_expiry" placeholder="MM/YY" className="w-full rounded-xl border border-forest/15 bg-white px-4 py-3 text-[14px] outline-none focus:border-forest" />
-                                    </div>
-                                    <div>
-                                      <label htmlFor="card_cvv" className="mb-2 block text-[13px] font-medium text-forest/80">CVV</label>
-                                      <input type="password" id="card_cvv" placeholder="123" className="w-full rounded-xl border border-forest/15 bg-white px-4 py-3 text-[14px] outline-none focus:border-forest" />
-                                    </div>
-                                    <div className="sm:col-span-2">
-                                      <label htmlFor="card_name" className="mb-2 block text-[13px] font-medium text-forest/80">Name on Card</label>
-                                      <input type="text" id="card_name" placeholder="Name" className="w-full rounded-xl border border-forest/15 bg-white px-4 py-3 text-[14px] outline-none focus:border-forest" />
-                                    </div>
-                                  </div>
-                                )}
-                                {m.id === 'Net Banking' && (
-                                  <div className="mt-4">
-                                    <label htmlFor="bank" className="mb-2 block text-[13px] font-medium text-forest/80">Select Bank</label>
-                                    <select id="bank" className="w-full rounded-xl border border-forest/15 bg-white px-4 py-3 text-[14px] outline-none focus:border-forest">
-                                      <option>HDFC Bank</option>
-                                      <option>ICICI Bank</option>
-                                      <option>State Bank of India</option>
-                                      <option>Axis Bank</option>
-                                    </select>
-                                  </div>
-                                )}
-                                {m.id === 'COD' && (
-                                  <p className="mt-4 text-[13px] text-muted">
-                                    Pay with cash upon delivery of your order.
-                                  </p>
-                                )}
-                              </div>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
+                  <label className="flex cursor-not-allowed items-center gap-4 rounded-2xl border border-forest/10 bg-gray-50 p-4 opacity-70">
+                    <input 
+                      type="radio" 
+                      name="payment" 
+                      value="razorpay"
+                      checked={paymentMethod === 'razorpay'}
+                      disabled
+                      className="w-5 h-5 text-forest border-forest/30 focus:ring-forest"
+                    />
+                    <div className="flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="font-medium text-forest">Online Payment</h3>
+                        <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-forest/50">Coming soon</span>
                       </div>
-                    );
-                  })}
+                      <p className="text-sm text-forest/70">UPI, cards, and net banking will be enabled after Razorpay setup.</p>
+                    </div>
+                  </label>
+                </div>
+
+                <div className="text-center">
+                  <motion.button
+                    onClick={handlePayment}
+                    disabled={lines.length === 0 || loading || !addressId}
+                    whileTap={{ scale: 0.98 }}
+                    className="rounded-full bg-forest px-10 py-4 w-full max-w-md text-[16px] font-medium text-cream shadow-soft transition-all hover:bg-forest-deep hover:shadow-lift disabled:opacity-50"
+                  >
+                    <span className="inline-flex items-center justify-center gap-2">
+                      {loading && <Loader2 size={16} className="animate-spin" />}
+                      {loading ? 'Processing...' : `Place Order · ₹${total}`}
+                    </span>
+                  </motion.button>
+                  {checkoutError && (
+                    <p className="mt-3 text-sm font-medium text-terracotta">
+                      {checkoutError}
+                    </p>
+                  )}
                 </div>
               </div>
 
-              <div className="flex flex-col items-end gap-3 pt-2">
-                <div className="w-full flex items-center justify-between">
-                  <Link href="/checkout/address" className="flex items-center gap-2 text-sm font-medium text-forest hover:text-terracotta transition-colors">
-                    <ArrowLeftIcon size={16} /> Return to delivery
-                  </Link>
-                  <motion.button
-                    type="submit"
-                    whileTap={{ scale: 0.98 }}
-                    disabled={lines.length === 0}
-                    className="rounded-full bg-forest px-10 py-4 text-[15px] font-medium text-cream shadow-soft transition-all hover:bg-forest-deep hover:shadow-lift disabled:opacity-50"
-                  >
-                    Place Order · ₹{total}
-                  </motion.button>
-                </div>
-                <div className="flex items-center gap-2 text-[12px] text-muted">
+              <div className="flex flex-col items-start gap-3 pt-2">
+                <Link href="/checkout/address" className="flex items-center gap-2 text-sm font-medium text-forest hover:text-terracotta transition-colors">
+                  <ArrowLeftIcon size={16} /> Return to delivery
+                </Link>
+                <div className="flex items-center gap-2 text-[12px] text-muted mt-2">
                   <LockIcon size={14} strokeWidth={2} className="text-forest/60" />
-                  <span>SSL secured checkout. Your payment information is encrypted.</span>
+                  <span>SSL secured checkout. Cash on Delivery is available now.</span>
                 </div>
               </div>
-            </form>
+            </div>
           </div>
 
-          <CheckoutSummary lines={lines} subtotal={subtotal} />
+          <CheckoutSummary codFee={codFee} />
         </div>
       </motion.div>
     </div>
+  );
+}
+
+export default function PaymentPage() {
+  return (
+    <Suspense fallback={<div className="flex h-screen items-center justify-center text-forest/60">Loading payment details...</div>}>
+      <PaymentContent />
+    </Suspense>
   );
 }

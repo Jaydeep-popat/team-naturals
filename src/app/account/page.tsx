@@ -1,82 +1,384 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  PencilIcon,
+  CheckIcon,
+  XIcon,
+  Loader2Icon,
+  CalendarIcon,
+  PhoneIcon,
+  AtSignIcon,
+  UserIcon,
+  ShieldCheckIcon,
+  ClockIcon,
+  AlertCircleIcon,
+} from 'lucide-react';
+import { useAuth } from '@/src/contexts/AuthContext';
+import { ApiError } from '@/src/lib/api';
 import { motion, AnimatePresence } from 'framer-motion';
-import { UserIcon, ShoppingBagIcon, MapPinIcon, SettingsIcon, LogOutIcon, PackageIcon } from 'lucide-react';
+import { CustomDatePicker } from '@/src/components/CustomDatePicker';
 
-type Tab = 'profile' | 'orders' | 'addresses' | 'settings';
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-export default function AccountPage() {
-  const [activeTab, setActiveTab] = useState<Tab>('profile');
+function formatDOB(iso: string | null): string {
+  if (!iso) return '';
+  // Return YYYY-MM-DD for <input type="date">
+  return new Date(iso).toISOString().split('T')[0];
+}
 
-  const tabs: { id: Tab; label: string; icon: React.FC<any> }[] = [
-    { id: 'profile', label: 'Personal Info', icon: UserIcon },
-    { id: 'orders', label: 'Order History', icon: ShoppingBagIcon },
-    { id: 'addresses', label: 'Addresses', icon: MapPinIcon },
-    { id: 'settings', label: 'Settings', icon: SettingsIcon },
-  ];
+function displayDOB(iso: string | null): string {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
+
+export default function PersonalInfoPage() {
+  const { user, updateProfile } = useAuth();
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
+  const [profilePicFile, setProfilePicFile] = useState<File | null>(null);
+
+  // Form state — synced from user on each edit session open
+  const [form, setForm] = useState({
+    firstName: '',
+    lastName: '',
+    username: '',
+    phoneNo: '',
+    dateOfBirth: '',
+    profilePic: '',
+  });
+  const [formError, setFormError] = useState('');
+
+  const firstFieldRef = useRef<HTMLInputElement>(null);
+
+  // Keep form in sync when user data loads or changes
+  useEffect(() => {
+    if (user) {
+      setForm({
+        firstName: user.firstName ?? '',
+        lastName: user.lastName ?? '',
+        username: user.username ?? '',
+        phoneNo: user.phoneNo ?? '',
+        dateOfBirth: formatDOB(user.dateOfBirth),
+        profilePic: user.profilePic ?? '',
+      });
+    }
+  }, [user]);
+
+  if (!user) return null;
+
+  const initials = `${user.firstName?.[0] ?? ''}${user.lastName?.[0] ?? ''}`.toUpperCase();
+
+  const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3500);
+  };
+
+  const handleEditOpen = () => {
+    setFormError('');
+    setIsEditing(true);
+    setTimeout(() => firstFieldRef.current?.focus(), 80);
+  };
+
+  const handleCancel = () => {
+    // Reset form to current user values
+    setForm({
+      firstName: user.firstName ?? '',
+      lastName: user.lastName ?? '',
+      username: user.username ?? '',
+      phoneNo: user.phoneNo ?? '',
+      dateOfBirth: formatDOB(user.dateOfBirth),
+      profilePic: user.profilePic ?? '',
+    });
+    setProfilePicFile(null);
+    setFormError('');
+    setIsEditing(false);
+  };
+
+  const handleSave = async () => {
+    setFormError('');
+
+    if (!form.firstName.trim()) { setFormError('First name is required.'); return; }
+    if (!form.lastName.trim()) { setFormError('Last name is required.'); return; }
+    if (!form.username.trim()) { setFormError('Username is required.'); return; }
+
+    setIsSaving(true);
+    try {
+      let finalProfilePicUrl = form.profilePic || null;
+
+      // If a new file was selected, upload it first
+      if (profilePicFile) {
+        const { auth } = await import('@/src/lib/api');
+        const formData = new FormData();
+        formData.append('profilePic', profilePicFile);
+        const res = await auth.uploadProfilePic(formData);
+        finalProfilePicUrl = res.data.user.profilePic || null;
+      }
+
+      await updateProfile({
+        firstName: form.firstName.trim(),
+        lastName: form.lastName.trim(),
+        username: form.username.trim(),
+        phoneNo: form.phoneNo.trim() || null,
+        dateOfBirth: form.dateOfBirth || null,
+        profilePic: finalProfilePicUrl,
+      });
+      setProfilePicFile(null);
+      setIsEditing(false);
+      showToast('Profile updated successfully');
+    } catch (err) {
+      const msg = err instanceof ApiError ? err.message : 'Failed to save. Please try again.';
+      setFormError(msg);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const field = (key: keyof typeof form, val: string) =>
+    setForm((f) => ({ ...f, [key]: val }));
+
+  // ─── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div className="min-h-screen bg-cream/30 px-4 py-32 lg:px-8">
-      <div className="mx-auto max-w-[1200px]">
-        {/* Header */}
-        <div className="mb-12 text-center lg:text-left">
-          <h1 className="font-display text-4xl font-bold tracking-tight text-forest lg:text-5xl">
-            My Account
-          </h1>
-          <p className="mt-3 text-[15px] text-muted">
-            Manage your personal information, orders, and addresses.
-          </p>
-        </div>
+    <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 relative">
 
-        <div className="flex flex-col gap-8 lg:flex-row lg:gap-12">
-          {/* Sidebar Navigation */}
-          <div className="w-full shrink-0 lg:w-64">
-            <div className="flex overflow-x-auto pb-4 lg:flex-col lg:overflow-visible lg:pb-0 hide-scrollbar gap-2">
-              {tabs.map((tab) => {
-                const isActive = activeTab === tab.id;
-                const Icon = tab.icon;
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`relative flex min-w-max items-center gap-3 rounded-xl px-4 py-3 text-[14px] font-semibold transition-colors lg:w-full ${
-                      isActive ? 'bg-forest text-cream shadow-soft' : 'text-forest hover:bg-cream-soft'
-                    }`}
-                  >
-                    <Icon size={18} strokeWidth={isActive ? 2.5 : 2} />
-                    {tab.label}
-                  </button>
-                );
-              })}
-              
-              <div className="hidden lg:block my-4 h-px w-full bg-forest/10" />
+      {/* ── Toast ── */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ opacity: 0, y: -16, x: '-50%' }}
+            animate={{ opacity: 1, y: 0, x: '-50%' }}
+            exit={{ opacity: 0, y: -16, x: '-50%' }}
+            className={`fixed top-24 left-1/2 z-50 flex items-center gap-2 rounded-full px-6 py-3 text-sm font-semibold shadow-lg
+              ${toast.type === 'success' ? 'bg-forest text-white' : 'bg-terracotta text-white'}`}
+          >
+            {toast.type === 'success'
+              ? <CheckIcon size={16} />
+              : <AlertCircleIcon size={16} />}
+            {toast.msg}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
+      {/* ── Avatar + Name header ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-forest/8">
+        <div className="flex items-center gap-4">
+          <div className="relative h-16 w-16 shrink-0 group">
+            <div className="h-full w-full rounded-2xl bg-gradient-to-br from-forest/10 to-forest/20 flex items-center justify-center text-forest text-xl font-display font-bold border border-forest/10 shadow-sm overflow-hidden relative">
+              {(isEditing ? form.profilePic : user.profilePic)
+                ? <img src={(isEditing ? form.profilePic : user.profilePic)!} alt="Profile" className="h-full w-full object-cover" />
+                : <span>{initials}</span>
+              }
+              {isEditing && (
+                <label className="absolute inset-0 flex items-center justify-center bg-black/40 text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                  <PencilIcon size={16} />
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    className="hidden" 
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        if (file.size > 2 * 1024 * 1024) {
+                          setFormError('Image must be less than 2MB');
+                          return;
+                        }
+                        setProfilePicFile(file);
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                          field('profilePic', reader.result as string);
+                          setFormError('');
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                  />
+                </label>
+              )}
+            </div>
+            {isEditing && form.profilePic && (
               <button
-                className="flex min-w-max items-center gap-3 rounded-xl px-4 py-3 text-[14px] font-semibold text-terracotta transition-colors hover:bg-terracotta/10 lg:w-full"
+                onClick={() => { field('profilePic', ''); setProfilePicFile(null); }}
+                className="absolute -top-1.5 -right-1.5 bg-terracotta text-white rounded-full p-0.5 shadow-sm hover:bg-terracotta/90 z-10"
+                title="Remove photo"
               >
-                <LogOutIcon size={18} strokeWidth={2} />
-                Log Out
+                <XIcon size={12} strokeWidth={3} />
               </button>
+            )}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-display font-bold text-forest text-xl leading-tight truncate">
+              {user.firstName} {user.lastName}
+            </p>
+            <p className="text-[13px] text-muted mt-0.5 truncate">@{user.username}</p>
+            <div className="mt-2">
+              {user.emailVerifiedAt ? (
+                <span className="inline-flex items-center gap-1 rounded-full bg-[#E8F3EB] px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#1B4D2E]">
+                  <ShieldCheckIcon size={10} /> Verified
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 rounded-full bg-terracotta/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-terracotta">
+                  Email not verified
+                </span>
+              )}
             </div>
           </div>
+        </div>
 
-          {/* Main Content Area */}
-          <div className="flex-1 rounded-3xl bg-white p-6 shadow-soft sm:p-10 border border-forest/5">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={activeTab}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.2 }}
+        {/* Edit / Save / Cancel buttons */}
+        <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto pl-[80px] sm:pl-0 mt-2 sm:mt-0">
+          {!isEditing ? (
+            <button
+              onClick={handleEditOpen}
+              id="edit-profile-btn"
+              className="flex items-center gap-1.5 rounded-full border border-forest/20 bg-white px-4 py-2 text-[13px] font-semibold text-forest hover:bg-forest hover:text-white hover:border-forest transition-all duration-200 shadow-sm"
+            >
+              <PencilIcon size={13} strokeWidth={2.2} />
+              Edit
+            </button>
+          ) : (
+            <>
+              <button
+                onClick={handleSave}
+                disabled={isSaving}
+                id="save-profile-btn"
+                className="flex items-center gap-1.5 rounded-full bg-forest px-4 py-2 text-[13px] font-semibold text-white hover:bg-forest/90 disabled:opacity-60 transition-all duration-200 shadow-sm"
               >
-                {activeTab === 'profile' && <ProfileTab />}
-                {activeTab === 'orders' && <OrdersTab />}
-                {activeTab === 'addresses' && <AddressesTab />}
-                {activeTab === 'settings' && <SettingsTab />}
-              </motion.div>
-            </AnimatePresence>
+                {isSaving
+                  ? <Loader2Icon size={13} className="animate-spin" />
+                  : <CheckIcon size={13} strokeWidth={2.5} />}
+                Save
+              </button>
+              <button
+                onClick={handleCancel}
+                disabled={isSaving}
+                id="cancel-edit-btn"
+                className="flex items-center gap-1.5 rounded-full border border-forest/15 bg-white px-4 py-2 text-[13px] font-semibold text-forest/70 hover:bg-forest/5 disabled:opacity-60 transition-all duration-200"
+              >
+                <XIcon size={13} strokeWidth={2.2} />
+                Cancel
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* ── Inline error (edit mode) ── */}
+      <AnimatePresence>
+        {formError && isEditing && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="mt-4 flex items-start gap-2.5 rounded-xl bg-terracotta/10 px-4 py-3 text-sm text-terracotta overflow-hidden"
+          >
+            <AlertCircleIcon size={15} className="mt-0.5 shrink-0" />
+            {formError}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Profile fields grid ── */}
+      <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+        {/* First Name */}
+        <ProfileField
+          id="firstName"
+          label="First Name"
+          icon={<UserIcon size={14} />}
+          value={isEditing ? form.firstName : user.firstName}
+          editing={isEditing}
+          inputRef={firstFieldRef}
+          onChange={(v) => field('firstName', v)}
+          placeholder="Enter first name"
+        />
+
+        {/* Last Name */}
+        <ProfileField
+          id="lastName"
+          label="Last Name"
+          icon={<UserIcon size={14} />}
+          value={isEditing ? form.lastName : user.lastName}
+          editing={isEditing}
+          onChange={(v) => field('lastName', v)}
+          placeholder="Enter last name"
+        />
+
+        {/* Username */}
+        <ProfileField
+          id="username"
+          label="Username"
+          icon={<AtSignIcon size={14} />}
+          value={isEditing ? form.username : user.username}
+          editing={isEditing}
+          onChange={(v) => field('username', v)}
+          placeholder="your_username"
+          prefix="@"
+        />
+
+        {/* Email — always read-only */}
+        <ProfileField
+          id="email"
+          label="Email Address"
+          icon={<AtSignIcon size={14} />}
+          value={user.email}
+          editing={false}
+          onChange={() => {}}
+          readonlyNote="Contact support to change email"
+        />
+
+        {/* Phone */}
+        <ProfileField
+          id="phoneNo"
+          label="Phone Number"
+          icon={<PhoneIcon size={14} />}
+          value={isEditing ? form.phoneNo : (user.phoneNo ?? '')}
+          editing={isEditing}
+          onChange={(v) => field('phoneNo', v)}
+          placeholder="Add phone number"
+          inputMode="tel"
+        />
+
+        {/* Date of Birth */}
+        <ProfileField
+          id="dateOfBirth"
+          label="Date of Birth"
+          icon={<CalendarIcon size={14} />}
+          value={isEditing ? form.dateOfBirth : ''}
+          displayValue={isEditing ? undefined : displayDOB(user.dateOfBirth)}
+          editing={isEditing}
+          onChange={(v) => field('dateOfBirth', v)}
+          type="date-custom"
+          placeholder="Select date"
+        />
+      </div>
+
+      {/* ── Account meta strip ── */}
+      <div className="mt-6 grid grid-cols-2 gap-3">
+        <div className="rounded-2xl border border-forest/8 bg-[#FDFBF9] px-4 py-3 flex items-center gap-3">
+          <div className="h-8 w-8 shrink-0 rounded-xl bg-forest/8 flex items-center justify-center text-forest">
+            <ClockIcon size={15} />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted/70">Member Since</p>
+            <p className="text-[13px] font-semibold text-forest mt-0.5 truncate">
+              {new Date(user.createdAt).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}
+            </p>
+          </div>
+        </div>
+        <div className="rounded-2xl border border-forest/8 bg-[#FDFBF9] px-4 py-3 flex items-center gap-3">
+          <div className={`h-8 w-8 shrink-0 rounded-xl flex items-center justify-center ${user.userStatus === 'active' ? 'bg-[#E8F3EB] text-[#1B4D2E]' : 'bg-terracotta/10 text-terracotta'}`}>
+            <ShieldCheckIcon size={15} />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted/70">Account Status</p>
+            <p className="text-[13px] font-semibold text-forest mt-0.5 truncate capitalize">
+              {user.userStatus}
+            </p>
           </div>
         </div>
       </div>
@@ -84,145 +386,93 @@ export default function AccountPage() {
   );
 }
 
-function ProfileTab() {
-  return (
-    <div className="space-y-8">
-      <div>
-        <h2 className="font-display text-2xl font-semibold text-forest">Personal Information</h2>
-        <p className="mt-1 text-sm text-muted">Update your details to keep your account secure.</p>
-      </div>
+// ─── ProfileField ─────────────────────────────────────────────────────────────
 
-      <div className="grid gap-6 sm:grid-cols-2">
-        <div className="space-y-2">
-          <label className="text-xs font-semibold uppercase tracking-wider text-muted">First Name</label>
-          <input type="text" defaultValue="Yugal" className="w-full rounded-xl border border-forest/10 bg-cream/20 px-4 py-3 text-sm font-medium text-forest outline-none transition-all focus:border-terracotta focus:bg-white focus:ring-1 focus:ring-terracotta/30" />
-        </div>
-        <div className="space-y-2">
-          <label className="text-xs font-semibold uppercase tracking-wider text-muted">Last Name</label>
-          <input type="text" defaultValue="Doe" className="w-full rounded-xl border border-forest/10 bg-cream/20 px-4 py-3 text-sm font-medium text-forest outline-none transition-all focus:border-terracotta focus:bg-white focus:ring-1 focus:ring-terracotta/30" />
-        </div>
-        <div className="space-y-2 sm:col-span-2">
-          <label className="text-xs font-semibold uppercase tracking-wider text-muted">Email Address</label>
-          <input type="email" defaultValue="yugal@example.com" className="w-full rounded-xl border border-forest/10 bg-cream/20 px-4 py-3 text-sm font-medium text-forest outline-none transition-all focus:border-terracotta focus:bg-white focus:ring-1 focus:ring-terracotta/30" />
-        </div>
-      </div>
-
-      <div className="pt-4">
-        <button className="rounded-full bg-forest px-8 py-3 text-sm font-bold text-white shadow-soft transition-all hover:bg-forest/90 hover:shadow-lg">
-          Save Changes
-        </button>
-      </div>
-    </div>
-  );
+interface ProfileFieldProps {
+  id: string;
+  label: string;
+  icon: React.ReactNode;
+  value: string;
+  displayValue?: string;     // Override display when not editing
+  editing: boolean;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  prefix?: string;
+  type?: string;
+  inputMode?: React.HTMLAttributes<HTMLInputElement>['inputMode'];
+  readonlyNote?: string;
+  inputRef?: React.RefObject<HTMLInputElement | null>;
 }
 
-function OrdersTab() {
-  const mockOrders = [
-    { id: '#TN-1249', date: 'Oct 12, 2026', total: '₹1450', status: 'Delivered', items: 3 },
-    { id: '#TN-1022', date: 'Sep 05, 2026', total: '₹890', status: 'Processing', items: 1 },
-  ];
+function ProfileField({
+  id, label, icon, value, displayValue, editing, onChange,
+  placeholder, prefix, type = 'text', inputMode, readonlyNote, inputRef,
+}: ProfileFieldProps) {
+  const shown = displayValue !== undefined ? displayValue : (value || placeholder || '—');
+  const isEmpty = !displayValue && !value;
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h2 className="font-display text-2xl font-semibold text-forest">Order History</h2>
-        <p className="mt-1 text-sm text-muted">View your recent orders and track their status.</p>
-      </div>
+    <div className="space-y-1.5">
+      <label
+        htmlFor={editing ? id : undefined}
+        className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-forest/60 pl-0.5"
+      >
+        <span className="text-forest/40">{icon}</span>
+        {label}
+      </label>
 
-      <div className="space-y-4">
-        {mockOrders.map((order) => (
-          <div key={order.id} className="flex flex-col gap-4 sm:flex-row sm:items-center justify-between rounded-2xl border border-forest/10 p-5 transition-colors hover:bg-cream-soft">
-            <div className="flex items-center gap-4">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-forest/5 text-forest">
-                <PackageIcon size={20} />
-              </div>
-              <div>
-                <p className="font-bold text-forest">{order.id}</p>
-                <p className="text-xs text-muted">{order.date} • {order.items} items</p>
-              </div>
-            </div>
-            
-            <div className="flex items-center justify-between sm:flex-col sm:items-end gap-1">
-              <p className="font-bold text-forest">{order.total}</p>
-              <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
-                order.status === 'Delivered' ? 'bg-forest/10 text-forest' : 'bg-terracotta/10 text-terracotta'
-              }`}>
-                {order.status}
-              </span>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function AddressesTab() {
-  return (
-    <div className="space-y-8">
-      <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-4">
-        <div>
-          <h2 className="font-display text-2xl font-semibold text-forest">Saved Addresses</h2>
-          <p className="mt-1 text-sm text-muted">Manage your shipping and billing addresses.</p>
-        </div>
-        <button className="rounded-full bg-forest px-5 py-2 text-sm font-bold text-white shadow-soft transition-all hover:bg-forest/90 shrink-0">
-          Add New Address
-        </button>
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        {/* Default Address */}
-        <div className="relative rounded-2xl border-2 border-forest p-5 shadow-soft">
-          <div className="absolute right-4 top-4 rounded-full bg-forest/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-forest">
-            Default
-          </div>
-          <p className="font-bold text-forest mb-1">Home</p>
-          <div className="text-sm text-muted space-y-1">
-            <p>Yugal Doe</p>
-            <p>123 Nature Valley Road, Suite A</p>
-            <p>Mumbai, MH 400001</p>
-            <p>India</p>
-            <p className="pt-2 text-forest/70">Phone: +91 98765 43210</p>
-          </div>
-          <div className="mt-4 flex gap-3 text-xs font-bold text-forest">
-            <button className="hover:text-terracotta">Edit</button>
-            <button className="hover:text-terracotta">Remove</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function SettingsTab() {
-  return (
-    <div className="space-y-8">
-      <div>
-        <h2 className="font-display text-2xl font-semibold text-forest">Account Settings</h2>
-        <p className="mt-1 text-sm text-muted">Manage notifications and account security.</p>
-      </div>
-      
-      <div className="rounded-2xl border border-forest/10 p-5 space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="font-bold text-forest">Email Notifications</p>
-            <p className="text-xs text-muted">Receive updates about your orders and exclusive offers.</p>
-          </div>
-          <div className="h-6 w-11 rounded-full bg-forest relative cursor-pointer">
-            <div className="absolute right-1 top-1 h-4 w-4 rounded-full bg-white" />
-          </div>
-        </div>
-        <hr className="border-forest/5" />
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="font-bold text-forest">SMS Notifications</p>
-            <p className="text-xs text-muted">Get text alerts for deliveries.</p>
-          </div>
-          <div className="h-6 w-11 rounded-full bg-forest/20 relative cursor-pointer">
-            <div className="absolute left-1 top-1 h-4 w-4 rounded-full bg-white shadow" />
-          </div>
-        </div>
-      </div>
+      <AnimatePresence mode="wait">
+        {editing ? (
+          <motion.div
+            key="input"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.1 }}
+            className={`flex items-center rounded-xl border-2 border-forest bg-white shadow-sm transition-shadow focus-within:shadow-md ${readonlyNote ? 'opacity-60 pointer-events-none border-forest/20' : ''}`}
+          >
+            {prefix && (
+              <span className="pl-3.5 text-forest/50 font-medium text-sm select-none">{prefix}</span>
+            )}
+            {type === 'date-custom' ? (
+              <CustomDatePicker
+                value={value}
+                onChange={(v) => onChange(v)}
+                placeholder={placeholder}
+                disabled={!!readonlyNote}
+              />
+            ) : (
+              <input
+                ref={inputRef as React.RefObject<HTMLInputElement>}
+                id={id}
+                type={type}
+                inputMode={inputMode}
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
+                placeholder={placeholder}
+                readOnly={!!readonlyNote}
+                className={`w-full bg-transparent px-3.5 py-2.5 text-[14px] font-semibold text-forest outline-none placeholder:text-muted/50 placeholder:font-normal ${type === 'date' ? 'cursor-pointer uppercase tracking-wide' : ''}`}
+              />
+            )}
+          </motion.div>
+        ) : (
+          <motion.div
+            key="display"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.1 }}
+            className="flex items-center rounded-xl border border-forest/8 bg-[#FDFBF9] px-3.5 py-2.5 min-h-[42px] overflow-hidden"
+          >
+            <span className={`text-[14px] font-semibold leading-tight truncate ${isEmpty ? 'text-muted/50 font-normal' : 'text-forest'}`}>
+              {prefix && !isEmpty ? prefix : ''}{shown}
+            </span>
+            {readonlyNote && (
+              <span className="ml-auto text-[10px] text-muted/50 font-normal shrink-0 pl-2 truncate">{readonlyNote}</span>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { SectionHeading } from '@/src/components/SectionHeading';
 import { motion } from 'framer-motion';
 import { Reveal, staggerContainer, staggerItem } from './Reveal';
 import { heroImage, storyImage, products } from '../data/products';
+import { SOCIAL_LINKS } from '@/src/lib/site-contact';
 
 export function InstagramFeed() {
   // Grab a few product images to mix with hero/story for the mock grid
@@ -28,7 +29,16 @@ export function InstagramFeed() {
           Join The Community
         </SectionHeading>
         <p className="mt-2 text-sm text-muted">
-          Follow <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="font-semibold text-forest hover:underline">@team.naturals</a> for skincare tips and behind-the-scenes.
+          Follow{' '}
+          <a
+            href={SOCIAL_LINKS.instagram.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-semibold text-forest hover:underline"
+          >
+            {SOCIAL_LINKS.instagram.handle}
+          </a>{' '}
+          for skincare tips and behind-the-scenes.
         </p>
       </Reveal>
 
@@ -44,7 +54,7 @@ export function InstagramFeed() {
           <motion.a
             key={i}
             variants={staggerItem}
-            href="https://instagram.com"
+            href={SOCIAL_LINKS.instagram.url}
             target="_blank"
             rel="noopener noreferrer"
             className="group relative aspect-square overflow-hidden rounded-2xl bg-cream shadow-soft"

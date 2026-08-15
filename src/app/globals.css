@@ -57,3 +57,35 @@ body {
   outline: 2px solid #1F3D2B;
   outline-offset: 2px;
 }
+
+/* Admin Sidebar Active Cutout Effect (Framer Motion Background) */
+.sidebar-active-bg {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: -1rem;
+  background-color: #FDFBF9;
+  border-top-left-radius: 1.5rem;
+  border-bottom-left-radius: 1.5rem;
+}
+
+.sidebar-active-bg::before,
+.sidebar-active-bg::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  width: 1.5rem;
+  height: 1.5rem;
+  pointer-events: none;
+}
+
+.sidebar-active-bg::before {
+  top: -1.5rem;
+  background: radial-gradient(circle at top left, transparent 1.5rem, #FDFBF9 1.5rem);
+}
+
+.sidebar-active-bg::after {
+  bottom: -1.5rem;
+  background: radial-gradient(circle at bottom left, transparent 1.5rem, #FDFBF9 1.5rem);
+}

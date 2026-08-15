@@ -16,9 +16,9 @@ export function LogoMark({ className = 'h-8 w-8', animate = false, layoutId, use
     return (
       <motion.img 
         layoutId={layoutId}
-        src="/team_naturals%20logo.png"
-        alt=""
-        className={`object-contain ${className}`}
+        src="/full_logo.webp"
+        alt="Team Naturals"
+        className={`object-contain object-left -ml-3 lg:-ml-5 ${className}`}
       />
     );
   }
@@ -73,15 +73,16 @@ export function LogoMark({ className = 'h-8 w-8', animate = false, layoutId, use
   );
 }
 
-export function Logo({ compact = false, useImage = false, disableLayoutAnimation = false, hideTextOnMobile = false }: { compact?: boolean, useImage?: boolean, disableLayoutAnimation?: boolean, hideTextOnMobile?: boolean }) {
+export function Logo({ compact = false, useImage = false, disableLayoutAnimation = false, hideTextOnMobile = false, isNavbar = false }: { compact?: boolean, useImage?: boolean, disableLayoutAnimation?: boolean, hideTextOnMobile?: boolean, isNavbar?: boolean }) {
   return (
     <span className="flex items-center gap-3 text-forest">
       <LogoMark 
-        className={useImage ? (compact ? 'h-10 w-auto' : 'h-14 w-auto') : (compact ? 'h-7 w-auto' : 'h-10 w-auto')} 
+        className={compact ? 'w-40 sm:w-52 h-auto transition-all duration-300 ease-out' : 'w-52 sm:w-64 h-auto transition-all duration-300 ease-out'} 
         layoutId={disableLayoutAnimation ? undefined : "logo-mark"} 
         useImage={useImage} 
       />
-      <span className={`leading-none ${hideTextOnMobile ? 'hidden sm:block' : ''}`}>
+      {!useImage && (
+        <span className={`leading-none ${hideTextOnMobile ? 'hidden sm:block' : ''}`}>
         <motion.span layoutId={disableLayoutAnimation ? undefined : "logo-text"} className="block font-display text-[19px] font-medium tracking-tight text-forest">
           Team Naturals
         </motion.span>
@@ -89,6 +90,7 @@ export function Logo({ compact = false, useImage = false, disableLayoutAnimation
           Rooted in Nature
         </motion.span>
       </span>
+      )}
     </span>
   );
 }

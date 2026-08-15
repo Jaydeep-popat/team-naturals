@@ -1,115 +1,85 @@
 'use client';
 
-import React from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
-import { SectionHeading } from '@/src/components/SectionHeading';
-import { ChevronDownIcon } from 'lucide-react';
-import { Reveal } from './Reveal';
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { PlusIcon, MinusIcon } from 'lucide-react';
 
-const faqs = [
+interface FAQItem {
+  question: string;
+  answer: string;
+}
+
+const faqs: FAQItem[] = [
   {
-    id: 'faq1',
-    question: 'How long does delivery take?',
-    answer:
-      'We dispatch within 1-2 business days of receiving your order. Standard shipping across India takes 4-7 business days. Express options are available at checkout for major cities.',
+    question: 'What exactly is cold-process soap?',
+    answer: 'Cold-process soap making is a traditional method that mixes oils and lye without applying external heat. This slow process takes weeks but preserves the natural benefits of the ingredients and naturally produces glycerin, an incredible humectant that keeps skin deeply moisturized.'
   },
   {
-    id: 'faq2',
-    question: 'Are your soaps safe for sensitive skin?',
-    answer:
-      'Yes. Our bars are cold-processed with natural ingredients and contain no SLS, parabens, artificial colours, or synthetic fragrance. The Rice Soap and Rose Soap are specifically formulated for sensitive and reactive skin types. We always recommend a small patch test first.',
+    question: 'Are your products vegan and cruelty-free?',
+    answer: 'Absolutely. We test exclusively on willing human volunteers. The vast majority of our products are 100% vegan. If we ever use ingredients like locally sourced beeswax or goat milk in specific formulations, it is always clearly stated on the label.'
   },
   {
-    id: 'faq3',
-    question: 'What is your return policy?',
-    answer:
-      "We accept returns within 7 days of delivery if the product is unused and in original packaging. Soaps that have been used cannot be returned for hygiene reasons. If your order arrived damaged, please photograph and contact us within 48 hours and we'll replace it, no questions asked.",
+    question: 'Why do you cure your soap for 4 to 6 weeks?',
+    answer: 'Patience is an active ingredient. A 6-week cure time allows all excess water to evaporate, resulting in a significantly harder, longer-lasting bar. It also ensures the soap is perfectly mild and gentle on the most sensitive skin.'
   },
   {
-    id: 'faq4',
-    question: 'How are the soaps packed?',
-    answer:
-      "Each bar is wrapped in kraft paper with a printed belly band and sealed with twine. Packaging is minimal, recyclable, and plastic-free. Orders are packed in recycled cardboard boxes with paper fill. We don't use styrofoam or bubble wrap.",
-  },
-  {
-    id: 'faq5',
-    question: 'Can I use the soaps on my face?',
-    answer:
-      'The Neem, Rice, and Rose soaps are gentle enough for facial use. Multani Mitti and Coffee soaps are better suited to the body. The clay and coffee grounds are excellent for arms and legs but can feel too heavy for facial skin. The face wash is formulated specifically for daily facial cleansing.',
+    question: 'Do you use artificial fragrances or colors?',
+    answer: 'Never. Our colors come exclusively from natural clays, botanicals, and spices. Our scents are derived purely from therapeutic-grade essential oils. We believe skincare shouldn\'t contain anything synthetic.'
   },
 ];
 
-function FAQItem({ faq }: { faq: (typeof faqs)[number] }) {
-  const [open, setOpen] = React.useState(false);
-
-  return (
-    <div className="border-b border-forest/8 last:border-0">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        aria-expanded={open}
-        aria-controls={`${faq.id}-answer`}
-        className="flex w-full items-center justify-between gap-4 py-5 text-left"
-      >
-        <span className="font-display text-[17px] text-forest">{faq.question}</span>
-        <motion.span
-          animate={{ rotate: open ? 180 : 0 }}
-          transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-          className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border border-forest/12 text-forest"
-        >
-          <ChevronDownIcon size={16} strokeWidth={1.8} />
-        </motion.span>
-      </button>
-
-      <AnimatePresence initial={false}>
-        {open && (
-          <motion.div
-            id={`${faq.id}-answer`}
-            key="answer"
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-            className="overflow-hidden"
-          >
-            <p className="pb-6 text-sm leading-relaxed text-muted">{faq.answer}</p>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
-
 export function FAQAccordion() {
-  return (
-    <Reveal>
-      <section aria-labelledby="faq-heading" className="w-full">
-        <div className="grid gap-10 lg:grid-cols-3">
-          {/* Left header */}
-          <div className="lg:col-span-1">
-            <p className="text-[10px] uppercase tracking-[0.28em] text-muted">Got questions?</p>
-            <SectionHeading className="mt-2" id="faq-heading">
-              Frequently Asked Questions
-            </SectionHeading>
-            <p className="mt-4 text-sm leading-relaxed text-muted">
-              {"Can't find an answer? Write to us at "}
-              <a
-                href="mailto:hello@teamnaturals.in"
-                className="text-forest underline-offset-2 hover:underline"
-              >
-                hello@teamnaturals.in
-              </a>
-            </p>
-          </div>
+  const [openIndex, setOpenIndex] = useState<number | null>(null);
 
-          {/* Right accordion */}
-          <div className="lg:col-span-2">
-            {faqs.map((faq) => (
-              <FAQItem key={faq.id} faq={faq} />
-            ))}
-          </div>
-        </div>
-      </section>
-    </Reveal>
+  const toggle = (index: number) => {
+    setOpenIndex(openIndex === index ? null : index);
+  };
+
+  return (
+    <div className="mx-auto w-full max-w-3xl space-y-4">
+      {faqs.map((faq, idx) => {
+        const isOpen = openIndex === idx;
+        return (
+          <motion.div
+            key={idx}
+            initial={false}
+            animate={{ backgroundColor: isOpen ? 'rgba(52,140,49,0.03)' : 'rgba(255,255,255,1)' }}
+            className="overflow-hidden rounded-2xl border border-forest/10 transition-colors"
+          >
+            <button
+              onClick={() => toggle(idx)}
+              className="flex w-full items-center justify-between px-6 py-5 text-left focus:outline-none"
+              aria-expanded={isOpen}
+            >
+              <span className="font-display text-lg font-medium text-forest sm:text-xl">
+                {faq.question}
+              </span>
+              <motion.div
+                animate={{ rotate: isOpen ? 180 : 0 }}
+                transition={{ duration: 0.3, ease: 'easeInOut' }}
+                className="ml-4 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-forest/5 text-forest"
+              >
+                {isOpen ? <MinusIcon size={18} /> : <PlusIcon size={18} />}
+              </motion.div>
+            </button>
+            <AnimatePresence initial={false}>
+              {isOpen && (
+                <motion.div
+                  key="content"
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                >
+                  <div className="px-6 pb-6 text-sm leading-relaxed text-muted sm:text-base">
+                    {faq.answer}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
+        );
+      })}
+    </div>
   );
 }

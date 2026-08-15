@@ -19,6 +19,8 @@ export interface Product {
   slug: string;
   category: Category;
   price: number;
+  compareAtPrice?: number;
+  stockQty?: number;
   weight: string;
   images: string[];
   shortDescription: string;

@@ -89,10 +89,10 @@ export function CatalogCTA() {
             <p className="mt-8 text-[11px] leading-relaxed text-cream/45">
               Interested in stocking Team Naturals? Write to us at{' '}
               <a
-                href="mailto:wholesale@teamnaturals.in"
+                href="mailto:info@teamnaturals.com"
                 className="text-cream/60 underline-offset-2 hover:underline"
               >
-                wholesale@teamnaturals.in
+                info@teamnaturals.com
               </a>{' '}
               or use the contact form.
             </p>

@@ -2,23 +2,70 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { products } from "@/src/data/products";
-import { ProductCard } from "@/src/components/ProductCard";
+import { Loader2, PackageIcon } from 'lucide-react';
+import { orders } from '@/src/lib/api';
+import { StatusPill } from '@/src/components/account/StatusPill';
+import { useCart } from '@/src/contexts/CartContext';
+import toast from 'react-hot-toast';
 
-export default function OrderConfirmationPage() {
-  const dummyOrder = {
-    id: '#TN-' + Math.floor(100000 + Math.random() * 900000),
-    date: '3-5 business days',
-    items: [
-      { product: products[0], quantity: 2 },
-      { product: products[1], quantity: 1 },
-    ],
-    address: 'Jane Doe, 123 Natural Lane, Green City, 400001',
-    total: products[0].price * 2 + products[1].price,
-  };
+function OrderConfirmationContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const orderId = searchParams.get('orderId');
+  const { clearCart } = useCart();
+  const [order, setOrder] = React.useState<any>(null);
+  const [isLoading, setIsLoading] = React.useState(true);
 
-  const relatedProducts = products.slice(2, 5);
+  React.useEffect(() => {
+    let mounted = true;
+
+    const loadOrder = async () => {
+      if (!orderId) {
+        router.replace('/account/orders');
+        return;
+      }
+
+      try {
+        const res = await orders.get(orderId);
+        if (!mounted) return;
+        setOrder(res.data.order);
+        await clearCart();
+      } catch (error) {
+        console.error('Failed to load order confirmation:', error);
+        toast.error('Could not load the order details. Redirecting to your orders.');
+        router.replace('/account/orders');
+      } finally {
+        if (mounted) setIsLoading(false);
+      }
+    };
+
+    loadOrder();
+
+    return () => {
+      mounted = false;
+    };
+  }, [orderId, router, clearCart]);
+
+  React.useEffect(() => {
+    if (!order) return;
+    const timer = window.setTimeout(() => {
+      router.replace('/account/orders');
+    }, 2200);
+    return () => window.clearTimeout(timer);
+  }, [order, router]);
+
+  if (isLoading || !order) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-white px-5">
+        <div className="flex flex-col items-center gap-4 text-center">
+          <Loader2 className="h-10 w-10 animate-spin text-forest" />
+          <p className="text-sm text-muted">Fetching your order details...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full bg-white pb-24 pt-12 min-h-screen">
@@ -54,71 +101,75 @@ export default function OrderConfirmationPage() {
           <div className="flex flex-col sm:flex-row justify-between gap-4 border-b border-forest/8 pb-6">
             <div>
               <span className="block text-[13px] text-muted">Order ID</span>
-              <span className="font-display text-lg font-medium text-forest">{dummyOrder.id}</span>
+              <span className="font-display text-lg font-medium text-forest">#{order.orderNumber}</span>
             </div>
             <div>
-              <span className="block text-[13px] text-muted">Estimated Delivery</span>
-              <span className="font-display text-lg font-medium text-forest">{dummyOrder.date}</span>
+              <span className="block text-[13px] text-muted">Status</span>
+              <StatusPill status={order.status} />
             </div>
           </div>
 
           <div className="py-6 space-y-4 border-b border-forest/8">
             <h3 className="font-display text-lg font-medium text-forest mb-2">Items ordered</h3>
-            {dummyOrder.items.map((item, idx) => (
-              <div key={idx} className="flex items-center gap-4">
-                <img src={item.product.images[0]} alt="" className="h-16 w-16 rounded-2xl object-cover shadow-sm bg-cream" />
+            {order.items?.map((item: any) => (
+              <div key={item.orderItemId} className="flex items-center gap-4">
+                <div className="h-16 w-16 overflow-hidden rounded-2xl bg-cream shadow-sm">
+                  {item.productImage ? (
+                    <img src={item.productImage} alt={item.productName} className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-forest/20">
+                      <PackageIcon size={28} />
+                    </div>
+                  )}
+                </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-[15px] font-medium text-forest">{item.product.name}</p>
+                  <p className="text-[15px] font-medium text-forest">{item.productName}</p>
                   <p className="text-[13px] text-muted">Qty: {item.quantity}</p>
                 </div>
-                <span className="text-[15px] font-medium text-forest">₹{item.product.price * item.quantity}</span>
+                <span className="text-[15px] font-medium text-forest">₹{Number(item.lineTotal).toFixed(2)}</span>
               </div>
             ))}
             <div className="flex justify-between pt-4 mt-2 border-t border-forest/5">
               <span className="font-medium text-forest">Total Paid</span>
-              <span className="font-display text-xl font-semibold text-forest">₹{dummyOrder.total}</span>
+              <span className="font-display text-xl font-semibold text-forest">₹{Number(order.totalAmount).toFixed(2)}</span>
             </div>
           </div>
 
           <div className="pt-6">
             <h3 className="font-display text-lg font-medium text-forest mb-2">Shipping to</h3>
             <p className="text-[14px] text-forest leading-relaxed">
-              {dummyOrder.address}
+              {order.shipping?.name}<br />
+              {order.shipping?.line1}{order.shipping?.line2 ? `, ${order.shipping.line2}` : ''}<br />
+              {order.shipping?.city}, {order.shipping?.state} {order.shipping?.postalCode}
             </p>
           </div>
         </div>
 
         {/* CTAs */}
         <div className="mt-10 flex flex-col sm:flex-row justify-center gap-4">
-          <button
-            type="button"
-            className="rounded-full border border-forest/15 px-8 py-3.5 text-[15px] font-medium text-forest transition-colors hover:bg-forest/5"
-          >
-            Track Order
-          </button>
           <Link
-            href="/shop"
+            href="/account/orders"
             className="rounded-full bg-forest px-8 py-3.5 text-[15px] font-medium text-cream shadow-soft transition-all hover:bg-forest-deep hover:shadow-lift"
           >
-            Continue Shopping
+            View Order History
           </Link>
         </div>
       </motion.div>
-
-      {/* You May Also Like */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.6, duration: 0.5 }}
-        className="mx-auto max-w-6xl px-5 mt-24"
-      >
-        <h2 className="font-display text-2xl font-medium text-forest text-center mb-10">You may also like</h2>
-        <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3">
-          {relatedProducts.map((p) => (
-            <ProductCard key={p.id} product={p} />
-          ))}
-        </div>
-      </motion.div>
     </div>
+  );
+}
+
+export default function OrderConfirmationPage() {
+  return (
+    <React.Suspense fallback={
+      <div className="flex min-h-screen items-center justify-center bg-white px-5">
+        <div className="flex flex-col items-center gap-4 text-center">
+          <Loader2 className="h-10 w-10 animate-spin text-forest" />
+          <p className="text-sm text-muted">Loading...</p>
+        </div>
+      </div>
+    }>
+      <OrderConfirmationContent />
+    </React.Suspense>
   );
 }
