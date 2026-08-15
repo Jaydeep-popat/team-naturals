@@ -1,4 +1,54 @@
-import type { Metadata } from 'next';
+import re
+
+# Fix ProductCard.tsx
+card_path = r'c:\Users\popat\Desktop\team-naturals\src\components\ProductCard.tsx'
+with open(card_path, 'r', encoding='utf-8') as f:
+    card_content = f.read()
+
+c_error = '''            ) : (
+              <motion.button
+                type="button"
+                whileTap={{ scale: 0.9 }}
+                onClick={handleAddToCart}
+                aria-label={`Add ${product.name} to cart`}
+                className="flex h-7 w-7 items-center justify-center rounded-full bg-forest text-cream transition-colors hover:bg-forest-deep sm:h-8 sm:w-8"
+              >
+                <ShoppingBagIcon size={14} strokeWidth={1.8} />
+              </motion.button>
+            ) : added ? (
+               <motion.div
+                 initial={{ scale: 0.8, opacity: 0 }}
+                 animate={{ scale: 1, opacity: 1 }}
+                 className="flex h-7 w-7 items-center justify-center rounded-full bg-forest-soft text-cream sm:h-8 sm:w-8"
+               >
+                 <ZapIcon size={14} strokeWidth={2} className="fill-gold text-gold" />
+               </motion.div>
+            ) : null}'''
+
+r_error = '''            ) : (
+              <motion.button
+                type="button"
+                whileTap={{ scale: 0.9 }}
+                onClick={handleAddToCart}
+                aria-label={`Add ${product.name} to cart`}
+                className="flex h-7 w-7 items-center justify-center rounded-full bg-forest text-cream transition-colors hover:bg-forest-deep sm:h-8 sm:w-8"
+              >
+                <ShoppingBagIcon size={14} strokeWidth={1.8} />
+              </motion.button>
+            )}
+            </AnimatePresence>'''
+
+card_content = card_content.replace(c_error, r_error)
+
+with open(card_path, 'w', encoding='utf-8') as f:
+    f.write(card_content)
+
+# Fix seo.ts
+seo_path = r'c:\Users\popat\Desktop\team-naturals\src\lib\seo.ts'
+with open(seo_path, 'r', encoding='utf-8') as f:
+    seo_content = f.read()
+
+seo_merged = '''import type { Metadata } from 'next';
 import { optimizeCloudinaryUrl } from './cloudinary';
 import { absoluteUrl, getSiteUrl } from './site';
 import { getSocialSameAs } from './site-contact';
@@ -267,3 +317,9 @@ export function isActiveProduct(product: { status?: string | null }): boolean {
   const status = product.status?.toLowerCase();
   return status !== 'draft' && status !== 'archived';
 }
+'''
+
+with open(seo_path, 'w', encoding='utf-8') as f:
+    f.write(seo_merged)
+
+print("Done fixing seo.ts and ProductCard.tsx.")

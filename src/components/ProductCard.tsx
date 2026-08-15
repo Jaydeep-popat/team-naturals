@@ -11,13 +11,10 @@ import { useCart } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
 import { StarRating } from './StarRating';
 import { AuthModal } from './AuthModal';
-<<<<<<< HEAD
 import { isCloudinaryUrl } from '@/src/lib/cloudinary';
-=======
 import { OptimizedImage } from './OptimizedImage';
 import { extractProductImageAlt } from '@/src/lib/seo';
 import { useAvailableDiscounts } from '../hooks/useAvailableDiscounts';
->>>>>>> origin/yugal
 
 // True hover guard: returns true only on pointer-fine (mouse) devices
 const canHover = typeof window !== 'undefined' && window.matchMedia('(hover: hover) and (pointer: fine)').matches;
@@ -124,24 +121,15 @@ export function ProductCard({
         // Do NOT use onFocus/onBlur for hover swap — they fire on touch tap
         whileHover={canHover ? { y: -4 } : {}}
         transition={{ type: 'spring', stiffness: 280, damping: 22 }}
-<<<<<<< HEAD
         className={`group relative flex flex-col overflow-hidden border border-forest/8 bg-white shadow-soft transition-shadow duration-300 hover:shadow-lift h-full ${
           compact ? 'rounded-[18px]' : 'rounded-[28px]'
         }`}
-=======
-        className="group relative flex flex-col h-full"
->>>>>>> origin/yugal
     >
       {/* ── Image area ── */}
       <Link
         href={`/product/${product.slug}`}
-<<<<<<< HEAD
         className="relative block overflow-hidden bg-cream"
         style={{ aspectRatio: compact ? '1/1' : '4/5' }}
-=======
-        className="relative block overflow-hidden bg-gray-50 rounded-[12px] sm:rounded-[16px]"
-        style={{ aspectRatio: '1/1' }}
->>>>>>> origin/yugal
         tabIndex={0}
       >
         {compact ? (
@@ -204,17 +192,16 @@ export function ProductCard({
         )}
 
         {/* Badges */}
-<<<<<<< HEAD
-        <div className={`absolute left-2 top-2 flex flex-col gap-1 ${compact ? '' : 'left-3 top-3 gap-1.5'}`}>
+        <div className={`absolute left-2 top-2 flex flex-col gap-1 z-10 w-[calc(100%-32px)] pointer-events-none ${compact ? '' : 'left-3 top-3 gap-1.5'}`}>
           {product.bestSeller && !compact && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-forest px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-cream shadow-sm">
-              <ZapIcon size={9} strokeWidth={2.5} className="fill-gold text-gold" />
-              Best Seller
+            <span className="inline-flex items-center gap-1 rounded-full bg-forest px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-cream shadow-sm max-w-full">
+              <ZapIcon size={9} strokeWidth={2.5} className="fill-gold text-gold shrink-0" />
+              <span className="truncate">Best Seller</span>
             </span>
           )}
           {(product as any).activeDiscount && !compact && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-[#FFC5C5] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-forest shadow-sm">
-              {(product as any).activeDiscount.event}
+            <span className="inline-flex items-center gap-1 rounded-full bg-[#FFC5C5] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-forest shadow-sm max-w-full">
+              <span className="truncate">{(product as any).activeDiscount.event}</span>
             </span>
           )}
           {!compact && (
@@ -222,20 +209,6 @@ export function ProductCard({
               {categoryLabel}
             </span>
           )}
-=======
-        <div className="absolute left-2 top-2 flex flex-wrap gap-1.5 z-10 w-[calc(100%-32px)] pointer-events-none">
-          {product.bestSeller && (
-            <span className="inline-flex items-center gap-1 rounded bg-forest px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-cream shadow-sm max-w-full">
-              <ZapIcon size={9} strokeWidth={2.5} className="fill-gold text-gold shrink-0" />
-              <span className="truncate">Best Seller</span>
-            </span>
-          )}
-          {(product as any).activeDiscount && (
-            <span className="inline-flex items-center rounded bg-[#FFC5C5] px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-[#4A1D1D] shadow-sm max-w-full">
-              <span className="truncate">{(product as any).activeDiscount.event}</span>
-            </span>
-          )}
->>>>>>> origin/yugal
         </div>
 
         {/* Quick-view concern tags — slide up on hover */}
@@ -274,19 +247,12 @@ export function ProductCard({
         aria-label={wished ? `Remove ${product.name} from wishlist` : `Save ${product.name} to wishlist`}
         aria-pressed={wished}
         whileTap={{ scale: 0.85 }}
-<<<<<<< HEAD
-        className={`absolute rounded-full bg-white/90 shadow-soft backdrop-blur transition-all hover:bg-white hover:shadow-lift ${
+        className={`absolute rounded-full bg-white/90 shadow-soft backdrop-blur transition-all hover:bg-white hover:shadow-lift z-20 ${
           compact ? 'right-2 top-2 p-1.5' : 'right-3 top-3 p-2.5'
         }`}
       >
         <HeartIcon
           size={compact ? 13 : 15}
-=======
-        className="absolute right-2 top-2 z-20 rounded-full bg-white/90 p-2 shadow-soft backdrop-blur transition-all hover:bg-white hover:shadow-lift"
-      >
-        <HeartIcon
-          size={14}
->>>>>>> origin/yugal
           strokeWidth={1.8}
           className={`transition-colors duration-200 ${
             wished ? 'fill-terracotta text-terracotta' : 'text-forest/60'
@@ -295,7 +261,6 @@ export function ProductCard({
       </motion.button>
 
       {/* ── Info area ── */}
-<<<<<<< HEAD
       <div className={`flex flex-1 flex-col ${compact ? 'p-2.5 pb-3' : 'p-4 pb-5'}`}>
         {/* Name */}
         <Link href={`/product/${product.slug}`} className="group/link">
@@ -335,19 +300,8 @@ export function ProductCard({
 
         {/* Price & Stock */}
         <div className={`flex flex-col gap-1 ${compact ? 'mt-2' : 'mt-4'}`}>
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-=======
-      <div className="flex flex-col pt-2.5 sm:pt-3">
-        {/* Name */}
-        <Link href={`/product/${product.slug}`} className="group/link block">
-          <h3 className="font-display text-[15px] sm:text-[16px] font-bold leading-tight text-forest transition-colors group-hover/link:text-forest-soft line-clamp-2">
-            {product.name}
-          </h3>
-        </Link>
-        {/* Price & Cart row */}
-        <div className="mt-1.5 flex items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex flex-col flex-1 min-w-0">
->>>>>>> origin/yugal
             {(() => {
               const mrp = product.compareAtPrice ? Number(product.compareAtPrice) : Number(product.price || 0);
               const productSellingPrice = Number(product.price || 0);
@@ -391,32 +345,17 @@ export function ProductCard({
               }
 
               return (
-<<<<<<< HEAD
-                <>
-                  <span
-                    className={`font-semibold text-forest ${
-                      compact ? 'text-[14px]' : 'text-[18px]'
-                    }`}
-                  >
-                    ₹{finalPrice.toFixed(2)}
-                  </span>
-                  {(activeDiscount || (compareAtPrice && compareAtPrice > originalPrice)) && (
-                    <>
-                      <span className="text-[13px] text-muted line-through">₹{compareAtPrice || originalPrice}</span>
-                      <span className="whitespace-nowrap text-[12px] font-semibold text-[#388E3C]">
-                        {activeDiscount ? discountLabel : `${Math.round((((compareAtPrice || originalPrice) - originalPrice) / (compareAtPrice || originalPrice)) * 100)}% off`}
-=======
                 <div className="flex flex-col gap-1 w-full">
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="text-[14px] sm:text-[16px] font-bold text-forest">
+                    <span className={`font-bold text-forest ${compact ? 'text-[14px]' : 'text-[16px]'}`}>
                       ₹{Math.round(finalPrice).toLocaleString('en-IN')}
                     </span>
                     {productDiscountPercent > 0 && (
                       <>
-                        <span className="text-[11px] sm:text-[12px] text-muted line-through">
+                        <span className={`text-muted line-through ${compact ? 'text-[11px]' : 'text-[12px]'}`}>
                           ₹{Math.round(mrp).toLocaleString('en-IN')}
                         </span>
-                        <span className="text-[10px] sm:text-[11px] font-bold text-[#388E3C]">
+                        <span className={`font-bold text-[#388E3C] ${compact ? 'text-[10px]' : 'text-[11px]'}`}>
                           {productDiscountPercent}% OFF
                         </span>
                       </>
@@ -428,7 +367,6 @@ export function ProductCard({
                       <span className="mr-1">🎁</span>
                       <span className="overflow-hidden text-ellipsis whitespace-nowrap font-medium text-blue-800">
                         {activeDiscount.event}
->>>>>>> origin/yugal
                       </span>
                       <span className="mx-1">·</span>
                       <span className="font-bold whitespace-nowrap text-blue-700">Extra {activeDiscount.type === 'percent' ? `${activeDiscount.value}%` : `₹${activeDiscount.value}`} OFF</span>
@@ -452,7 +390,6 @@ export function ProductCard({
                 </div>
               );
             })()}
-<<<<<<< HEAD
             
             {!compact && (
               <span className="text-[11px] text-muted ml-auto">
@@ -460,6 +397,8 @@ export function ProductCard({
               </span>
             )}
           </div>
+          </div>
+          
           {!compact && product.stockQty !== undefined && product.stockQty > 0 && product.stockQty <= 10 && (
             <div className="mt-1">
               <span className="inline-flex items-center text-[11px] font-bold text-terracotta bg-terracotta/10 px-2 py-0.5 rounded-full">
@@ -535,13 +474,6 @@ export function ProductCard({
                 Added to cart!
               </motion.div>
             ) : (
-=======
-          </div>
-          
-          {/* Quick Add Button */}
-          <div className="shrink-0 flex items-end h-full self-end pb-1">
-            {product.stockQty !== 0 && user?.role !== 'admin' && !added ? (
->>>>>>> origin/yugal
               <motion.button
                 type="button"
                 whileTap={{ scale: 0.9 }}
@@ -551,15 +483,8 @@ export function ProductCard({
               >
                 <ShoppingBagIcon size={14} strokeWidth={1.8} />
               </motion.button>
-            ) : added ? (
-               <motion.div
-                 initial={{ scale: 0.8, opacity: 0 }}
-                 animate={{ scale: 1, opacity: 1 }}
-                 className="flex h-7 w-7 items-center justify-center rounded-full bg-forest-soft text-cream sm:h-8 sm:w-8"
-               >
-                 <ZapIcon size={14} strokeWidth={2} className="fill-gold text-gold" />
-               </motion.div>
-            ) : null}
+            )}
+            </AnimatePresence>
           </div>
         </div>
         )}
