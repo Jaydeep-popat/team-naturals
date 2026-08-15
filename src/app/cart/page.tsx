@@ -257,7 +257,11 @@ export default function CartPage() {
                           <div>
                             <span className="block font-medium text-forest text-sm">{offer.code}</span>
                             <span className="block text-[11px] text-muted mt-0.5">
-                              {offer.type === 'percent' ? `${offer.value}% off` : `₹${offer.value} off`}
+                              {offer.type === 'percent' 
+                                ? `${offer.value}% off` 
+                                : offer.type === 'buy_x'
+                                ? `Buy ${offer.minQuantity || 1} Get ${offer.getQuantity || 1} at ${offer.value}% off`
+                                : `₹${offer.value} off`}
                             </span>
                           </div>
                           <TagIcon size={14} className="text-forest/40" />

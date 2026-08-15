@@ -15,6 +15,8 @@ type Category = {
   name: string;
   slug: string;
   description: string | null;
+  metaTitle?: string | null;
+  metaDescription?: string | null;
   imageUrl?: string;
   _count: { products: number };
 };
@@ -27,7 +29,13 @@ export default function AdminCategoriesPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
-  const [form, setForm] = useState({ name: '', slug: '', description: '' });
+  const [form, setForm] = useState({
+    name: '',
+    slug: '',
+    description: '',
+    metaTitle: '',
+    metaDescription: '',
+  });
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -35,7 +43,7 @@ export default function AdminCategoriesPage() {
   const fetchCategories = async () => {
     setIsLoading(true);
     try {
-      const res = await categoriesApi.list();
+      const res = await categoriesApi.adminList();
       setCategories(res.data.categories);
     } catch (err) {
       console.error('Failed to fetch categories:', err);
@@ -53,6 +61,8 @@ export default function AdminCategoriesPage() {
       name: category.name,
       slug: category.slug,
       description: category.description || '',
+      metaTitle: category.metaTitle || '',
+      metaDescription: category.metaDescription || '',
     });
     setImageFile(null);
     setImagePreview(category.imageUrl || null);
@@ -61,7 +71,7 @@ export default function AdminCategoriesPage() {
   };
 
   const handleOpenNew = () => {
-    setForm({ name: '', slug: '', description: '' });
+    setForm({ name: '', slug: '', description: '', metaTitle: '', metaDescription: '' });
     setImageFile(null);
     setImagePreview(null);
     setEditId(null);
@@ -91,6 +101,8 @@ export default function AdminCategoriesPage() {
       payload.append('name', form.name);
       if (form.slug) payload.append('slug', form.slug);
       if (form.description) payload.append('description', form.description);
+      if (form.metaTitle) payload.append('metaTitle', form.metaTitle);
+      if (form.metaDescription) payload.append('metaDescription', form.metaDescription);
       if (imageFile) payload.append('image', imageFile);
 
       if (editId) {
@@ -122,14 +134,14 @@ export default function AdminCategoriesPage() {
     { key: 'productCount', header: 'Products', render: (c) => <span className="text-forest/70">{c._count?.products || 0}</span> },
     { key: 'actions', header: '',
       render: (c) => (
-        <div className="flex items-center gap-1 justify-end">
+        <div className="flex items-center gap-2 justify-end">
           <button onClick={(e) => { e.stopPropagation(); handleEdit(c); }}
-            className="p-1.5 rounded-lg text-forest/30 hover:text-forest hover:bg-forest/5 transition-colors">
-            <Pencil size={14} />
+            className="p-2 rounded-lg text-forest/40 hover:text-forest hover:bg-forest/5 transition-colors">
+            <Pencil size={18} />
           </button>
           <button onClick={(e) => { e.stopPropagation(); setDeleteTarget(c); }}
-            className="p-1.5 rounded-lg text-forest/30 hover:text-terracotta hover:bg-terracotta/5 transition-colors">
-            <Trash2 size={14} />
+            className="p-2 rounded-lg text-forest/40 hover:text-terracotta hover:bg-terracotta/5 transition-colors">
+            <Trash2 size={18} />
           </button>
         </div>
       )},
@@ -217,6 +229,14 @@ export default function AdminCategoriesPage() {
           <div className="space-y-1.5">
             <label className="text-sm font-semibold text-forest/80">Description</label>
             <textarea value={form.description} onChange={(e) => setForm(p => ({ ...p, description: e.target.value }))} rows={3} className={inp} placeholder="Optional description..." />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-sm font-semibold text-forest/80">Meta Title</label>
+            <input value={form.metaTitle} onChange={(e) => setForm(p => ({ ...p, metaTitle: e.target.value }))} maxLength={160} className={inp} placeholder="SEO page title (max 160 chars)" />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-sm font-semibold text-forest/80">Meta Description</label>
+            <textarea value={form.metaDescription} onChange={(e) => setForm(p => ({ ...p, metaDescription: e.target.value }))} rows={2} maxLength={300} className={inp} placeholder="SEO meta description (max 300 chars)" />
           </div>
           <button type="submit" disabled={isSaving}
             className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-forest text-white font-bold text-sm hover:bg-[#16301F] transition-colors disabled:opacity-60">

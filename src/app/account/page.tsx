@@ -17,6 +17,7 @@ import {
 import { useAuth } from '@/src/contexts/AuthContext';
 import { ApiError } from '@/src/lib/api';
 import { motion, AnimatePresence } from 'framer-motion';
+import { CustomDatePicker } from '@/src/components/CustomDatePicker';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -39,6 +40,7 @@ export default function PersonalInfoPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
+  const [profilePicFile, setProfilePicFile] = useState<File | null>(null);
 
   // Form state — synced from user on each edit session open
   const [form, setForm] = useState({
@@ -47,6 +49,7 @@ export default function PersonalInfoPage() {
     username: '',
     phoneNo: '',
     dateOfBirth: '',
+    profilePic: '',
   });
   const [formError, setFormError] = useState('');
 
@@ -61,6 +64,7 @@ export default function PersonalInfoPage() {
         username: user.username ?? '',
         phoneNo: user.phoneNo ?? '',
         dateOfBirth: formatDOB(user.dateOfBirth),
+        profilePic: user.profilePic ?? '',
       });
     }
   }, [user]);
@@ -88,7 +92,9 @@ export default function PersonalInfoPage() {
       username: user.username ?? '',
       phoneNo: user.phoneNo ?? '',
       dateOfBirth: formatDOB(user.dateOfBirth),
+      profilePic: user.profilePic ?? '',
     });
+    setProfilePicFile(null);
     setFormError('');
     setIsEditing(false);
   };
@@ -102,13 +108,26 @@ export default function PersonalInfoPage() {
 
     setIsSaving(true);
     try {
+      let finalProfilePicUrl = form.profilePic || null;
+
+      // If a new file was selected, upload it first
+      if (profilePicFile) {
+        const { auth } = await import('@/src/lib/api');
+        const formData = new FormData();
+        formData.append('profilePic', profilePicFile);
+        const res = await auth.uploadProfilePic(formData);
+        finalProfilePicUrl = res.data.user.profilePic || null;
+      }
+
       await updateProfile({
         firstName: form.firstName.trim(),
         lastName: form.lastName.trim(),
         username: form.username.trim(),
         phoneNo: form.phoneNo.trim() || null,
         dateOfBirth: form.dateOfBirth || null,
+        profilePic: finalProfilePicUrl,
       });
+      setProfilePicFile(null);
       setIsEditing(false);
       showToast('Profile updated successfully');
     } catch (err) {
@@ -146,35 +165,72 @@ export default function PersonalInfoPage() {
       </AnimatePresence>
 
       {/* ── Avatar + Name header ── */}
-      <div className="flex items-center gap-5 pb-6 border-b border-forest/8">
-        <div className="relative h-16 w-16 shrink-0">
-          <div className="h-full w-full rounded-2xl bg-gradient-to-br from-forest/10 to-forest/20 flex items-center justify-center text-forest text-xl font-display font-bold border border-forest/10 shadow-sm overflow-hidden">
-            {user.profilePic
-              ? <img src={user.profilePic} alt="Profile" className="h-full w-full object-cover" />
-              : <span>{initials}</span>
-            }
-          </div>
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="font-display font-bold text-forest text-xl leading-tight truncate">
-            {user.firstName} {user.lastName}
-          </p>
-          <p className="text-[13px] text-muted mt-0.5">@{user.username}</p>
-          <div className="mt-2">
-            {user.emailVerifiedAt ? (
-              <span className="inline-flex items-center gap-1 rounded-full bg-[#E8F3EB] px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#1B4D2E]">
-                <ShieldCheckIcon size={10} /> Verified
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1 rounded-full bg-terracotta/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-terracotta">
-                Email not verified
-              </span>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-forest/8">
+        <div className="flex items-center gap-4">
+          <div className="relative h-16 w-16 shrink-0 group">
+            <div className="h-full w-full rounded-2xl bg-gradient-to-br from-forest/10 to-forest/20 flex items-center justify-center text-forest text-xl font-display font-bold border border-forest/10 shadow-sm overflow-hidden relative">
+              {(isEditing ? form.profilePic : user.profilePic)
+                ? <img src={(isEditing ? form.profilePic : user.profilePic)!} alt="Profile" className="h-full w-full object-cover" />
+                : <span>{initials}</span>
+              }
+              {isEditing && (
+                <label className="absolute inset-0 flex items-center justify-center bg-black/40 text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                  <PencilIcon size={16} />
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    className="hidden" 
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        if (file.size > 2 * 1024 * 1024) {
+                          setFormError('Image must be less than 2MB');
+                          return;
+                        }
+                        setProfilePicFile(file);
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                          field('profilePic', reader.result as string);
+                          setFormError('');
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                  />
+                </label>
+              )}
+            </div>
+            {isEditing && form.profilePic && (
+              <button
+                onClick={() => { field('profilePic', ''); setProfilePicFile(null); }}
+                className="absolute -top-1.5 -right-1.5 bg-terracotta text-white rounded-full p-0.5 shadow-sm hover:bg-terracotta/90 z-10"
+                title="Remove photo"
+              >
+                <XIcon size={12} strokeWidth={3} />
+              </button>
             )}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-display font-bold text-forest text-xl leading-tight truncate">
+              {user.firstName} {user.lastName}
+            </p>
+            <p className="text-[13px] text-muted mt-0.5 truncate">@{user.username}</p>
+            <div className="mt-2">
+              {user.emailVerifiedAt ? (
+                <span className="inline-flex items-center gap-1 rounded-full bg-[#E8F3EB] px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#1B4D2E]">
+                  <ShieldCheckIcon size={10} /> Verified
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 rounded-full bg-terracotta/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-terracotta">
+                  Email not verified
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
         {/* Edit / Save / Cancel buttons */}
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto pl-[80px] sm:pl-0 mt-2 sm:mt-0">
           {!isEditing ? (
             <button
               onClick={handleEditOpen}
@@ -296,7 +352,7 @@ export default function PersonalInfoPage() {
           displayValue={isEditing ? undefined : displayDOB(user.dateOfBirth)}
           editing={isEditing}
           onChange={(v) => field('dateOfBirth', v)}
-          type="date"
+          type="date-custom"
           placeholder="Select date"
         />
       </div>
@@ -373,22 +429,31 @@ function ProfileField({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.1 }}
-            className={`flex items-center rounded-xl border-2 border-forest bg-white shadow-sm overflow-hidden transition-shadow focus-within:shadow-md ${readonlyNote ? 'opacity-60 pointer-events-none border-forest/20' : ''}`}
+            className={`flex items-center rounded-xl border-2 border-forest bg-white shadow-sm transition-shadow focus-within:shadow-md ${readonlyNote ? 'opacity-60 pointer-events-none border-forest/20' : ''}`}
           >
             {prefix && (
               <span className="pl-3.5 text-forest/50 font-medium text-sm select-none">{prefix}</span>
             )}
-            <input
-              ref={inputRef as React.RefObject<HTMLInputElement>}
-              id={id}
-              type={type}
-              inputMode={inputMode}
-              value={value}
-              onChange={(e) => onChange(e.target.value)}
-              placeholder={placeholder}
-              readOnly={!!readonlyNote}
-              className="w-full bg-transparent px-3.5 py-2.5 text-[14px] font-semibold text-forest outline-none placeholder:text-muted/50 placeholder:font-normal"
-            />
+            {type === 'date-custom' ? (
+              <CustomDatePicker
+                value={value}
+                onChange={(v) => onChange(v)}
+                placeholder={placeholder}
+                disabled={!!readonlyNote}
+              />
+            ) : (
+              <input
+                ref={inputRef as React.RefObject<HTMLInputElement>}
+                id={id}
+                type={type}
+                inputMode={inputMode}
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
+                placeholder={placeholder}
+                readOnly={!!readonlyNote}
+                className={`w-full bg-transparent px-3.5 py-2.5 text-[14px] font-semibold text-forest outline-none placeholder:text-muted/50 placeholder:font-normal ${type === 'date' ? 'cursor-pointer uppercase tracking-wide' : ''}`}
+              />
+            )}
           </motion.div>
         ) : (
           <motion.div
@@ -397,13 +462,13 @@ function ProfileField({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.1 }}
-            className="flex items-center rounded-xl border border-forest/8 bg-[#FDFBF9] px-3.5 py-2.5 min-h-[42px]"
+            className="flex items-center rounded-xl border border-forest/8 bg-[#FDFBF9] px-3.5 py-2.5 min-h-[42px] overflow-hidden"
           >
-            <span className={`text-[14px] font-semibold leading-tight ${isEmpty ? 'text-muted/50 font-normal' : 'text-forest'}`}>
+            <span className={`text-[14px] font-semibold leading-tight truncate ${isEmpty ? 'text-muted/50 font-normal' : 'text-forest'}`}>
               {prefix && !isEmpty ? prefix : ''}{shown}
             </span>
             {readonlyNote && (
-              <span className="ml-auto text-[10px] text-muted/50 font-normal shrink-0 pl-2">{readonlyNote}</span>
+              <span className="ml-auto text-[10px] text-muted/50 font-normal shrink-0 pl-2 truncate">{readonlyNote}</span>
             )}
           </motion.div>
         )}

@@ -26,7 +26,7 @@ export function CartFloatingPill() {
           animate={{ x: "-50%", y: 0, opacity: 1, scale: 1 }}
           exit={{ x: "-50%", y: 100, opacity: 0, scale: 0.8 }}
           transition={{ type: 'spring', stiffness: 350, damping: 25, mass: 0.8 }}
-          className="fixed bottom-[5.5rem] left-1/2 z-[100] flex w-[calc(100vw-2rem)] sm:w-max items-center justify-center rounded-full bg-[#348C31] p-1.5 pr-4 sm:pr-5 shadow-2xl shadow-[#348C31]/40 lg:hidden"
+          className="fixed bottom-[5.5rem] lg:bottom-8 left-1/2 z-[100] flex w-[calc(100vw-2rem)] sm:w-max items-center justify-center rounded-full bg-[#348C31] p-1.5 pr-4 sm:pr-5 shadow-2xl shadow-[#348C31]/40"
         >
           <Link href="/cart" className="flex w-full items-center justify-between gap-4 sm:justify-start">
             <div className="flex items-center gap-3">

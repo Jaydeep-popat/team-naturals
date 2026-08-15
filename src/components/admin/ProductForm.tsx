@@ -17,9 +17,13 @@ export function ProductForm({ initialData, isEdit }: ProductFormProps) {
   const [categoryList, setCategoryList] = useState<any[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
+  const [existingImages, setExistingImages] = useState<any[]>(initialData?.images || []);
+  const [draggedPreviewIndex, setDraggedPreviewIndex] = useState<number | null>(null);
+  const [draggedExistingIndex, setDraggedExistingIndex] = useState<number | null>(null);
   
   const [formData, setFormData] = useState({
     name: initialData?.name || '',
+    slug: initialData?.slug || '',
     sku: initialData?.sku || '',
     categoryId: initialData?.categoryId?.toString() || '',
     price: initialData?.price || '',
@@ -28,7 +32,10 @@ export function ProductForm({ initialData, isEdit }: ProductFormProps) {
     status: initialData?.status || 'draft',
     size: initialData?.size || '',
     scent: initialData?.scent || '',
+    shortDescription: initialData?.shortDescription || '',
     description: initialData?.description || '',
+    metaTitle: initialData?.metaTitle || '',
+    metaDescription: initialData?.metaDescription || '',
   });
 
   useEffect(() => {
@@ -40,6 +47,56 @@ export function ProductForm({ initialData, isEdit }: ProductFormProps) {
     });
   }, []);
 
+  const handleDragStartPreview = (e: React.DragEvent, index: number) => {
+    e.dataTransfer.effectAllowed = "move";
+    setDraggedPreviewIndex(index);
+  };
+
+  const handleDragOverPreview = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  };
+
+  const handleDropPreview = (e: React.DragEvent, targetIndex: number) => {
+    e.preventDefault();
+    if (draggedPreviewIndex === null || draggedPreviewIndex === targetIndex) return;
+
+    const newFiles = [...selectedFiles];
+    const newPreviews = [...previews];
+    
+    const [draggedFile] = newFiles.splice(draggedPreviewIndex, 1);
+    const [draggedPreview] = newPreviews.splice(draggedPreviewIndex, 1);
+    
+    newFiles.splice(targetIndex, 0, draggedFile);
+    newPreviews.splice(targetIndex, 0, draggedPreview);
+    
+    setSelectedFiles(newFiles);
+    setPreviews(newPreviews);
+    setDraggedPreviewIndex(null);
+  };
+
+  const handleDragStartExisting = (e: React.DragEvent, index: number) => {
+    e.dataTransfer.effectAllowed = "move";
+    setDraggedExistingIndex(index);
+  };
+
+  const handleDragOverExisting = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  };
+
+  const handleDropExisting = (e: React.DragEvent, targetIndex: number) => {
+    e.preventDefault();
+    if (draggedExistingIndex === null || draggedExistingIndex === targetIndex) return;
+
+    const newExisting = [...existingImages];
+    const [draggedItem] = newExisting.splice(draggedExistingIndex, 1);
+    newExisting.splice(targetIndex, 0, draggedItem);
+    
+    setExistingImages(newExisting);
+    setDraggedExistingIndex(null);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
@@ -49,13 +106,39 @@ export function ProductForm({ initialData, isEdit }: ProductFormProps) {
         categoryId: parseInt(formData.categoryId, 10),
         price: parseFloat(formData.price),
         compareAtPrice: formData.compareAtPrice ? parseFloat(formData.compareAtPrice) : undefined,
-        stockQty: !isEdit ? parseInt(formData.stockQty, 10) : undefined,
+        stockQty: parseInt(formData.stockQty, 10),
+        slug: formData.slug.trim() || undefined,
+        shortDescription: formData.shortDescription.trim() || undefined,
+        metaTitle: formData.metaTitle.trim() || undefined,
+        metaDescription: formData.metaDescription.trim() || undefined,
       };
 
       let productId = initialData?.productId?.toString();
 
       if (isEdit && productId) {
-        await products.update(productId, data);
+        const { stockQty, ...updateData } = data;
+        await products.update(productId, updateData);
+
+        // Update stock via adjustStock if it changed
+        const currentStock = initialData?.stockQty || 0;
+        const newStock = parseInt(formData.stockQty, 10);
+        if (newStock !== currentStock) {
+          await products.adjustStock(productId, { newQty: newStock, reason: 'Manual adjustment via edit form' });
+        }
+        
+        if (existingImages.length > 0) {
+          const originalImages = initialData?.images || [];
+          const orderChanged = existingImages.some((img, idx) => img.imageId !== originalImages[idx]?.imageId);
+          
+          if (orderChanged) {
+            await products.reorderImages(productId, {
+              images: existingImages.map((img, idx) => ({ imageId: img.imageId, sortOrder: idx }))
+            });
+            if (existingImages[0].imageId !== originalImages[0]?.imageId) {
+              await products.setPrimaryImage(productId, existingImages[0].imageId);
+            }
+          }
+        }
       } else {
         const res = await products.create(data);
         productId = res.data.product.productId.toString();
@@ -189,14 +272,66 @@ export function ProductForm({ initialData, isEdit }: ProductFormProps) {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-forest mb-1.5">Description</label>
+              <label className="block text-sm font-medium text-forest mb-1.5">Short Description</label>
+              <textarea
+                name="shortDescription"
+                value={formData.shortDescription}
+                onChange={handleChange}
+                rows={2}
+                maxLength={300}
+                className="w-full px-4 py-2.5 bg-[#FDFBF9] border border-forest/10 rounded-xl text-forest focus:outline-none focus:ring-2 focus:ring-forest/20 resize-none"
+                placeholder="Brief summary for listings (max 300 chars)"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-forest mb-1.5">Full Description</label>
               <textarea
                 name="description"
                 value={formData.description}
                 onChange={handleChange}
                 rows={4}
                 className="w-full px-4 py-2.5 bg-[#FDFBF9] border border-forest/10 rounded-xl text-forest focus:outline-none focus:ring-2 focus:ring-forest/20 resize-none"
-                placeholder="Product description..."
+                placeholder="Full product description..."
+              />
+            </div>
+          </div>
+
+          {/* SEO */}
+          <div className="bg-white rounded-2xl border border-forest/10 p-6 space-y-4 shadow-sm">
+            <h2 className="font-bold text-forest text-lg">SEO</h2>
+            <div>
+              <label className="block text-sm font-medium text-forest mb-1.5">URL Slug</label>
+              <input
+                name="slug"
+                value={formData.slug}
+                onChange={handleChange}
+                maxLength={220}
+                className="w-full px-4 py-2.5 bg-[#FDFBF9] border border-forest/10 rounded-xl text-forest focus:outline-none focus:ring-2 focus:ring-forest/20"
+                placeholder="auto-generated from name if empty"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-forest mb-1.5">Meta Title</label>
+              <input
+                name="metaTitle"
+                value={formData.metaTitle}
+                onChange={handleChange}
+                maxLength={160}
+                className="w-full px-4 py-2.5 bg-[#FDFBF9] border border-forest/10 rounded-xl text-forest focus:outline-none focus:ring-2 focus:ring-forest/20"
+                placeholder="Page title for search engines (max 160 chars)"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-forest mb-1.5">Meta Description</label>
+              <textarea
+                name="metaDescription"
+                value={formData.metaDescription}
+                onChange={handleChange}
+                rows={2}
+                maxLength={300}
+                className="w-full px-4 py-2.5 bg-[#FDFBF9] border border-forest/10 rounded-xl text-forest focus:outline-none focus:ring-2 focus:ring-forest/20 resize-none"
+                placeholder="Search snippet description (max 300 chars)"
               />
             </div>
           </div>
@@ -235,21 +370,19 @@ export function ProductForm({ initialData, isEdit }: ProductFormProps) {
               </div>
             </div>
 
-            {!isEdit && (
-              <div>
-                <label className="block text-sm font-medium text-forest mb-1.5">Initial Stock Quantity<span className="text-terracotta">*</span></label>
-                <input
-                  required
-                  type="number"
-                  min="0"
-                  name="stockQty"
-                  value={formData.stockQty}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2.5 bg-[#FDFBF9] border border-forest/10 rounded-xl text-forest focus:outline-none focus:ring-2 focus:ring-forest/20"
-                />
-                <p className="text-xs text-forest/60 mt-1">Stock can only be adjusted via inventory management after creation.</p>
-              </div>
-            )}
+            <div>
+              <label className="block text-sm font-medium text-forest mb-1.5">Stock Quantity<span className="text-terracotta">*</span></label>
+              <input
+                required
+                type="number"
+                min="0"
+                name="stockQty"
+                value={formData.stockQty}
+                onChange={handleChange}
+                className="w-full px-4 py-2.5 bg-[#FDFBF9] border border-forest/10 rounded-xl text-forest focus:outline-none focus:ring-2 focus:ring-forest/20"
+                placeholder="0"
+              />
+            </div>
           </div>
 
           {/* Product Images */}
@@ -272,8 +405,16 @@ export function ProductForm({ initialData, isEdit }: ProductFormProps) {
             {previews.length > 0 && (
               <div className="grid grid-cols-4 gap-4 mt-4">
                 {previews.map((preview, index) => (
-                  <div key={index} className="relative aspect-square rounded-xl overflow-hidden border border-forest/10 group">
-                    <img src={preview} alt="Preview" className="w-full h-full object-cover" />
+                  <div 
+                    key={index} 
+                    className={`relative aspect-square rounded-xl overflow-hidden border ${draggedPreviewIndex === index ? 'border-forest opacity-50' : 'border-forest/10'} group cursor-move`}
+                    draggable
+                    onDragStart={(e) => handleDragStartPreview(e, index)}
+                    onDragOver={handleDragOverPreview}
+                    onDrop={(e) => handleDropPreview(e, index)}
+                    onDragEnd={() => setDraggedPreviewIndex(null)}
+                  >
+                    <img src={preview} alt="Preview" className="w-full h-full object-cover pointer-events-none" />
                     <button
                       type="button"
                       onClick={() => removeFile(index)}
@@ -291,12 +432,20 @@ export function ProductForm({ initialData, isEdit }: ProductFormProps) {
               </div>
             )}
             
-            {isEdit && initialData?.images && initialData.images.length > 0 && previews.length === 0 && (
+            {isEdit && existingImages.length > 0 && previews.length === 0 && (
               <div className="grid grid-cols-4 gap-4 mt-4">
-                {initialData.images.map((img: any, idx: number) => (
-                  <div key={idx} className="relative aspect-square rounded-xl overflow-hidden border border-forest/10">
-                    <img src={img.url} alt="Current" className="w-full h-full object-cover" />
-                    {img.isPrimary && (
+                {existingImages.map((img: any, idx: number) => (
+                  <div 
+                    key={img.imageId} 
+                    className={`relative aspect-square rounded-xl overflow-hidden border ${draggedExistingIndex === idx ? 'border-forest opacity-50' : 'border-forest/10'} cursor-move`}
+                    draggable
+                    onDragStart={(e) => handleDragStartExisting(e, idx)}
+                    onDragOver={handleDragOverExisting}
+                    onDrop={(e) => handleDropExisting(e, idx)}
+                    onDragEnd={() => setDraggedExistingIndex(null)}
+                  >
+                    <img src={img.url} alt="Current" className="w-full h-full object-cover pointer-events-none" />
+                    {idx === 0 && (
                       <span className="absolute bottom-2 left-2 px-2 py-1 bg-forest text-white text-[10px] font-bold rounded-lg shadow-sm">
                         Primary
                       </span>

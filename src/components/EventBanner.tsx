@@ -42,12 +42,54 @@ export type EventBannerModel = {
   
   desktopHeight?: string | null;
   mobileHeight?: string | null;
+  startDate?: string | Date;
+  endDate?: string | Date;
 };
 
 export function EventBanner({ event, className = '' }: { event: EventBannerModel | null, className?: string }) {
+  const [now, setNow] = React.useState<Date | null>(null);
+
+  React.useEffect(() => {
+    setNow(new Date());
+    const timer = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
   if (!event) return null;
 
   const type = event.bannerType || 'image';
+
+  // Countdown logic
+  let targetDate: Date | null = null;
+  let countdownLabel = "";
+  let isEnded = false;
+
+  if (event.startDate && event.endDate && now) {
+    const start = new Date(event.startDate);
+    const end = new Date(event.endDate);
+    if (now < start) {
+      targetDate = start;
+      countdownLabel = "Starts in";
+    } else if (now < end) {
+      targetDate = end;
+      countdownLabel = "Ends in";
+    } else {
+      isEnded = true;
+    }
+  }
+
+  let d = 0, h = 0, m = 0, s = 0;
+  if (targetDate && now) {
+    const diff = targetDate.getTime() - now.getTime();
+    if (diff > 0) {
+      d = Math.floor(diff / (1000 * 60 * 60 * 24));
+      h = Math.floor((diff / (1000 * 60 * 60)) % 24);
+      m = Math.floor((diff / 1000 / 60) % 60);
+      s = Math.floor((diff / 1000) % 60);
+    }
+  }
+
+  const pad = (n: number) => n.toString().padStart(2, '0');
 
 const PATTERNS: Record<string, string> = {
   independence: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23FF9933' fill-opacity='0.15'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3Cg fill='%23138808' fill-opacity='0.15'%3E%3Cpath d='M21 19v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0 30v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zM51 19v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0 30v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
@@ -181,6 +223,43 @@ const PATTERNS: Record<string, string> = {
             >
               {event.shortDescription || event.description}
             </p>
+          )}
+
+          {/* Countdown Timer */}
+          {now && (targetDate || isEnded) && (
+            <div className="mb-8 flex flex-col items-center">
+              <span 
+                className="text-[10px] sm:text-xs font-bold uppercase tracking-[0.2em] mb-3"
+                style={{ color: event.textColor || (type === 'custom' ? '#1f3d2b' : '#ffffff'), opacity: 0.8 }}
+              >
+                {isEnded ? 'Event Ended' : countdownLabel}
+              </span>
+              {!isEnded && (
+                <div className="flex items-center gap-2 sm:gap-3">
+                  {[
+                    { label: 'Days', value: pad(d) },
+                    { label: 'Hours', value: pad(h) },
+                    { label: 'Mins', value: pad(m) },
+                    { label: 'Secs', value: pad(s) }
+                  ].map((unit, idx) => (
+                    <div key={unit.label} className="flex flex-col items-center">
+                      <div 
+                        className="flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-xl bg-black/20 backdrop-blur-md border border-white/10 shadow-lg"
+                        style={{ color: event.textColor || (type === 'custom' ? '#1f3d2b' : '#ffffff') }}
+                      >
+                        <span className="font-display text-xl sm:text-2xl font-bold">{unit.value}</span>
+                      </div>
+                      <span 
+                        className="mt-1.5 text-[9px] sm:text-[10px] font-medium uppercase tracking-wider"
+                        style={{ color: event.textColor || (type === 'custom' ? '#1f3d2b' : '#ffffff'), opacity: 0.7 }}
+                      >
+                        {unit.label}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
 
           {/* CTA Button */}

@@ -25,6 +25,8 @@ export interface DataTableProps<T> {
   // Pagination
   page?: number;
   totalPages?: number;
+  totalRecords?: number;
+  limit?: number;
   onPageChange?: (page: number) => void;
   
   // Selection
@@ -48,6 +50,8 @@ export function DataTable<T>({
   defaultSortKey,
   page,
   totalPages,
+  totalRecords,
+  limit,
   onPageChange,
   selectable = false,
   selectedKeys = new Set(),
@@ -197,21 +201,33 @@ export function DataTable<T>({
         </table>
       </div>
       
-      {totalPages !== undefined && totalPages > 1 && (
+      {(totalPages !== undefined || totalRecords !== undefined) && (
         <div className="flex items-center justify-between border-t border-forest/10 px-4 py-3 bg-[#FDFBF9]">
-          <span className="text-sm text-forest/60">
-            Page {page} of {totalPages}
-          </span>
+          <div className="text-sm text-forest/60">
+            {totalRecords !== undefined && limit !== undefined && page !== undefined ? (
+              totalRecords > 0 ? (
+                <span>
+                  Showing <span className="font-medium text-forest">{Math.min((page - 1) * limit + 1, totalRecords)}</span> to <span className="font-medium text-forest">{Math.min(page * limit, totalRecords)}</span> of <span className="font-medium text-forest">{totalRecords}</span> results
+                </span>
+              ) : (
+                <span>No results</span>
+              )
+            ) : (
+              <span>
+                Page {page} of {totalPages || 1}
+              </span>
+            )}
+          </div>
           <div className="flex items-center gap-2">
             <button
-              disabled={page === 1}
+              disabled={page === 1 || !page}
               onClick={() => onPageChange?.(page! - 1)}
               className="rounded-lg border border-forest/10 px-3 py-1.5 text-sm font-medium text-forest disabled:opacity-50 hover:bg-forest/5 transition-colors"
             >
               Previous
             </button>
             <button
-              disabled={page === totalPages}
+              disabled={page === totalPages || totalPages === 0 || !page}
               onClick={() => onPageChange?.(page! + 1)}
               className="rounded-lg border border-forest/10 px-3 py-1.5 text-sm font-medium text-forest disabled:opacity-50 hover:bg-forest/5 transition-colors"
             >

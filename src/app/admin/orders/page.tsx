@@ -41,11 +41,16 @@ export default function AdminOrdersPage() {
   const [selectedKeys, setSelectedKeys] = useState(new Set<string>());
   const [bulkAction, setBulkAction] = useState('');
   const [showBulkConfirm, setShowBulkConfirm] = useState(false);
+  
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const limit = 10;
 
   const fetchOrders = React.useCallback(async () => {
     setIsLoading(true);
     try {
-      const res = await ordersApi.adminList(activeFilters);
+      const res = await ordersApi.adminList({ ...activeFilters, page: String(page), limit: String(limit) });
       
       const mappedOrders = res.data.orders.map((o: any) => ({
         id: o.orderId,
@@ -59,13 +64,15 @@ export default function AdminOrdersPage() {
       }));
       
       setOrders(mappedOrders);
+      setTotalPages(res.data.pagination?.totalPages || 1);
+      setTotalRecords(res.data.pagination?.total || 0);
     } catch (err) {
       console.error('Failed to fetch orders:', err);
       toast.error('Failed to load orders');
     } finally {
       setIsLoading(false);
     }
-  }, [activeFilters]);
+  }, [activeFilters, page]);
 
   React.useEffect(() => {
     fetchOrders();
@@ -77,12 +84,8 @@ export default function AdminOrdersPage() {
       if (value === undefined) { delete next[key]; } else { next[key] = value; }
       return next;
     });
+    setPage(1);
   };
-
-  const filteredOrders = orders.filter((o) => {
-    if (activeFilters.status && o.status !== activeFilters.status) return false;
-    return true;
-  });
 
   const columns: Column<any>[] = [
     { key: 'number', header: 'Order', sortable: true,
@@ -117,7 +120,7 @@ export default function AdminOrdersPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="font-display text-3xl font-bold text-forest">Orders</h1>
-          <p className="text-sm text-forest/60 mt-1">{filteredOrders.length} orders found</p>
+          <p className="text-sm text-forest/60 mt-1">{totalRecords} orders found</p>
         </div>
         <button className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-forest/10 text-sm font-medium text-forest shadow-sm hover:bg-forest/5 transition-colors">
           <Download size={16} /> Export CSV
@@ -163,15 +166,20 @@ export default function AdminOrdersPage() {
       )}
 
       <DataTable
-        data={filteredOrders}
+        data={orders}
         columns={columns}
         keyExtractor={(o) => o.id}
+        isLoading={isLoading}
+        onRowClick={(o) => router.push(`/admin/orders/${o.id}`)}
+        emptyMessage="No orders found matching the criteria."
         selectable
         selectedKeys={selectedKeys}
         onSelectionChange={setSelectedKeys}
-        onRowClick={(o) => router.push(`/admin/orders/${o.id}`)}
-        isLoading={isLoading}
-        emptyMessage="No orders match your filters."
+        page={page}
+        totalPages={totalPages}
+        totalRecords={totalRecords}
+        limit={limit}
+        onPageChange={setPage}
       />
 
       <ConfirmDialog

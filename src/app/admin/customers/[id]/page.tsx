@@ -25,6 +25,7 @@ export default function AdminCustomerDetailPage() {
           name: `${data.firstName || ''} ${data.lastName || ''}`.trim() || data.username,
           email: data.email,
           phone: data.phoneNo || 'N/A',
+          profilePic: data.profilePic,
           joinedAt: new Date(data.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
           totalOrders: data.orderCount || data.orders?.length || 0,
           totalSpend: `₹${data.totalSpent || 0}`,
@@ -36,7 +37,9 @@ export default function AdminCustomerDetailPage() {
             city: addr.city,
             state: addr.state,
             postalCode: addr.postalCode,
-            isDefault: addr.isDefault
+            isDefault: addr.isDefault,
+            latitude: addr.latitude,
+            longitude: addr.longitude,
           })) || [],
           orders: data.orders?.map((o: any) => ({
             id: o.orderId,
@@ -106,13 +109,28 @@ export default function AdminCustomerDetailPage() {
           <div className="rounded-2xl border border-forest/10 bg-white p-6 shadow-sm">
             <h2 className="font-display text-lg font-bold text-forest mb-4">Saved Addresses</h2>
             {customer.addresses.map((addr: any) => (
-              <div key={addr.id} className="rounded-xl bg-[#FDFBF9] border border-forest/10 p-4 mb-4 last:mb-0">
+              <div key={addr.id} className="rounded-xl bg-[#FDFBF9] border border-forest/10 p-4 mb-4 last:mb-0 relative pr-12">
                 {addr.isDefault && <span className="inline-flex mb-2 px-2 py-0.5 rounded-full text-[11px] font-bold bg-forest text-white">Default</span>}
                 <p className="font-semibold text-forest text-sm">{addr.fullName}</p>
                 <address className="not-italic text-sm text-forest/60 mt-1 leading-relaxed">
                   {addr.line1}{addr.line2 && `, ${addr.line2}`}<br />
                   {addr.city}, {addr.state} {addr.postalCode}
                 </address>
+
+                <button
+                  onClick={() => {
+                    if (addr.latitude && addr.longitude) {
+                      window.open(`https://www.google.com/maps?q=${addr.latitude},${addr.longitude}`, '_blank');
+                    } else {
+                      const query = `${addr.line1}, ${addr.city}, ${addr.state} ${addr.postalCode}`;
+                      window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`, '_blank');
+                    }
+                  }}
+                  className="absolute top-1/2 -translate-y-1/2 right-4 h-8 w-8 rounded-full bg-forest/5 flex items-center justify-center text-forest hover:bg-forest/10 transition-colors"
+                  title="View on Map"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                </button>
               </div>
             ))}
             {customer.addresses.length === 0 && (
@@ -123,7 +141,19 @@ export default function AdminCustomerDetailPage() {
 
         <div className="space-y-4">
           <div className="rounded-2xl border border-forest/10 bg-white p-5 shadow-sm space-y-4">
-            <h2 className="font-semibold text-forest">Profile</h2>
+            <div className="flex items-center gap-4 pb-4 border-b border-forest/5">
+              {customer.profilePic ? (
+                <img src={customer.profilePic} alt={customer.name} className="w-16 h-16 rounded-full object-cover border border-forest/10 shrink-0" />
+              ) : (
+                <div className="w-16 h-16 rounded-full bg-forest/10 flex items-center justify-center text-forest font-display text-2xl font-bold shrink-0">
+                  {customer.name.charAt(0).toUpperCase()}
+                </div>
+              )}
+              <div className="min-w-0">
+                 <h2 className="font-semibold text-forest text-lg truncate">{customer.name}</h2>
+                 <p className="text-xs text-forest/50 mt-0.5">Joined {customer.joinedAt}</p>
+              </div>
+            </div>
             {[
               { icon: Mail, val: customer.email },
               { icon: Phone, val: customer.phone },

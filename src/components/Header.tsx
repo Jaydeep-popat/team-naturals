@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
-import { MenuIcon, SearchIcon, ShoppingBagIcon, UserIcon, XIcon, ArrowRightIcon, HeartIcon, MapPinIcon, BellIcon, LogOutIcon, ChevronDownIcon, PackageIcon, SettingsIcon } from 'lucide-react';
+import { MenuIcon, SearchIcon, ShoppingBagIcon, UserIcon, XIcon, ArrowRightIcon, HeartIcon, MapPinIcon, BellIcon, LogOutIcon, ChevronDownIcon, PackageIcon, SettingsIcon, ChevronRightIcon, DownloadIcon } from 'lucide-react';
 import { Logo } from './Logo';
 import { useCart } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -123,11 +123,11 @@ export function Header() {
           transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
         >
           {/* Left: Mobile Menu + Logo */}
-          <div className="flex shrink-0 items-center gap-1 sm:gap-3">
+          <div className="flex shrink-0 items-center gap-0 sm:gap-3">
             <button
               type="button"
               onClick={() => setMenuOpen(true)}
-              className="-ml-2 rounded-full p-2 text-forest transition-colors hover:bg-forest/5 lg:hidden"
+              className="-ml-3 rounded-full p-1 sm:p-2 text-forest transition-colors hover:bg-forest/5 lg:hidden"
               aria-label="Open menu"
             >
               <MenuIcon size={22} strokeWidth={1.8} />
@@ -136,7 +136,7 @@ export function Header() {
             {/* Mobile Search Toggle Button */}
             {!isMobileSearchOpen && (
               <button 
-                className="p-2 text-forest transition-colors hover:bg-forest/5 sm:hidden"
+                className="p-1 sm:p-2 text-forest transition-colors hover:bg-forest/5 sm:hidden"
                 onClick={() => setIsMobileSearchOpen(true)}
                 aria-label="Open search"
               >
@@ -219,7 +219,7 @@ export function Header() {
           </nav>
 
           {/* Right: Search + Icons */}
-          <div className="flex shrink-0 items-center justify-end gap-2 sm:gap-6">
+          <div className="flex shrink-0 items-center justify-end gap-1 sm:gap-6">
 
 
             {/* Inline Search Bar */}
@@ -410,6 +410,12 @@ export function Header() {
                         
                         <div className="border-t border-forest/5 py-1.5">
                           <button
+                            onClick={() => { setIsProfileOpen(false); window.dispatchEvent(new Event('show-pwa-install')); }}
+                            className="px-5 py-2.5 text-[14px] text-forest/80 hover:bg-forest/5 hover:text-forest text-left flex items-center gap-3 w-full transition-colors font-medium"
+                          >
+                            <DownloadIcon size={18} strokeWidth={1.8} className="text-forest/60 group-hover:text-forest/80" /> Install App
+                          </button>
+                          <button
                             onClick={async () => { setIsProfileOpen(false); await logout(); router.push('/'); }}
                             className="px-5 py-2.5 text-[14px] text-forest/80 hover:bg-terracotta/5 hover:text-terracotta text-left flex items-center gap-3 w-full transition-colors font-medium"
                           >
@@ -597,24 +603,41 @@ function MobileMenu({
             </ul>
             <div className="mt-auto flex flex-col gap-3">
               {user ? (
-                <>
-                  <Link
-                    href="/account"
-                    onClick={onClose}
-                    className="flex items-center justify-center gap-2 rounded-full border border-forest px-5 py-3.5 text-[15px] font-semibold text-forest shadow-soft transition-colors hover:bg-forest/5"
-                  >
-                    <UserIcon size={18} strokeWidth={2} /> My Profile
-                  </Link>
-                  <button
-                    onClick={async () => {
-                      onClose();
-                      await logout();
-                    }}
-                    className="flex items-center justify-center gap-2 rounded-full bg-forest px-5 py-3.5 text-[15px] font-semibold text-cream shadow-soft transition-colors hover:bg-forest/90"
-                  >
-                    <LogOutIcon size={18} strokeWidth={2} /> Logout
-                  </button>
-                </>
+                <div className="rounded-2xl border border-forest/10 bg-white overflow-hidden shadow-xs mt-2">
+                  <div className="bg-[#FDFBF9] border-b border-forest/10 p-3">
+                    <ProfileIdentityBlock />
+                  </div>
+                  <div className="flex flex-col divide-y divide-forest/5">
+                    <Link
+                      href="/account"
+                      onClick={onClose}
+                      className="flex items-center justify-between py-3.5 px-4 hover:bg-forest/5 transition-colors active:bg-forest/10"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-forest/5 text-forest">
+                          <UserIcon size={18} strokeWidth={1.8} />
+                        </div>
+                        <span className="text-[14px] text-forest font-semibold">Personal Info</span>
+                      </div>
+                      <ChevronRightIcon size={16} strokeWidth={2} className="text-forest/30" />
+                    </Link>
+                    <button
+                      onClick={async () => {
+                        onClose();
+                        await logout();
+                      }}
+                      className="w-full flex items-center justify-between py-3.5 px-4 hover:bg-terracotta/5 transition-colors active:bg-terracotta/10 text-left"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-terracotta/10 text-terracotta">
+                          <LogOutIcon size={18} strokeWidth={1.8} />
+                        </div>
+                        <span className="text-[14px] text-terracotta font-semibold">Sign Out</span>
+                      </div>
+                      <ChevronRightIcon size={16} strokeWidth={2} className="text-forest/30" />
+                    </button>
+                  </div>
+                </div>
               ) : (
                 <>
                   <Link

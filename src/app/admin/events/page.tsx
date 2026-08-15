@@ -92,23 +92,23 @@ export default function AdminEventsPage() {
       key: 'actions',
       header: '',
       render: (event) => (
-        <div className="flex justify-end gap-1">
+        <div className="flex justify-end gap-2">
           <Link
             href={`/admin/events/${event.eventId}`}
-            className="rounded-lg p-1.5 text-forest/50 transition-colors hover:bg-forest/5 hover:text-forest"
+            className="rounded-lg p-2 text-forest/50 transition-colors hover:bg-forest/5 hover:text-forest"
             aria-label={`Edit ${event.name}`}
           >
-            <Pencil size={14} />
+            <Pencil size={18} />
           </Link>
           <button
             onClick={(e) => {
               e.stopPropagation();
               setDeleteTarget(event);
             }}
-            className="rounded-lg p-1.5 text-forest/30 transition-colors hover:bg-terracotta/5 hover:text-terracotta"
+            className="rounded-lg p-2 text-forest/40 transition-colors hover:bg-terracotta/5 hover:text-terracotta"
             aria-label={`Delete ${event.name}`}
           >
-            <Trash2 size={14} />
+            <Trash2 size={18} />
           </button>
         </div>
       ),

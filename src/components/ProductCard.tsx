@@ -5,13 +5,19 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { HeartIcon, ShoppingBagIcon, ZapIcon } from 'lucide-react';
+import { HeartIcon, ShoppingBagIcon, ZapIcon, StarIcon } from 'lucide-react';
 import type { Product } from '../types/product';
 import { useCart } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
 import { StarRating } from './StarRating';
 import { AuthModal } from './AuthModal';
+<<<<<<< HEAD
 import { isCloudinaryUrl } from '@/src/lib/cloudinary';
+=======
+import { OptimizedImage } from './OptimizedImage';
+import { extractProductImageAlt } from '@/src/lib/seo';
+import { useAvailableDiscounts } from '../hooks/useAvailableDiscounts';
+>>>>>>> origin/yugal
 
 // True hover guard: returns true only on pointer-fine (mouse) devices
 const canHover = typeof window !== 'undefined' && window.matchMedia('(hover: hover) and (pointer: fine)').matches;
@@ -37,6 +43,11 @@ export function ProductCard({
   const hoverTimerRef = React.useRef<number | null>(null);
   const hoverCycleRef = React.useRef<number | null>(null);
 
+  const { getCouponsForProduct } = useAvailableDiscounts();
+  const categoryId = typeof product.category === 'object' && product.category !== null ? (product.category as any).categoryId || (product.category as any).id : undefined;
+  const applicableCoupons = getCouponsForProduct(productId, categoryId);
+  const hasCoupons = applicableCoupons.length > 0;
+
   function handleAddToCart() {
     if (!isAuthenticated) {
       setShowAuthModal(true);
@@ -50,10 +61,14 @@ export function ProductCard({
     }, 1800);
   }
 
-  const images = (product.images || []).map((img) => (typeof img === 'string' ? img : ((img as any)?.url || '/placeholder.png')));
+  const rawImages = product.images || [];
+  const images = rawImages.map((img) =>
+    typeof img === 'string' ? img : ((img as any)?.url || '/placeholder.png')
+  );
   const primaryImage = images[0] || '/placeholder.png';
   const hasMultipleImages = images.length > 1;
   const activeImage = images[activeImageIndex] || primaryImage;
+  const imageAlt = extractProductImageAlt(rawImages, activeImageIndex, product.name);
 
   const startHoverSwap = () => {
     // Only run on true pointer-capable (mouse) devices
@@ -107,17 +122,26 @@ export function ProductCard({
         onMouseEnter={startHoverSwap}
         onMouseLeave={clearHoverSwap}
         // Do NOT use onFocus/onBlur for hover swap — they fire on touch tap
-        whileHover={canHover ? { y: -8 } : {}}
+        whileHover={canHover ? { y: -4 } : {}}
         transition={{ type: 'spring', stiffness: 280, damping: 22 }}
+<<<<<<< HEAD
         className={`group relative flex flex-col overflow-hidden border border-forest/8 bg-white shadow-soft transition-shadow duration-300 hover:shadow-lift h-full ${
           compact ? 'rounded-[18px]' : 'rounded-[28px]'
         }`}
+=======
+        className="group relative flex flex-col h-full"
+>>>>>>> origin/yugal
     >
       {/* ── Image area ── */}
       <Link
         href={`/product/${product.slug}`}
+<<<<<<< HEAD
         className="relative block overflow-hidden bg-cream"
         style={{ aspectRatio: compact ? '1/1' : '4/5' }}
+=======
+        className="relative block overflow-hidden bg-gray-50 rounded-[12px] sm:rounded-[16px]"
+        style={{ aspectRatio: '1/1' }}
+>>>>>>> origin/yugal
         tabIndex={0}
       >
         {compact ? (
@@ -131,20 +155,24 @@ export function ProductCard({
           />
         ) : (
         <AnimatePresence mode="wait" initial={false}>
-          <motion.img
+          <motion.div
             key={activeImage}
-            src={activeImage}
-            alt={`${product.name} — handmade natural ${categoryLabel.toLowerCase()} by Team Naturals`}
-            loading="lazy"
             initial={hasMultipleImages ? { opacity: 0, x: 36, scale: 1.02 } : { opacity: 0, scale: 1.04, x: 0 }}
             animate={{ opacity: 1, scale: 1, x: 0 }}
             exit={hasMultipleImages ? { opacity: 0, x: -28 } : { opacity: 0, scale: 1.01, x: 0 }}
             transition={{ duration: hasMultipleImages ? 0.38 : 0.55, ease: 'easeOut' }}
-            className={`absolute inset-0 h-full w-full object-cover object-[58%_42%] transition-transform duration-700 ease-out ${
-              // Only scale on hover for true pointer devices
-              canHover ? (hasMultipleImages ? 'group-hover:scale-115' : 'group-hover:scale-[1.14]') : ''
-            }`}
-          />
+            className="absolute inset-0"
+          >
+            <OptimizedImage
+              src={activeImage}
+              alt={imageAlt}
+              fill
+              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 260px"
+              className={`object-cover object-top transition-transform duration-700 ease-out ${
+                canHover ? (hasMultipleImages ? 'group-hover:scale-110' : 'group-hover:scale-[1.08]') : ''
+              }`}
+            />
+          </motion.div>
         </AnimatePresence>
         )}
 
@@ -175,10 +203,8 @@ export function ProductCard({
           </div>
         )}
 
-        {/* Gradient overlay on hover */}
-        <div className="absolute inset-0 bg-gradient-to-t from-forest/30 via-transparent to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
-
         {/* Badges */}
+<<<<<<< HEAD
         <div className={`absolute left-2 top-2 flex flex-col gap-1 ${compact ? '' : 'left-3 top-3 gap-1.5'}`}>
           {product.bestSeller && !compact && (
             <span className="inline-flex items-center gap-1 rounded-full bg-forest px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-cream shadow-sm">
@@ -196,16 +222,30 @@ export function ProductCard({
               {categoryLabel}
             </span>
           )}
+=======
+        <div className="absolute left-2 top-2 flex flex-wrap gap-1.5 z-10 w-[calc(100%-32px)] pointer-events-none">
+          {product.bestSeller && (
+            <span className="inline-flex items-center gap-1 rounded bg-forest px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-cream shadow-sm max-w-full">
+              <ZapIcon size={9} strokeWidth={2.5} className="fill-gold text-gold shrink-0" />
+              <span className="truncate">Best Seller</span>
+            </span>
+          )}
+          {(product as any).activeDiscount && (
+            <span className="inline-flex items-center rounded bg-[#FFC5C5] px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-[#4A1D1D] shadow-sm max-w-full">
+              <span className="truncate">{(product as any).activeDiscount.event}</span>
+            </span>
+          )}
+>>>>>>> origin/yugal
         </div>
 
         {/* Quick-view concern tags — slide up on hover */}
         {product.concerns && product.concerns.length > 0 && (
-          <div className="absolute bottom-0 inset-x-0 translate-y-full transition-transform duration-400 ease-out group-hover:translate-y-0">
-            <div className="flex flex-wrap gap-1.5 p-3">
-              {product.concerns.slice(0, 3).map((c) => (
+          <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20 pointer-events-none">
+            <div className="flex flex-col gap-1 items-end">
+              {product.concerns.slice(0, 2).map((c) => (
                 <span
                   key={c}
-                  className="rounded-full bg-white/85 px-2 py-0.5 text-[10px] text-forest/80 backdrop-blur-sm"
+                  className="rounded bg-white/90 px-1.5 py-0.5 text-[9px] font-medium text-forest/90 backdrop-blur-sm shadow-sm max-w-[80px] truncate"
                 >
                   {c}
                 </span>
@@ -213,6 +253,18 @@ export function ProductCard({
             </div>
           </div>
         )}
+        
+        {/* Floating Rating Badge */}
+        {(() => {
+          // Provide a fallback rating of 4.8 if not specified in the backend, for better aesthetics
+          const rating = (product as any).avgRating ?? product.rating ?? 4.8;
+          return (
+            <div className="absolute bottom-2 left-2 z-20 flex items-center gap-1 rounded-md bg-white px-2 py-1 shadow-sm">
+              <span className="text-[11px] font-bold text-forest">{rating.toFixed(1)}</span>
+              <StarIcon size={10} strokeWidth={2.5} className="fill-gold text-gold" />
+            </div>
+          );
+        })()}
       </Link>
 
       {/* ── Wishlist button ── */}
@@ -222,12 +274,19 @@ export function ProductCard({
         aria-label={wished ? `Remove ${product.name} from wishlist` : `Save ${product.name} to wishlist`}
         aria-pressed={wished}
         whileTap={{ scale: 0.85 }}
+<<<<<<< HEAD
         className={`absolute rounded-full bg-white/90 shadow-soft backdrop-blur transition-all hover:bg-white hover:shadow-lift ${
           compact ? 'right-2 top-2 p-1.5' : 'right-3 top-3 p-2.5'
         }`}
       >
         <HeartIcon
           size={compact ? 13 : 15}
+=======
+        className="absolute right-2 top-2 z-20 rounded-full bg-white/90 p-2 shadow-soft backdrop-blur transition-all hover:bg-white hover:shadow-lift"
+      >
+        <HeartIcon
+          size={14}
+>>>>>>> origin/yugal
           strokeWidth={1.8}
           className={`transition-colors duration-200 ${
             wished ? 'fill-terracotta text-terracotta' : 'text-forest/60'
@@ -236,6 +295,7 @@ export function ProductCard({
       </motion.button>
 
       {/* ── Info area ── */}
+<<<<<<< HEAD
       <div className={`flex flex-1 flex-col ${compact ? 'p-2.5 pb-3' : 'p-4 pb-5'}`}>
         {/* Name */}
         <Link href={`/product/${product.slug}`} className="group/link">
@@ -276,25 +336,62 @@ export function ProductCard({
         {/* Price & Stock */}
         <div className={`flex flex-col gap-1 ${compact ? 'mt-2' : 'mt-4'}`}>
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+=======
+      <div className="flex flex-col pt-2.5 sm:pt-3">
+        {/* Name */}
+        <Link href={`/product/${product.slug}`} className="group/link block">
+          <h3 className="font-display text-[15px] sm:text-[16px] font-bold leading-tight text-forest transition-colors group-hover/link:text-forest-soft line-clamp-2">
+            {product.name}
+          </h3>
+        </Link>
+        {/* Price & Cart row */}
+        <div className="mt-1.5 flex items-center justify-between gap-2">
+          <div className="flex flex-col flex-1 min-w-0">
+>>>>>>> origin/yugal
             {(() => {
-              const activeDiscount = (product as any).activeDiscount;
-              const originalPrice = Number(product.price || 0);
-              const compareAtPrice = product.compareAtPrice ? Number(product.compareAtPrice) : null;
+              const mrp = product.compareAtPrice ? Number(product.compareAtPrice) : Number(product.price || 0);
+              const productSellingPrice = Number(product.price || 0);
+              const productDiscountPercent = mrp > productSellingPrice ? Math.round(((mrp - productSellingPrice) / mrp) * 100) : 0;
               
-              let finalPrice = originalPrice;
-              let discountLabel = '';
+              const activeDiscount = (product as any).activeDiscount;
+              let finalPrice = productSellingPrice;
               
               if (activeDiscount) {
                 if (activeDiscount.type === 'percent') {
-                  finalPrice = originalPrice - (originalPrice * Number(activeDiscount.value) / 100);
-                  discountLabel = `${activeDiscount.value}% off`;
+                  finalPrice = productSellingPrice - (productSellingPrice * Number(activeDiscount.value) / 100);
                 } else if (activeDiscount.type === 'flat') {
-                  finalPrice = Math.max(0, originalPrice - Number(activeDiscount.value));
-                  discountLabel = `₹${activeDiscount.value} off`;
+                  finalPrice = Math.max(0, productSellingPrice - Number(activeDiscount.value));
                 }
               }
 
+              let bestCouponPrice = finalPrice;
+              let bogoCoupon = null;
+              
+              if (applicableCoupons && applicableCoupons.length > 0) {
+                let maxDiscValue = 0;
+                applicableCoupons.forEach((coupon: any) => {
+                  if (coupon.type === 'buy_x') {
+                    bogoCoupon = coupon;
+                  } else {
+                    let discountAmt = 0;
+                    if (coupon.type === 'percent') {
+                      discountAmt = finalPrice * (Number(coupon.value) / 100);
+                      const maxDisc = coupon.maxDiscount ? Number(coupon.maxDiscount) : Infinity;
+                      if (discountAmt > maxDisc) discountAmt = maxDisc;
+                    } else if (coupon.type === 'flat') {
+                      discountAmt = Number(coupon.value);
+                    }
+                    
+                    if (discountAmt > maxDiscValue) {
+                      maxDiscValue = discountAmt;
+                    }
+                  }
+                });
+                bestCouponPrice = Math.max(0, finalPrice - maxDiscValue);
+              }
+
               return (
+<<<<<<< HEAD
                 <>
                   <span
                     className={`font-semibold text-forest ${
@@ -308,12 +405,54 @@ export function ProductCard({
                       <span className="text-[13px] text-muted line-through">₹{compareAtPrice || originalPrice}</span>
                       <span className="whitespace-nowrap text-[12px] font-semibold text-[#388E3C]">
                         {activeDiscount ? discountLabel : `${Math.round((((compareAtPrice || originalPrice) - originalPrice) / (compareAtPrice || originalPrice)) * 100)}% off`}
+=======
+                <div className="flex flex-col gap-1 w-full">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-[14px] sm:text-[16px] font-bold text-forest">
+                      ₹{Math.round(finalPrice).toLocaleString('en-IN')}
+                    </span>
+                    {productDiscountPercent > 0 && (
+                      <>
+                        <span className="text-[11px] sm:text-[12px] text-muted line-through">
+                          ₹{Math.round(mrp).toLocaleString('en-IN')}
+                        </span>
+                        <span className="text-[10px] sm:text-[11px] font-bold text-[#388E3C]">
+                          {productDiscountPercent}% OFF
+                        </span>
+                      </>
+                    )}
+                  </div>
+                  
+                  {activeDiscount && (
+                    <div className="flex items-center text-[10px] sm:text-[11px] text-forest/80 overflow-hidden text-ellipsis whitespace-nowrap bg-blue-50/50 rounded px-1 w-fit max-w-full border border-blue-100/50">
+                      <span className="mr-1">🎁</span>
+                      <span className="overflow-hidden text-ellipsis whitespace-nowrap font-medium text-blue-800">
+                        {activeDiscount.event}
+>>>>>>> origin/yugal
                       </span>
-                    </>
+                      <span className="mx-1">·</span>
+                      <span className="font-bold whitespace-nowrap text-blue-700">Extra {activeDiscount.type === 'percent' ? `${activeDiscount.value}%` : `₹${activeDiscount.value}`} OFF</span>
+                    </div>
                   )}
-                </>
+
+                  {bogoCoupon ? (
+                    <div className="flex items-center text-[10px] sm:text-[11px] font-bold text-blue-700 bg-blue-50 border border-blue-100/50 px-1.5 py-0.5 rounded w-fit mt-0.5 uppercase tracking-wide">
+                      <span className="mr-1">🎁</span> BUY {(bogoCoupon as any).minQuantity || 1} GET {(bogoCoupon as any).getQuantity || 1} {Number((bogoCoupon as any).value) === 100 ? 'FREE' : `AT ${Number((bogoCoupon as any).value)}% OFF`}
+                    </div>
+                  ) : bestCouponPrice < finalPrice ? (
+                    <div className="flex items-center text-[14px] sm:text-[15px] text-blue-700 w-fit mt-0.5">
+                      <span className="font-extrabold">Buy at ₹{Math.round(bestCouponPrice).toLocaleString('en-IN')}</span>
+                    </div>
+                  ) : bestCouponPrice === finalPrice && hasCoupons ? (
+                    <div className="flex items-center text-[10px] sm:text-[11px] text-forest/70 w-fit mt-0.5">
+                      <span className="mr-1">🏷</span>
+                      <span className="font-medium">Offers available</span>
+                    </div>
+                  ) : null}
+                </div>
               );
             })()}
+<<<<<<< HEAD
             
             {!compact && (
               <span className="text-[11px] text-muted ml-auto">
@@ -396,23 +535,31 @@ export function ProductCard({
                 Added to cart!
               </motion.div>
             ) : (
+=======
+          </div>
+          
+          {/* Quick Add Button */}
+          <div className="shrink-0 flex items-end h-full self-end pb-1">
+            {product.stockQty !== 0 && user?.role !== 'admin' && !added ? (
+>>>>>>> origin/yugal
               <motion.button
-                key="add"
                 type="button"
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -6 }}
-                transition={{ duration: 0.22 }}
-                whileTap={{ scale: 0.97 }}
+                whileTap={{ scale: 0.9 }}
                 onClick={handleAddToCart}
                 aria-label={`Add ${product.name} to cart`}
-                className="flex w-full items-center justify-center gap-1.5 rounded-full border border-forest/15 bg-cream-soft px-2 py-2.5 text-[12px] font-medium text-forest transition-all duration-200 hover:border-forest hover:bg-forest hover:text-cream group-hover:border-forest group-hover:bg-forest group-hover:text-cream"
+                className="flex h-7 w-7 items-center justify-center rounded-full bg-forest text-cream transition-colors hover:bg-forest-deep sm:h-8 sm:w-8"
               >
-                <ShoppingBagIcon size={14} strokeWidth={1.8} className="shrink-0" />
-                <span className="whitespace-nowrap">Add<span className="hidden sm:inline"> to Cart</span></span>
+                <ShoppingBagIcon size={14} strokeWidth={1.8} />
               </motion.button>
-              )}
-            </AnimatePresence>
+            ) : added ? (
+               <motion.div
+                 initial={{ scale: 0.8, opacity: 0 }}
+                 animate={{ scale: 1, opacity: 1 }}
+                 className="flex h-7 w-7 items-center justify-center rounded-full bg-forest-soft text-cream sm:h-8 sm:w-8"
+               >
+                 <ZapIcon size={14} strokeWidth={2} className="fill-gold text-gold" />
+               </motion.div>
+            ) : null}
           </div>
         </div>
         )}
