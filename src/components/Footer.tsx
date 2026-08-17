@@ -66,17 +66,17 @@ export function Footer() {
         <LeafIcon size={450} strokeWidth={0.3} className="text-white opacity-[0.04]" />
       </div>
 
-      <div className="relative mx-auto max-w-7xl px-5 py-16 lg:px-8">
-        <div className="grid gap-12 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="relative mx-auto max-w-7xl px-5 py-10 lg:px-8">
+        <div className="grid gap-8 sm:grid-cols-2 xl:grid-cols-4">
           <div>
             <div className="brightness-0 invert">
               <Logo useImage={true} disableLayoutAnimation={true} />
             </div>
-            <p className="mt-6 max-w-xs text-[13px] leading-relaxed text-white/70">
+            <p className="mt-4 max-w-xs text-sm leading-relaxed text-white/80 font-medium">
               Handmade natural soaps and face wash from Morbi, Gujarat — no palm oil, no harsh
               chemicals.
             </p>
-            <div className="mt-6 flex gap-3">
+            <div className="mt-5 flex gap-3">
               {footerSocial.map(({ key, href, label, Icon, isLucide }) => (
                 <a
                   key={key}
@@ -86,7 +86,7 @@ export function Footer() {
                   aria-label={label}
                   className="rounded-full border border-white/20 p-2.5 text-white transition-colors hover:bg-white hover:text-forest"
                 >
-                  <Icon size={16} {...(isLucide ? { strokeWidth: 1.5 } : {})} />
+                  <Icon size={18} {...(isLucide ? { strokeWidth: 1.5 } : {})} />
                 </a>
               ))}
             </div>
@@ -96,29 +96,26 @@ export function Footer() {
           <FooterColumn title="Customer Support" links={helpLinks} />
 
           <div>
-            <h3 className="text-[15px] font-semibold text-white">Contact Us</h3>
-            <ul className="mt-6 space-y-5 text-[13px] text-white/70">
+            <h3 className="text-base font-bold text-white">Contact Us</h3>
+            <ul className="mt-4 space-y-3.5 text-sm font-medium text-white/80">
               <li className="flex items-start gap-3">
-                <MapPinIcon size={18} strokeWidth={1.5} className="mt-0.5 shrink-0" />
-                <span>
-                  Morbi, Gujarat
-                  <span className="block text-[11px] text-white/50">[NEEDS INPUT: full address]</span>
-                </span>
+                <MapPinIcon size={18} strokeWidth={1.8} className="mt-0.5 shrink-0 text-cream" />
+                <span>Morbi, Gujarat</span>
               </li>
               <li className="flex items-center gap-3">
-                <PhoneIcon size={18} strokeWidth={1.5} className="shrink-0" />
+                <PhoneIcon size={18} strokeWidth={1.8} className="shrink-0 text-cream" />
                 <a href={getPhoneTelUrl()} className="transition-colors hover:text-white">
                   {SITE_CONTACT.phoneDisplay}
                 </a>
               </li>
               <li className="flex items-center gap-3">
-                <MailIcon size={18} strokeWidth={1.5} className="shrink-0" />
+                <MailIcon size={18} strokeWidth={1.8} className="shrink-0 text-cream" />
                 <a href={getEmailMailtoUrl()} className="transition-colors hover:text-white">
                   {SITE_CONTACT.email}
                 </a>
               </li>
               <li className="flex items-center gap-3">
-                <WhatsAppIcon size={18} className="shrink-0" />
+                <WhatsAppIcon size={18} className="shrink-0 text-cream" />
                 <a
                   href={getWhatsAppChatUrl()}
                   target="_blank"
@@ -129,17 +126,16 @@ export function Footer() {
                 </a>
               </li>
               <li className="flex items-center gap-3">
-                <ClockIcon size={18} strokeWidth={1.5} className="shrink-0" />
+                <ClockIcon size={18} strokeWidth={1.8} className="shrink-0 text-cream" />
                 <span>{SITE_CONTACT.businessHours}</span>
               </li>
             </ul>
           </div>
         </div>
 
-        <div className="mt-16 flex flex-col items-center justify-between gap-6 border-t border-white/10 pt-8 text-[12px] text-white/60 md:flex-row">
+        <div className="mt-10 flex flex-col items-center justify-between gap-4 border-t border-white/10 pt-6 text-xs text-white/70 md:flex-row">
           <p>
-            © {new Date().getFullYear()} Team Naturals. All Rights Reserved. &nbsp;|&nbsp; Designed
-            with ♥ for a better tomorrow.
+            © {new Date().getFullYear()} Team Naturals. All Rights Reserved.
           </p>
           <div className="flex items-center gap-2">
             <div className="flex h-7 items-center justify-center rounded bg-white px-2.5 font-bold text-[#1434CB] text-[10px]">
@@ -171,20 +167,19 @@ function FooterColumn({
 }) {
   return (
     <div>
-      <h3 className="text-[15px] font-semibold text-white">{title}</h3>
-      <ul className="mt-6 space-y-3.5">
+      <h3 className="text-base font-bold text-white">{title}</h3>
+      <ul className="mt-4 space-y-3">
         {links.map((l) => (
           <li key={l.label}>
             <Link
               href={l.href}
-              className="group flex items-center text-[13px] text-white/70 transition-colors hover:text-white"
+              className="group flex items-center text-sm font-medium text-white/80 transition-colors hover:text-white"
             >
               <ChevronRightIcon
                 size={14}
-                strokeWidth={2}
-                className="mr-2 opacity-70 transition-all group-hover:translate-x-1 group-hover:opacity-100"
+                className="mr-1.5 opacity-0 transition-all group-hover:opacity-100 group-hover:translate-x-0.5 text-cream"
               />
-              {l.label}
+              <span>{l.label}</span>
             </Link>
           </li>
         ))}

@@ -315,12 +315,6 @@ export default function HomePageClient() {
       </div>
 
       <section className={SECTION_PAD}>
-        <Reveal>
-          <PromiseBanner />
-        </Reveal>
-      </section>
-
-      <section className={SECTION_PAD}>
         <CatalogCTA />
       </section>
 
@@ -563,30 +557,52 @@ function BestSellersCarousel({
 }
 
 function Hero() {
+  const heroStaggerContainer = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.12,
+        delayChildren: 0.2,
+      },
+    },
+  };
+
+  const heroItemVariant = {
+    hidden: { opacity: 0, x: -50 },
+    visible: {
+      opacity: 1,
+      x: 0,
+      transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] },
+    },
+  };
+
   return (
     <>
       <section
         className="relative overflow-hidden bg-white pb-8 pt-20 sm:pb-12 sm:pt-24"
         aria-labelledby="hero-heading"
       >
+        {/* Static Background Blobs */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ duration: 1.5 }}
+          transition={{ duration: 1 }}
           aria-hidden="true"
           className="pointer-events-none absolute -right-24 top-0 h-[560px] w-[560px] rounded-[46%_54%_38%_62%/56%_44%_56%_44%] bg-forest-mist/70 sm:-right-16 lg:right-4"
         />
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ duration: 1.5 }}
+          transition={{ duration: 1, delay: 0.2 }}
           aria-hidden="true"
           className="pointer-events-none absolute -left-[240px] bottom-0 h-[480px] w-[480px] rounded-full bg-cream/80"
         />
 
         <div className="relative mx-auto grid max-w-7xl items-center gap-8 px-5 lg:grid-cols-2 lg:gap-10 lg:px-10">
+          {/* Left Text & CTA Content - Entrance from Left */}
           <motion.div
-            variants={staggerContainer}
+            variants={heroStaggerContainer}
             initial="hidden"
             animate="visible"
             className="order-1 relative lg:order-1"
@@ -596,24 +612,28 @@ function Hero() {
               aria-hidden="true"
             />
 
+            {/* Leaf Icon - Entrance Fade */}
             <motion.div
-              className="absolute -left-12 -top-8 text-forest-soft sm:-left-20 sm:-top-12"
-              animate={{ y: [0, -14, 0], rotate: [0, 8, 0] }}
-              transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut' }}
+              className="absolute -left-2 -top-6 text-forest-soft sm:-left-20 sm:-top-12"
+              initial={{ opacity: 0, scale: 0.5, y: -20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.5, ease: [0.22, 1, 0.36, 1] }}
               aria-hidden="true"
             >
-              <LeafIcon size={48} strokeWidth={1} className="sm:h-[72px] sm:w-[72px]" />
+              <LeafIcon size={36} strokeWidth={1} className="sm:h-[72px] sm:w-[72px]" />
             </motion.div>
 
+            {/* Top Badge */}
             <motion.span
-              variants={staggerItem}
-              className="inline-flex items-center gap-2 rounded-full border border-forest/12 bg-white px-3.5 py-1.5 text-[11px] text-forest"
+              variants={heroItemVariant}
+              className="inline-flex items-center gap-2 rounded-full border border-forest/12 bg-white px-3.5 py-1.5 text-[11px] font-semibold text-forest shadow-sm"
             >
               Handmade in small batches
             </motion.span>
 
+            {/* Main Title */}
             <motion.h1
-              variants={staggerItem}
+              variants={heroItemVariant}
               id="hero-heading"
               className="mt-4 font-display text-[40px] font-extrabold leading-[1.05] text-forest sm:text-[56px] lg:text-[64px]"
             >
@@ -622,57 +642,56 @@ function Hero() {
               <span className="font-extrabold text-forest-soft">&amp; face wash</span>
             </motion.h1>
 
+            {/* Subtitle */}
             <motion.p
-              variants={staggerItem}
+              variants={heroItemVariant}
               className="mt-4 max-w-md text-[15px] font-medium leading-relaxed text-forest/90 sm:text-[16px]"
             >
               Neem, rose, multani mitti, coffee, and rice soaps — plus a clay face wash. No palm
               oil. No harsh chemicals.
             </motion.p>
 
-            <motion.div variants={staggerItem} className="mt-5 flex flex-wrap items-center gap-3">
-              <motion.div whileTap={{ scale: 0.96 }}>
+            {/* Action Buttons */}
+            <motion.div variants={heroItemVariant} className="mt-6 flex flex-wrap items-center gap-3">
+              <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.96 }}>
                 <Link
                   href="/shop/soaps"
-                  className="inline-flex items-center gap-2 rounded-full bg-forest px-6 py-3 text-sm font-medium text-cream transition-colors hover:bg-forest-deep"
+                  className="inline-flex items-center gap-2 rounded-full bg-forest px-7 py-3.5 text-sm font-semibold text-cream shadow-md transition-all hover:bg-forest-deep hover:shadow-lg"
                 >
-                  Browse handmade soaps <ArrowRightIcon size={16} strokeWidth={1.8} />
+                  Browse handmade soaps <ArrowRightIcon size={16} strokeWidth={2} />
                 </Link>
               </motion.div>
-              <Link
-                href="/shop/face-wash"
-                className="rounded-full border border-forest/15 px-6 py-3 text-sm text-forest transition-colors hover:bg-cream"
-              >
-                Multani mitti face wash
-              </Link>
             </motion.div>
 
+            {/* Feature Bullets */}
             <motion.ul
-              variants={staggerItem}
-              className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs font-medium text-muted"
+              variants={heroItemVariant}
+              className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs font-semibold text-muted"
             >
               <li className="flex items-center gap-1.5">
-                <LeafIcon size={14} strokeWidth={1.5} className="text-forest-soft" />
+                <LeafIcon size={14} strokeWidth={1.8} className="text-forest-soft" />
                 No palm oil
               </li>
               <li className="flex items-center gap-1.5">
-                <LeafIcon size={14} strokeWidth={1.5} className="text-forest-soft" />
+                <LeafIcon size={14} strokeWidth={1.8} className="text-forest-soft" />
                 No harsh chemicals
               </li>
               <li className="flex items-center gap-1.5">
-                <LeafIcon size={14} strokeWidth={1.5} className="text-forest-soft" />
+                <LeafIcon size={14} strokeWidth={1.8} className="text-forest-soft" />
                 Handmade
               </li>
             </motion.ul>
           </motion.div>
 
-          <motion.div
-            initial={{ opacity: 0, scale: 0.94 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.9, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
-            className="relative order-2 mx-auto w-full max-w-[320px] sm:max-w-[360px] lg:order-2"
-          >
-            <div className="relative ml-auto w-[85%] overflow-hidden rounded-t-[140px] rounded-b-[40px] border-[6px] border-white shadow-xl">
+          {/* Right Product Images - Slide in from Right & Bottom */}
+          <div className="relative order-2 mx-auto w-full max-w-[320px] sm:max-w-[360px] lg:order-2">
+            {/* Main Product Image - Slide in from Right */}
+            <motion.div
+              initial={{ opacity: 0, x: 80 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.8, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
+              className="relative ml-auto w-[85%] overflow-hidden rounded-t-[140px] rounded-b-[40px] border-[6px] border-white shadow-2xl"
+            >
               <Image
                 src="/facewash/wash_1.webp"
                 alt="Team Naturals multani mitti face wash bottle beside a lathered clay cleanser on stone"
@@ -681,9 +700,15 @@ function Hero() {
                 priority
                 className="aspect-[3/4] w-full object-cover transition-transform duration-700 hover:scale-105"
               />
-            </div>
+            </motion.div>
 
-            <div className="absolute -bottom-4 left-0 w-[45%] overflow-hidden rounded-full border-[6px] border-white shadow-2xl sm:-bottom-6">
+            {/* Secondary Inset Image - Slide up from Bottom */}
+            <motion.div
+              initial={{ opacity: 0, y: 60, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 0.8, delay: 0.65, ease: [0.22, 1, 0.36, 1] }}
+              className="absolute -bottom-4 left-0 w-[45%] overflow-hidden rounded-full border-[6px] border-white shadow-2xl sm:-bottom-6"
+            >
               <Image
                 src="/facewash/wash_2.webp"
                 alt="Close-up of multani mitti face wash lather on skin during a gentle cleanse"
@@ -691,8 +716,8 @@ function Hero() {
                 height={240}
                 className="aspect-square w-full object-cover transition-transform duration-700 hover:scale-105"
               />
-            </div>
-          </motion.div>
+            </motion.div>
+          </div>
         </div>
       </section>
 

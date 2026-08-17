@@ -32,7 +32,7 @@ export function TrustBadges() {
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: '-50px' }}
       transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-      className="relative z-20 mx-auto max-w-6xl px-5 sm:px-10 mt-[-40px] sm:mt-[-60px]"
+      className="relative z-20 mx-auto max-w-6xl px-5 sm:px-10 mt-6 sm:mt-10 lg:mt-12"
     >
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 rounded-3xl bg-white p-6 sm:p-8 shadow-[0_8px_30px_rgb(31,61,43,0.06)] border border-forest-mist/50">
         {features.map((feature, i) => (

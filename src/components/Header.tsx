@@ -118,7 +118,7 @@ export function Header() {
         transition={{ duration: 0.3 }}
       >
         <motion.div
-          className="relative mx-auto flex w-full max-w-[1600px] items-center justify-between px-4 lg:px-6"
+          className="relative mx-auto flex w-full max-w-[1600px] items-center justify-between px-6 sm:px-8 lg:px-12 xl:px-16"
           animate={{ height: scrolled ? 64 : 80 }}
           transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
         >
@@ -162,12 +162,12 @@ export function Header() {
                   <div key={item.href} className="group relative py-2">
                     <Link
                       href={item.href}
-                      className={`relative flex items-center gap-1 text-[14px] font-semibold tracking-wide transition-colors ${
+                      className={`relative flex items-center gap-1 text-[16px] font-semibold tracking-wide transition-colors ${
                         isActive ? 'text-terracotta' : 'text-forest hover:text-terracotta/70'
                       }`}
                     >
                       {item.label}
-                      <ChevronDownIcon size={14} className="transition-transform group-hover:rotate-180" />
+                      <ChevronDownIcon size={16} className="transition-transform group-hover:rotate-180" />
                       {isActive && (
                         <motion.span
                           layoutId="nav-underline"
@@ -201,7 +201,7 @@ export function Header() {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`relative py-2 text-[14px] font-semibold tracking-wide transition-colors ${
+                  className={`relative py-2 text-[16px] font-semibold tracking-wide transition-colors ${
                     isActive ? 'text-terracotta' : 'text-forest hover:text-terracotta/70'
                   }`}
                 >
