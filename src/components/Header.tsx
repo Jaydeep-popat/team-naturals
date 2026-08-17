@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
-import { MenuIcon, SearchIcon, ShoppingBagIcon, UserIcon, XIcon, ArrowRightIcon, HeartIcon, MapPinIcon, BellIcon, LogOutIcon, ChevronDownIcon, PackageIcon, SettingsIcon, ChevronRightIcon, DownloadIcon } from 'lucide-react';
+import { MenuIcon, SearchIcon, ShoppingBagIcon, UserIcon, XIcon, ArrowRightIcon, HeartIcon, MapPinIcon, BellIcon, LogOutIcon, ChevronDownIcon, PackageIcon, SettingsIcon, ChevronRightIcon, DownloadIcon, BookOpenIcon, TruckIcon, RefreshCwIcon, HelpCircleIcon, UsersIcon } from 'lucide-react';
 import { Logo } from './Logo';
 import { useCart } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -17,6 +17,14 @@ const navItems = [
   { label: 'Shop', href: '/shop' },
   { label: 'About', href: '/about' },
   { label: 'Contact', href: '/contact' },
+];
+
+const RESOURCE_LINKS = [
+  { label: 'Blogs', href: '/blog', icon: BookOpenIcon, desc: 'Tips & stories from our workshop' },
+  { label: 'FAQs', href: '/faqs', icon: HelpCircleIcon, desc: 'Quick answers to common questions' },
+  { label: 'Shipping & Delivery', href: '/shipping', icon: TruckIcon, desc: 'Timelines, charges & tracking' },
+  { label: 'Returns & Refunds', href: '/returns', icon: RefreshCwIcon, desc: 'Our fair returns policy' },
+  { label: 'Wholesale / Bulk Orders', href: '/wholesale', icon: UsersIcon, desc: 'Resell our soaps across India' },
 ];
 
 export function Header() {
@@ -216,6 +224,43 @@ export function Header() {
                 </Link>
               );
             })}
+
+            {/* Resources Dropdown */}
+            <div className="group relative py-2">
+              <button
+                type="button"
+                className={`relative flex items-center gap-1 text-[16px] font-semibold tracking-wide transition-colors ${
+                  pathname.startsWith('/blog') || pathname.startsWith('/faqs') || pathname.startsWith('/shipping') || pathname.startsWith('/returns') || pathname.startsWith('/wholesale')
+                    ? 'text-terracotta'
+                    : 'text-forest hover:text-terracotta/70'
+                }`}
+              >
+                Resources
+                <ChevronDownIcon size={16} className="transition-transform group-hover:rotate-180" />
+              </button>
+              <div className="absolute left-1/2 top-full hidden -translate-x-1/2 pt-2 group-hover:block z-50">
+                <div className="flex min-w-[260px] flex-col gap-0.5 rounded-2xl bg-white p-2 shadow-lg ring-1 ring-black/5">
+                  {RESOURCE_LINKS.map((link) => {
+                    const Icon = link.icon;
+                    return (
+                      <Link
+                        key={link.href}
+                        href={link.href}
+                        className="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-forest/5 group/item"
+                      >
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-forest/8 text-forest group-hover/item:bg-forest group-hover/item:text-cream transition-colors">
+                          <Icon size={15} strokeWidth={2} />
+                        </span>
+                        <div>
+                          <p className="text-sm font-semibold text-forest group-hover/item:text-terracotta transition-colors">{link.label}</p>
+                          <p className="text-[11px] text-muted">{link.desc}</p>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
           </nav>
 
           {/* Right: Search + Icons */}
@@ -506,6 +551,7 @@ function MobileMenu({
   categories: any[];
 }) {
   const [shopOpen, setShopOpen] = React.useState(false);
+  const [resourcesOpen, setResourcesOpen] = React.useState(false);
   const { user, logout } = useAuth();
 
   return (
@@ -600,7 +646,39 @@ function MobileMenu({
                   </motion.li>
                 );
               })}
-            </ul>
+
+            {/* Resources mobile dropdown */}
+            <motion.li
+              initial={{ opacity: 0, x: -16 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.06 * navItems.length + 0.1 }}
+            >
+              <div className="flex flex-col">
+                <div className={`flex items-center justify-between rounded-2xl px-4 py-3.5 font-display text-xl transition-colors ${
+                  pathname.startsWith('/blog') || pathname.startsWith('/faqs') || pathname.startsWith('/shipping') || pathname.startsWith('/returns') || pathname.startsWith('/wholesale')
+                    ? 'bg-white text-terracotta shadow-sm' : 'text-forest hover:bg-white/50'
+                }`}>
+                  <span className="flex-1">Resources</span>
+                  <button onClick={() => setResourcesOpen(!resourcesOpen)} className="p-2 -mr-2 text-forest/60" aria-label="Toggle Resources">
+                    <ChevronDownIcon size={20} className={`transition-transform ${resourcesOpen ? 'rotate-180' : ''}`} />
+                  </button>
+                </div>
+                <AnimatePresence>
+                  {resourcesOpen && (
+                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                      <div className="pl-6 pt-2 pb-2 space-y-2 border-l-2 border-forest/10 ml-6 mt-2">
+                        {RESOURCE_LINKS.map((link) => (
+                          <Link key={link.href} href={link.href} onClick={onClose} className="block text-lg font-display text-forest/80 hover:text-terracotta transition-colors py-1">
+                            {link.label}
+                          </Link>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            </motion.li>
+          </ul>
             <div className="mt-auto flex flex-col gap-3">
               {user ? (
                 <div className="rounded-2xl border border-forest/10 bg-white overflow-hidden shadow-xs mt-2">

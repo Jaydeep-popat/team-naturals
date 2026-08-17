@@ -35,6 +35,7 @@ const helpLinks = [
   { label: 'FAQs', href: '/faqs' },
   { label: 'Shipping & Delivery', href: '/shipping' },
   { label: 'Returns & Refunds', href: '/returns' },
+  { label: 'Wholesale / Bulk Orders', href: '/wholesale' },
   { label: 'Terms & Conditions', href: '/terms' },
   { label: 'Privacy Policy', href: '/privacy' },
 ];
