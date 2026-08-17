@@ -432,81 +432,109 @@ export function ProductForm({ initialData, isEdit }: ProductFormProps) {
               </div>
             )}
             
-            {/* Existing Images Management */}
-            {isEdit && existingImages.length > 0 && (
-              <div className="space-y-3">
-                <p className="text-xs font-bold uppercase tracking-wider text-forest/70">
-                  Current Uploaded Images ({existingImages.length})
-                </p>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                  {existingImages.map((img: any, idx: number) => (
-                    <div 
-                      key={img.imageId} 
-                      className={`group relative aspect-square rounded-xl overflow-hidden border transition-all ${
-                        draggedExistingIndex === idx ? 'border-forest opacity-50' : 'border-forest/15 hover:border-forest/40 shadow-xs'
-                      } cursor-move bg-[#FDFBF9]`}
-                      draggable
-                      onDragStart={(e) => handleDragStartExisting(e, idx)}
-                      onDragOver={handleDragOverExisting}
-                      onDrop={(e) => handleDropExisting(e, idx)}
-                      onDragEnd={() => setDraggedExistingIndex(null)}
-                    >
-                      <img src={img.url} alt={img.altText || "Product"} className="w-full h-full object-cover pointer-events-none" />
-                      
-                      {/* Action overlays */}
-                      <div className="absolute inset-0 bg-forest/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                        {!img.isPrimary && (
-                          <button
-                            type="button"
-                            title="Set as Primary"
-                            onClick={async () => {
-                              try {
-                                const productId = initialData?.productId?.toString();
-                                await products.setPrimaryImage(productId, img.imageId);
-                                const updated = existingImages.map(i => ({
-                                  ...i,
-                                  isPrimary: i.imageId === img.imageId
-                                }));
-                                setExistingImages(updated);
-                                toast.success('Primary image updated');
-                              } catch (err: any) {
-                                toast.error(err.message || 'Failed to set primary image');
-                              }
-                            }}
-                            className="px-2 py-1 bg-white text-forest text-[11px] font-bold rounded-md shadow-md hover:bg-cream"
-                          >
-                            Set Primary
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          title="Delete image"
-                          onClick={async () => {
-                            if (!confirm('Are you sure you want to delete this image?')) return;
-                            try {
-                              const productId = initialData?.productId?.toString();
-                              await products.deleteImage(productId, img.imageId);
-                              setExistingImages(existingImages.filter(i => i.imageId !== img.imageId));
-                              toast.success('Image deleted successfully');
-                            } catch (err: any) {
-                              toast.error(err.message || 'Failed to delete image');
-                            }
-                          }}
-                          className="p-1.5 bg-terracotta text-white rounded-lg hover:bg-terracotta/90 shadow-md"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-
-                      {img.isPrimary && (
-                        <span className="absolute bottom-2 left-2 px-2 py-0.5 bg-forest text-white text-[10px] font-bold rounded-md shadow-sm">
-                          Primary
-                        </span>
-                      )}
-                    </div>
-                  ))}
+            {/* Existing Images Management (Edit Mode) */}
+            {isEdit && (
+              <div className="space-y-3 pt-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-bold uppercase tracking-wider text-forest">
+                    Current Product Images ({existingImages.length})
+                  </p>
+                  <p className="text-[11px] text-forest/60">Drag to reorder • Tap trash icon to delete</p>
                 </div>
-                <p className="text-[11px] text-forest/50">Drag images to reorder. Hover over an image to set primary or delete.</p>
+
+                {existingImages.length === 0 ? (
+                  <p className="text-sm text-forest/50 italic py-2">No images uploaded for this product yet.</p>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    {existingImages.map((img: any, idx: number) => {
+                      const imageId = img.imageId || img.id;
+                      const imageUrl = typeof img === 'string' ? img : (img.url || '/placeholder.png');
+                      const isPrimary = img.isPrimary || idx === 0;
+
+                      return (
+                        <div 
+                          key={imageId || idx} 
+                          className={`relative aspect-square rounded-2xl overflow-hidden border-2 transition-all ${
+                            draggedExistingIndex === idx 
+                              ? 'border-forest opacity-40 scale-95' 
+                              : isPrimary 
+                              ? 'border-forest ring-2 ring-forest/20 shadow-md' 
+                              : 'border-forest/15 hover:border-forest/40 shadow-xs'
+                          } bg-[#FDFBF9] flex flex-col justify-between p-2`}
+                          draggable
+                          onDragStart={(e) => handleDragStartExisting(e, idx)}
+                          onDragOver={handleDragOverExisting}
+                          onDrop={(e) => handleDropExisting(e, idx)}
+                          onDragEnd={() => setDraggedExistingIndex(null)}
+                        >
+                          <img 
+                            src={imageUrl} 
+                            alt={img.altText || "Product"} 
+                            className="absolute inset-0 w-full h-full object-cover pointer-events-none" 
+                          />
+                          
+                          {/* Top bar: Primary Badge + Delete Button */}
+                          <div className="relative z-10 flex items-center justify-between w-full">
+                            {isPrimary ? (
+                              <span className="px-2 py-0.5 bg-forest text-white text-[10px] font-bold rounded-md shadow-md">
+                                ★ Primary
+                              </span>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={async (e) => {
+                                  e.stopPropagation();
+                                  try {
+                                    const productId = initialData?.productId?.toString() || initialData?.id?.toString();
+                                    await products.setPrimaryImage(productId, imageId);
+                                    const updated = existingImages.map((i, index) => ({
+                                      ...i,
+                                      isPrimary: (i.imageId || i.id) === imageId
+                                    }));
+                                    setExistingImages(updated);
+                                    toast.success('Set as primary image');
+                                  } catch (err: any) {
+                                    toast.error(err.message || 'Failed to set primary image');
+                                  }
+                                }}
+                                className="px-2 py-0.5 bg-white/90 backdrop-blur-sm text-forest text-[10px] font-bold rounded-md shadow-md hover:bg-forest hover:text-white transition-colors"
+                              >
+                                Make Primary
+                              </button>
+                            )}
+
+                            <button
+                              type="button"
+                              title="Delete Image"
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                if (!confirm('Delete this image permanently?')) return;
+                                try {
+                                  const productId = initialData?.productId?.toString() || initialData?.id?.toString();
+                                  await products.deleteImage(productId, imageId);
+                                  setExistingImages(existingImages.filter((i) => (i.imageId || i.id) !== imageId));
+                                  toast.success('Image deleted successfully');
+                                } catch (err: any) {
+                                  toast.error(err.message || 'Failed to delete image');
+                                }
+                              }}
+                              className="flex items-center justify-center h-7 w-7 rounded-lg bg-terracotta text-white shadow-md hover:bg-terracotta/90 transition-colors"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+
+                          {/* Bottom Drag handle hint */}
+                          <div className="relative z-10 flex items-center justify-center w-full">
+                            <span className="text-[9px] font-bold tracking-wider uppercase bg-black/40 text-white px-2 py-0.5 rounded-full backdrop-blur-sm pointer-events-none">
+                              Drag to move
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
           </div>
