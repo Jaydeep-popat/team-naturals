@@ -131,9 +131,9 @@ export default function ProductDetailClient() {
   };
 
   return (
-    <div className="w-full bg-white">
+    <div className="w-full max-w-full overflow-hidden bg-white">
       <div className="border-b border-forest/8 bg-cream-soft">
-        <div className="mx-auto max-w-6xl px-5 py-5 lg:px-8">
+        <div className="mx-auto max-w-6xl px-4 py-4 sm:px-5 sm:py-5 lg:px-8">
           <Breadcrumb
             items={[
               { label: 'Home', to: '/' },
@@ -148,7 +148,7 @@ export default function ProductDetailClient() {
         </div>
       </div>
 
-      <div className="mx-auto grid max-w-6xl gap-10 px-5 py-10 lg:grid-cols-2 lg:gap-14 lg:px-8">
+      <div className="mx-auto grid max-w-6xl w-full gap-8 px-4 py-6 sm:px-5 sm:py-10 lg:grid-cols-2 lg:gap-14 lg:px-8">
         <ProductGallery
           images={displayImages}
           imageAlts={imageAlts}
@@ -156,7 +156,7 @@ export default function ProductDetailClient() {
         />
 
         {/* Info */}
-        <div>
+        <div className="w-full min-w-0 max-w-full overflow-hidden">
           <p className="text-[10px] uppercase tracking-[0.24em] text-muted">
             {categoryLabel}
           </p>
@@ -377,27 +377,27 @@ export default function ProductDetailClient() {
 
           <p className="mt-5 text-[15px] leading-relaxed text-muted">{product.shortDescription || product.description || ''}</p>
 
-          <div className="mt-7 flex flex-wrap items-center gap-3">
+          <div className="mt-7 flex flex-wrap items-center gap-2.5 sm:gap-3 w-full max-w-full">
             <QtyStepper value={qty} onChange={(q) => setQty(Math.max(1, q))} label={product.name} />
             {user?.role === 'admin' ? (
-              <div className="flex-1 flex gap-3">
+              <div className="flex-1 min-w-[200px] flex gap-3">
                 <div className="flex-1 flex items-center justify-center rounded-full bg-gray-100 px-6 py-3.5 text-sm font-medium text-gray-500 cursor-not-allowed border border-gray-200">
                   Admins cannot purchase
                 </div>
               </div>
             ) : product.stockQty === 0 ? (
-              <div className="flex-1 flex gap-3">
+              <div className="flex-1 min-w-[200px] flex gap-3">
                 <div className="flex-1 flex items-center justify-center rounded-full bg-gray-50 px-6 py-3.5 text-sm font-medium text-forest/50 cursor-not-allowed border border-forest/15">
                   Out of Stock
                 </div>
               </div>
             ) : (
-              <>
+              <div className="flex flex-1 min-w-[240px] items-center gap-2">
                 <motion.button
                   type="button"
                   whileTap={{ scale: 0.96 }}
                   onClick={handleAddToCart}
-                  className="flex-1 rounded-full bg-forest px-6 py-3.5 text-sm text-cream transition-colors hover:bg-forest-deep sm:flex-none sm:px-8"
+                  className="flex-1 rounded-full bg-forest px-4 py-3.5 text-xs sm:text-sm font-bold text-cream transition-colors hover:bg-forest-deep"
                 >
                   Add to Cart
                 </motion.button>
@@ -405,18 +405,18 @@ export default function ProductDetailClient() {
                   type="button"
                   whileTap={{ scale: 0.96 }}
                   onClick={buyNow}
-                  className="flex-1 rounded-full bg-gold px-6 py-3.5 text-sm text-forest-deep transition-colors hover:bg-gold/90 sm:flex-none sm:px-8"
+                  className="flex-1 rounded-full bg-gold px-4 py-3.5 text-xs sm:text-sm font-bold text-forest-deep transition-colors hover:bg-gold/90"
                 >
                   Buy Now
                 </motion.button>
-              </>
+              </div>
             )}
             <button
               type="button"
               onClick={() => toggleWishlist(String(product.productId || product.id))}
               aria-label="Save to wishlist"
               aria-pressed={wished}
-              className="rounded-full border border-forest/15 p-3.5 text-forest transition-colors hover:bg-cream"
+              className="rounded-full border border-forest/15 p-3.5 text-forest transition-colors hover:bg-cream shrink-0"
             >
               <HeartIcon
                 size={17}
@@ -646,9 +646,9 @@ function ProductGallery({
 
   return (
     <>
-      <div>
+      <div className="w-full max-w-full overflow-hidden">
         <div
-          className="group relative aspect-square overflow-hidden rounded-3xl border border-forest/8 bg-cream"
+          className="group relative aspect-[4/3] sm:aspect-square w-full max-w-full overflow-hidden rounded-2xl sm:rounded-3xl border border-forest/8 bg-cream"
           onMouseEnter={() => setIsPaused(true)}
           onMouseLeave={() => setIsPaused(false)}
         >
