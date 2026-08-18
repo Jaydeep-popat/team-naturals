@@ -56,14 +56,14 @@ export default function AdminCustomersPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = React.useState(1);
   const [totalRecords, setTotalRecords] = React.useState(0);
-  const limit = 10;
+  const [limit, setLimit] = useState(10);
 
   React.useEffect(() => {
     const fetchCustomers = async () => {
       setIsLoading(true);
       try {
-        const query: any = { page: String(page), limit: String(limit) };
-        if (searchQuery) query.q = searchQuery;
+        const query: any = { page: Number(page), limit: Number(limit) };
+        if (searchQuery) query.search = searchQuery; // adminUsers.list expects 'search'
         
         const res = await usersApi.adminList(query);
         
@@ -92,7 +92,7 @@ export default function AdminCustomersPage() {
     };
     
     fetchCustomers();
-  }, [page, searchQuery]);
+  }, [page, limit, searchQuery]);
 
   return (
     <div className="space-y-6">
@@ -117,6 +117,10 @@ export default function AdminCustomersPage() {
         totalRecords={totalRecords}
         limit={limit}
         onPageChange={setPage}
+        onLimitChange={(newLimit) => {
+          setLimit(newLimit);
+          setPage(1);
+        }}
       />
     </div>
   );

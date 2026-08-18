@@ -71,8 +71,8 @@ function PaymentContent() {
         transition={{ duration: 0.3 }}
         className="mx-auto max-w-6xl px-5 py-6 lg:px-8"
       >
-        <div className="grid gap-8 lg:grid-cols-[1fr_360px]">
-          <div>
+        <div className="flex flex-col lg:grid gap-8 lg:grid-cols-[1fr_360px]">
+          <div className="order-2 lg:order-1">
             <h1 className="font-display text-3xl text-forest mb-6">Payment</h1>
 
             <div className="space-y-8">
@@ -114,12 +114,12 @@ function PaymentContent() {
                   </label>
                 </div>
 
-                <div className="text-center">
+                <div className="hidden lg:block text-center mt-6">
                   <motion.button
                     onClick={handlePayment}
                     disabled={lines.length === 0 || loading || !addressId}
                     whileTap={{ scale: 0.98 }}
-                    className="rounded-full bg-forest px-10 py-4 w-full max-w-md text-[16px] font-medium text-cream shadow-soft transition-all hover:bg-forest-deep hover:shadow-lift disabled:opacity-50"
+                    className="rounded-sm bg-[#fb641b] px-10 py-4 w-full max-w-md text-[16px] font-medium text-white shadow-sm transition-all hover:bg-[#f3580a] disabled:opacity-50"
                   >
                     <span className="inline-flex items-center justify-center gap-2">
                       {loading && <Loader2 size={16} className="animate-spin" />}
@@ -127,7 +127,7 @@ function PaymentContent() {
                     </span>
                   </motion.button>
                   {checkoutError && (
-                    <p className="mt-3 text-sm font-medium text-terracotta">
+                    <p className="mt-3 text-sm font-medium text-red-500">
                       {checkoutError}
                     </p>
                   )}
@@ -146,9 +146,27 @@ function PaymentContent() {
             </div>
           </div>
 
-          <CheckoutSummary codFee={codFee} />
+          <div className="order-1 lg:order-2">
+            <CheckoutSummary codFee={codFee} />
+          </div>
         </div>
       </motion.div>
+
+      {/* Fixed Bottom Bar for Mobile */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 p-3 flex items-center justify-between shadow-[0_-4px_12px_rgba(0,0,0,0.05)] lg:hidden">
+        <div className="flex flex-col">
+          <span className="text-[17px] font-bold text-gray-900">₹{total}</span>
+          <span className="text-[12px] text-[#2874f0] font-medium" onClick={() => window.scrollTo({top: 0, behavior: 'smooth'})}>View price details</span>
+        </div>
+        <button
+          onClick={handlePayment}
+          disabled={lines.length === 0 || loading || !addressId}
+          className="rounded-sm bg-[#fb641b] px-6 py-3 text-[15px] font-medium text-white shadow-sm transition-all hover:bg-[#f3580a] disabled:opacity-50 flex items-center gap-2"
+        >
+          {loading && <Loader2 size={16} className="animate-spin" />}
+          {loading ? 'Processing...' : 'Place Order'}
+        </button>
+      </div>
     </div>
   );
 }

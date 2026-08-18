@@ -51,13 +51,17 @@ export function useAvailableDiscounts() {
       }
       
       // If it applies to specific products
-      if (coupon.applyTo === 'specific_products' && coupon.targetItemIds && coupon.targetItemIds.length > 0) {
-        if (!coupon.targetItemIds.includes(productId.toString())) return false;
+      if (coupon.applyTo === 'specific_products' && coupon.targetItemIds && Array.isArray(coupon.targetItemIds) && coupon.targetItemIds.length > 0) {
+        const idStr = String(productId);
+        const idNum = Number(productId);
+        if (!coupon.targetItemIds.includes(idStr) && !coupon.targetItemIds.includes(idNum)) return false;
       }
       
       // If it applies to specific categories
-      if (coupon.applyTo === 'specific_categories' && categoryId && coupon.targetItemIds && coupon.targetItemIds.length > 0) {
-        if (!coupon.targetItemIds.includes(categoryId.toString())) return false;
+      if (coupon.applyTo === 'specific_categories' && categoryId && coupon.targetItemIds && Array.isArray(coupon.targetItemIds) && coupon.targetItemIds.length > 0) {
+        const idStr = String(categoryId);
+        const idNum = Number(categoryId);
+        if (!coupon.targetItemIds.includes(idStr) && !coupon.targetItemIds.includes(idNum)) return false;
       }
       
       return true;

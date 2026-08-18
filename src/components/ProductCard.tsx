@@ -15,6 +15,7 @@ import { isCloudinaryUrl } from '@/src/lib/cloudinary';
 import { OptimizedImage } from './OptimizedImage';
 import { extractProductImageAlt } from '@/src/lib/seo';
 import { useAvailableDiscounts } from '../hooks/useAvailableDiscounts';
+import { triggerFlyToCart } from './FlyToCart';
 
 // True hover guard: returns true only on pointer-fine (mouse) devices
 const canHover = typeof window !== 'undefined' && window.matchMedia('(hover: hover) and (pointer: fine)').matches;
@@ -45,11 +46,17 @@ export function ProductCard({
   const applicableCoupons = getCouponsForProduct(productId, categoryId);
   const hasCoupons = applicableCoupons.length > 0;
 
-  function handleAddToCart() {
+  function handleAddToCart(e: React.MouseEvent) {
     if (!isAuthenticated) {
       setShowAuthModal(true);
       return;
     }
+    const rawImages = product.images || [];
+    const images = rawImages.map((img) =>
+      typeof img === 'string' ? img : ((img as any)?.url || '/placeholder.png')
+    );
+    triggerFlyToCart(e, images[0] || '/placeholder.png');
+    
     addToCart(product, quantity);
     setAdded(true);
     setTimeout(() => {
@@ -318,31 +325,8 @@ export function ProductCard({
                 }
               }
 
-              let bestCouponPrice = finalPrice;
-              let bogoCoupon = null;
-              
-              if (applicableCoupons && applicableCoupons.length > 0) {
-                let maxDiscValue = 0;
-                applicableCoupons.forEach((coupon: any) => {
-                  if (coupon.type === 'buy_x') {
-                    bogoCoupon = coupon;
-                  } else {
-                    let discountAmt = 0;
-                    if (coupon.type === 'percent') {
-                      discountAmt = finalPrice * (Number(coupon.value) / 100);
-                      const maxDisc = coupon.maxDiscount ? Number(coupon.maxDiscount) : Infinity;
-                      if (discountAmt > maxDisc) discountAmt = maxDisc;
-                    } else if (coupon.type === 'flat') {
-                      discountAmt = Number(coupon.value);
-                    }
-                    
-                    if (discountAmt > maxDiscValue) {
-                      maxDiscValue = discountAmt;
-                    }
-                  }
-                });
-                bestCouponPrice = Math.max(0, finalPrice - maxDiscValue);
-              }
+              // Only show BOGO (buy_x) offer badge on product card
+              const bogoCoupon = applicableCoupons?.find((c: any) => c.type === 'buy_x') || null;
 
               return (
                 <div className="flex flex-col gap-1 w-full">
@@ -373,20 +357,11 @@ export function ProductCard({
                     </div>
                   )}
 
-                  {bogoCoupon ? (
+                  {bogoCoupon && (
                     <div className="flex items-center text-[10px] sm:text-[11px] font-bold text-blue-700 bg-blue-50 border border-blue-100/50 px-1.5 py-0.5 rounded w-fit mt-0.5 uppercase tracking-wide">
                       <span className="mr-1">🎁</span> BUY {(bogoCoupon as any).minQuantity || 1} GET {(bogoCoupon as any).getQuantity || 1} {Number((bogoCoupon as any).value) === 100 ? 'FREE' : `AT ${Number((bogoCoupon as any).value)}% OFF`}
                     </div>
-                  ) : bestCouponPrice < finalPrice ? (
-                    <div className="flex items-center text-[14px] sm:text-[15px] text-blue-700 w-fit mt-0.5">
-                      <span className="font-extrabold">Buy at ₹{Math.round(bestCouponPrice).toLocaleString('en-IN')}</span>
-                    </div>
-                  ) : bestCouponPrice === finalPrice && hasCoupons ? (
-                    <div className="flex items-center text-[10px] sm:text-[11px] text-forest/70 w-fit mt-0.5">
-                      <span className="mr-1">🏷</span>
-                      <span className="font-medium">Offers available</span>
-                    </div>
-                  ) : null}
+                  )}
                 </div>
               );
             })()}
@@ -416,7 +391,6 @@ export function ProductCard({
         </div>
 
         {/* Add to Cart & Quantity */}
-        {!compact && (
         <div className="mt-3 flex flex-row items-center gap-2">
           {product.stockQty !== 0 && user?.role !== 'admin' && !added && (
             <div className="flex h-9 shrink-0 items-center justify-between rounded-full border border-forest/15 bg-white px-1 py-1 min-w-[72px] shadow-sm">
@@ -477,9 +451,9 @@ export function ProductCard({
               <motion.button
                 type="button"
                 whileTap={{ scale: 0.9 }}
-                onClick={handleAddToCart}
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleAddToCart(e); }}
                 aria-label={`Add ${product.name} to cart`}
-                className="flex h-7 w-7 items-center justify-center rounded-full bg-forest text-cream transition-colors hover:bg-forest-deep sm:h-8 sm:w-8"
+                className="flex h-7 w-7 items-center justify-center rounded-full bg-forest text-cream transition-colors hover:bg-forest-deep sm:h-8 sm:w-8 ml-auto"
               >
                 <ShoppingBagIcon size={14} strokeWidth={1.8} />
               </motion.button>
@@ -487,7 +461,6 @@ export function ProductCard({
             </AnimatePresence>
           </div>
         </div>
-        )}
       </div>
     </motion.article>
 

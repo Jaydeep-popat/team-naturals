@@ -38,12 +38,27 @@ export default function AdminProductsPage() {
   const [deleteTarget, setDeleteTarget] = useState<Product | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const [pagination, setPagination] = useState({ total: 0, pages: 1 });
 
   const fetchProducts = async () => {
     setIsLoading(true);
     try {
-      const res = await productsApi.adminList(activeFilters);
+      const res = await productsApi.adminList({
+        page: page.toString(),
+        limit: limit.toString(),
+        search: searchQuery,
+        ...activeFilters
+      });
       setProducts(res.data.products);
+      if (res.data.pagination) {
+        setPagination({
+          total: res.data.pagination.total || 0,
+          pages: res.data.pagination.pages || 1
+        });
+      }
     } catch (err) {
       console.error('Failed to fetch products:', err);
     } finally {
@@ -54,14 +69,20 @@ export default function AdminProductsPage() {
   useEffect(() => {
     fetchProducts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeFilters]);
+  }, [activeFilters, page, limit, searchQuery]);
 
   const handleFilterChange = (key: string, value: string | undefined) => {
+    setPage(1); // Reset to first page on filter change
     setActiveFilters((prev) => {
       const next = { ...prev };
       if (value === undefined) delete next[key]; else next[key] = value;
       return next;
     });
+  };
+
+  const handleSearch = (query: string) => {
+    setPage(1);
+    setSearchQuery(query);
   };
 
   const handleDelete = async () => {
@@ -158,17 +179,21 @@ export default function AdminProductsPage() {
 
       <FilterBar
         searchPlaceholder="Search by product name or SKU..."
-        onSearch={setSearchQuery}
+        onSearch={handleSearch}
         filters={[
           { key: 'status', label: 'Status', options: [{ value: 'active', label: 'Active' }, { value: 'draft', label: 'Draft' }, { value: 'archived', label: 'Archived' }] },
         ]}
         activeFilters={activeFilters}
         onFilterChange={handleFilterChange}
-        onClearFilters={() => setActiveFilters({})}
+        onClearFilters={() => {
+          setActiveFilters({});
+          setSearchQuery('');
+          setPage(1);
+        }}
       />
 
       <DataTable
-        data={products.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()))}
+        data={products}
         columns={columns}
         keyExtractor={(p) => p.productId.toString()}
         selectable
@@ -176,6 +201,15 @@ export default function AdminProductsPage() {
         onSelectionChange={setSelectedKeys}
         onRowClick={(p) => router.push(`/admin/products/${p.productId}`)}
         emptyMessage={isLoading ? "Loading products..." : "No products found."}
+        page={page}
+        limit={limit}
+        totalPages={pagination.pages}
+        totalRecords={pagination.total}
+        onPageChange={setPage}
+        onLimitChange={(newLimit) => {
+          setLimit(newLimit);
+          setPage(1);
+        }}
       />
 
       <ConfirmDialog

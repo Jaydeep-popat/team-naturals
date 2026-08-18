@@ -7,7 +7,7 @@ import { motion } from 'framer-motion';
 import { useCart } from "@/src/contexts/CartContext";
 import { CheckoutStepper } from "@/src/components/CheckoutStepper";
 import { CheckoutSummary } from "@/src/components/CheckoutSummary";
-import { ArrowLeftIcon, MapPin, Plus, CheckCircle2 } from 'lucide-react';
+import { ArrowLeftIcon, MapPin, Plus, CheckCircle2, Loader2 } from 'lucide-react';
 import { addresses } from '@/src/lib/api';
 import { Address } from '@/src/types/auth';
 import { AddressCard } from '@/src/components/account/AddressCard';
@@ -25,6 +25,8 @@ export default function AddressPage() {
   const [showNewAddressForm, setShowNewAddressForm] = useState(false);
   const [showMapModal, setShowMapModal] = useState(false);
   const [isManualEntry, setIsManualEntry] = useState(false);
+  const [isProceeding, setIsProceeding] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -58,6 +60,7 @@ export default function AddressPage() {
     landmark: '',
     latitude: null as number | null,
     longitude: null as number | null,
+    type: 'Home' as 'Home' | 'Work',
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -78,6 +81,7 @@ export default function AddressPage() {
 
   const handleProceedWithSelected = () => {
     if (selectedAddressId) {
+      setIsProceeding(true);
       router.push(`/checkout/payment?addressId=${selectedAddressId}`);
     }
   };
@@ -85,6 +89,7 @@ export default function AddressPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (validate()) {
+      setIsSubmitting(true);
       try {
         const res = await addresses.create({
           fullName: form.name,
@@ -102,7 +107,8 @@ export default function AddressPage() {
         router.push(`/checkout/payment?addressId=${addressId}`);
       } catch (error) {
         console.error('Failed to create address', error);
-        toast.error('Failed to save address. Please make sure you are logged in.');
+        toast.error('Failed to save address');
+        setIsSubmitting(false);
       }
     }
   };
@@ -121,8 +127,8 @@ export default function AddressPage() {
         transition={{ duration: 0.3 }}
         className="mx-auto max-w-6xl px-5 py-6 lg:px-8"
       >
-        <div className="grid gap-8 lg:grid-cols-[1fr_360px]">
-          <div>
+        <div className="flex flex-col lg:grid gap-8 lg:grid-cols-[1fr_360px]">
+          <div className="order-2 lg:order-1">
             <div className="mb-6 flex items-center justify-between">
               <h1 className="font-display text-3xl text-forest">Delivery details</h1>
             </div>
@@ -164,25 +170,29 @@ export default function AddressPage() {
                           </p>
                         </div>
                       ))}
+                      
+                      {/* Add New Address Card Option */}
+                      <div
+                        onClick={() => setShowMapModal(true)}
+                        className="relative cursor-pointer rounded-[20px] border-2 border-dashed border-forest/20 p-5 flex flex-col items-center justify-center text-forest/70 hover:bg-forest/5 hover:border-forest/40 hover:text-forest transition-all min-h-[130px]"
+                      >
+                        <Plus size={28} className="mb-2" />
+                        <span className="font-medium">Add a new address</span>
+                      </div>
                     </div>
-                    
-                    <button
-                      onClick={() => setShowMapModal(true)}
-                      className="flex items-center gap-2 text-forest font-medium hover:text-terracotta transition-colors"
-                    >
-                      <Plus size={18} /> Add a new address
-                    </button>
 
-                    <div className="flex items-center justify-between pt-6 border-t border-forest/10 mt-6">
+                    <div className="hidden lg:flex items-center justify-between pt-6 border-t border-forest/10 mt-6">
                       <Link href="/cart" className="flex items-center gap-2 text-sm font-medium text-forest hover:text-terracotta transition-colors">
                         <ArrowLeftIcon size={16} /> Return to cart
                       </Link>
                       <motion.button
                         whileTap={{ scale: 0.98 }}
                         onClick={handleProceedWithSelected}
-                        className="rounded-full bg-forest px-8 py-4 text-[15px] font-medium text-cream shadow-soft transition-all hover:bg-forest-deep hover:shadow-lift"
+                        disabled={isProceeding}
+                        className="rounded-full bg-forest px-8 py-4 text-[15px] font-medium text-cream shadow-soft transition-all hover:bg-forest-deep hover:shadow-lift flex items-center justify-center gap-2 disabled:opacity-70"
                       >
-                        Deliver to this address
+                        {isProceeding && <Loader2 size={16} className="animate-spin" />}
+                        {isProceeding ? 'Processing...' : 'Deliver to this address'}
                       </motion.button>
                     </div>
                   </div>
@@ -244,6 +254,19 @@ export default function AddressPage() {
                               <FloatingField id="state" label="State" value={form.state} onChange={(v) => setForm({ ...form, state: v })} error={errors.state} required />
                             </div>
                             <FloatingField id="pin" label="Pincode" value={form.pin} onChange={(v) => setForm({ ...form, pin: v })} error={errors.pin} required />
+                            
+                            <div className="flex justify-end pt-2">
+                              <button 
+                                type="button"
+                                onClick={() => {
+                                  setShowNewAddressForm(false);
+                                  setShowMapModal(true);
+                                }}
+                                className="text-[#1D4ED8] font-semibold text-[14px] flex items-center gap-1.5 hover:underline"
+                              >
+                                <MapPin size={16} /> Use map instead
+                              </button>
+                            </div>
                           </div>
                         ) : (
                           <>
@@ -281,18 +304,34 @@ export default function AddressPage() {
                     <div className="pt-2">
                       <label className="block text-[13px] text-gray-500 mb-2">Type of address</label>
                       <div className="flex gap-3">
-                        <button type="button" className="flex items-center gap-2 px-4 py-2 rounded-full border border-gray-200 text-gray-700 font-medium text-[14px] hover:border-gray-300 bg-white">
+                        <button 
+                          type="button" 
+                          onClick={() => setForm({ ...form, type: 'Home' })}
+                          className={`flex items-center gap-2 px-4 py-2 rounded-full border font-medium text-[14px] transition-colors ${
+                            form.type === 'Home' 
+                              ? 'border-[#1D4ED8] bg-blue-50 text-[#1D4ED8]' 
+                              : 'border-gray-200 text-gray-700 hover:border-gray-300 bg-white'
+                          }`}
+                        >
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
                           Home
                         </button>
-                        <button type="button" className="flex items-center gap-2 px-4 py-2 rounded-full border border-gray-200 text-gray-700 font-medium text-[14px] hover:border-gray-300 bg-white">
+                        <button 
+                          type="button" 
+                          onClick={() => setForm({ ...form, type: 'Work' })}
+                          className={`flex items-center gap-2 px-4 py-2 rounded-full border font-medium text-[14px] transition-colors ${
+                            form.type === 'Work' 
+                              ? 'border-[#1D4ED8] bg-blue-50 text-[#1D4ED8]' 
+                              : 'border-gray-200 text-gray-700 hover:border-gray-300 bg-white'
+                          }`}
+                        >
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="16" height="20" x="4" y="2" rx="2" ry="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M12 6h.01"/><path d="M12 10h.01"/><path d="M12 14h.01"/><path d="M16 10h.01"/><path d="M16 14h.01"/><path d="M8 10h.01"/><path d="M8 14h.01"/></svg>
                           Work
                         </button>
                       </div>
                     </div>
 
-                    <div className="pt-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-gray-100 mt-6">
+                    <div className="hidden lg:flex pt-4 items-center justify-between gap-4 border-t border-gray-100 mt-6">
                       <Link href="/cart" className="flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-black transition-colors w-full sm:w-auto justify-center">
                         <ArrowLeftIcon size={16} /> Return to cart
                       </Link>
@@ -308,10 +347,12 @@ export default function AddressPage() {
                         )}
                         <motion.button
                           type="submit"
+                          disabled={isSubmitting}
                           whileTap={{ scale: 0.98 }}
-                          className="flex-[2] sm:flex-none rounded-xl bg-[#1D4ED8] hover:bg-blue-700 px-8 py-4 text-[16px] font-bold text-white shadow-sm transition-colors text-center"
+                          className="flex-[2] sm:flex-none rounded-xl bg-[#1D4ED8] hover:bg-blue-700 px-8 py-4 text-[16px] font-bold text-white shadow-sm transition-colors text-center disabled:opacity-70 flex items-center justify-center gap-2"
                         >
-                          Save address
+                          {isSubmitting && <Loader2 size={18} className="animate-spin" />}
+                          {isSubmitting ? 'Saving...' : 'Save address'}
                         </motion.button>
                       </div>
                     </div>
@@ -321,9 +362,52 @@ export default function AddressPage() {
             )}
           </div>
 
-          <CheckoutSummary />
+          <div className="order-1 lg:order-2">
+            <CheckoutSummary />
+          </div>
         </div>
       </motion.div>
+
+      {/* Fixed Bottom Bar for Mobile (Select Address) */}
+      {savedAddresses.length > 0 && !showNewAddressForm && !isLoadingAddresses && (
+        <div className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 p-3 flex items-center justify-between shadow-[0_-4px_12px_rgba(0,0,0,0.05)] lg:hidden">
+          <div className="flex flex-col">
+            <span className="text-[17px] font-bold text-gray-900">₹{subtotal}</span>
+            <span className="text-[12px] text-[#2874f0] font-medium" onClick={() => window.scrollTo({top: 0, behavior: 'smooth'})}>View price details</span>
+          </div>
+          <button
+            onClick={handleProceedWithSelected}
+            disabled={isProceeding}
+            className="rounded-sm bg-[#fb641b] px-8 py-3 text-[15px] font-medium text-white shadow-sm transition-all hover:bg-[#f3580a] flex items-center justify-center gap-2 disabled:opacity-70"
+          >
+            {isProceeding && <Loader2 size={16} className="animate-spin" />}
+            {isProceeding ? 'Loading...' : 'Deliver Here'}
+          </button>
+        </div>
+      )}
+
+      {/* Fixed Bottom Bar for Mobile (Manual Address Form) */}
+      {showNewAddressForm && (
+        <div className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 p-3 flex items-center justify-between shadow-[0_-4px_12px_rgba(0,0,0,0.05)] lg:hidden gap-3">
+          {savedAddresses.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowNewAddressForm(false)}
+              className="flex-1 rounded-sm border border-gray-200 bg-white px-4 py-3 text-[15px] font-medium text-gray-700 transition-colors hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+          )}
+          <button
+            onClick={handleSubmit}
+            disabled={isSubmitting}
+            className="flex-[2] rounded-sm bg-[#1D4ED8] px-4 py-3 text-[15px] font-medium text-white shadow-sm transition-all hover:bg-blue-700 flex items-center justify-center gap-2 disabled:opacity-70"
+          >
+            {isSubmitting && <Loader2 size={16} className="animate-spin" />}
+            {isSubmitting ? 'Saving...' : 'Save Address'}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

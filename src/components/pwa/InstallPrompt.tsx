@@ -156,7 +156,7 @@ export default function InstallPrompt() {
 
             <div className="flex gap-4 items-center pr-6">
               <div className="w-14 h-14 bg-forest/5 rounded-xl flex-shrink-0 flex items-center justify-center overflow-hidden">
-                <img src="/icons/manifest-icon-192.maskable.png" alt="App Icon" className="w-full h-full object-contain p-1" />
+                <img src="/appstore-images/android/launchericon-192x192.png" alt="App Icon" className="w-full h-full object-contain p-2" />
               </div>
               <div className="flex-1">
                 <h3 className="font-bold text-forest text-sm">Install Team Naturals</h3>

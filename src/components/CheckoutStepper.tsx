@@ -17,39 +17,14 @@ export function CheckoutStepper({ currentStep }: { currentStep: number }) {
   return (
     <div className="w-full py-8 overflow-hidden">
       <div className="mx-auto max-w-4xl px-4">
-        {/* Mobile View */}
-        <div className="md:hidden flex flex-col items-center">
-          <div className="flex items-center justify-between w-full text-sm mb-4">
-            <span className="font-semibold text-forest/70 uppercase tracking-widest text-[11px]">
-              Step {currentStep} of {steps.length}
-            </span>
-            <motion.span
-              key={currentStepName}
-              initial={{ opacity: 0, y: 5 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="text-forest font-bold tracking-wide"
-            >
-              {currentStepName}
-            </motion.span>
-          </div>
-          <div className="relative h-2 w-full bg-forest/10 rounded-full overflow-hidden shadow-inner">
-            <motion.div
-              className="absolute left-0 top-0 bottom-0 bg-gradient-to-r from-forest to-[#3A6B4C]"
-              initial={false}
-              animate={{ width: `${((currentStep) / steps.length) * 100}%` }}
-              transition={{ type: 'spring', stiffness: 200, damping: 25 }}
-            />
-          </div>
-        </div>
-
-        {/* Desktop View */}
-        <div className="hidden md:flex relative items-start justify-between mt-4">
+        {/* Unified Responsive View */}
+        <div className="flex relative items-start justify-between mt-2 sm:mt-4">
           {/* Background line */}
-          <div className="absolute left-[12.5%] right-[12.5%] top-[22px] h-[3px] bg-forest/10 rounded-full overflow-hidden" />
+          <div className="absolute left-[12.5%] right-[12.5%] top-[20px] sm:top-[22px] h-[2px] sm:h-[3px] bg-forest/10 rounded-full overflow-hidden" />
 
           {/* Active progress line (Animated Gradient) */}
           <motion.div
-            className="absolute left-[12.5%] top-[22px] h-[3px] bg-gradient-to-r from-forest via-gold to-forest bg-[length:200%_auto] rounded-full origin-left shadow-[0_0_8px_rgba(31,61,43,0.3)]"
+            className="absolute left-[12.5%] top-[20px] sm:top-[22px] h-[2px] sm:h-[3px] bg-gradient-to-r from-forest via-gold to-forest bg-[length:200%_auto] rounded-full origin-left shadow-[0_0_8px_rgba(31,61,43,0.3)]"
             initial={false}
             animate={{ 
               width: `${((currentStep - 1) / (steps.length - 1)) * 75}%`,
@@ -72,7 +47,7 @@ export function CheckoutStepper({ currentStep }: { currentStep: number }) {
                 {/* Glowing Halo for Active Step */}
                 {isActive && (
                   <motion.div
-                    className="absolute top-0 left-1/2 -translate-x-1/2 w-14 h-14 bg-gold/20 rounded-full blur-md"
+                    className="absolute top-0 left-1/2 -translate-x-1/2 w-10 h-10 sm:w-14 sm:h-14 bg-gold/20 rounded-full blur-md"
                     initial={{ scale: 0.8, opacity: 0 }}
                     animate={{ scale: [1, 1.3, 1], opacity: [0.4, 0.8, 0.4] }}
                     transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
@@ -89,7 +64,7 @@ export function CheckoutStepper({ currentStep }: { currentStep: number }) {
                   }}
                   whileHover={!isActive ? { scale: 1.05 } : {}}
                   transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-                  className="relative flex h-12 w-12 items-center justify-center rounded-full border-[3px] transition-colors bg-white shadow-sm"
+                  className="relative flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full border-[2px] sm:border-[3px] transition-colors bg-white shadow-sm"
                 >
                   {isCompleted ? (
                     <motion.div
@@ -97,7 +72,7 @@ export function CheckoutStepper({ currentStep }: { currentStep: number }) {
                       animate={{ scale: 1 }}
                       transition={{ type: 'spring', stiffness: 400, damping: 25 }}
                     >
-                      <CheckIcon size={20} strokeWidth={3} className="text-cream" />
+                      <CheckIcon strokeWidth={3} className="text-cream w-4 h-4 sm:w-5 sm:h-5" />
                     </motion.div>
                   ) : (
                     <motion.div
@@ -105,7 +80,7 @@ export function CheckoutStepper({ currentStep }: { currentStep: number }) {
                         color: isActive ? 'rgb(253,251,249)' : 'rgba(31,61,43,0.4)'
                       }}
                     >
-                      <Icon size={20} strokeWidth={isActive ? 2.5 : 2} />
+                      <Icon strokeWidth={isActive ? 2.5 : 2} className="w-4 h-4 sm:w-5 sm:h-5" />
                     </motion.div>
                   )}
                 </motion.div>
@@ -120,7 +95,7 @@ export function CheckoutStepper({ currentStep }: { currentStep: number }) {
                   className="mt-5 flex flex-col items-center"
                 >
                   <span
-                    className={`text-[13px] tracking-wide transition-colors ${
+                    className={`text-[10px] sm:text-[13px] tracking-wide transition-colors whitespace-nowrap ${
                       isActive 
                         ? 'text-forest font-bold drop-shadow-sm' 
                         : isCompleted 

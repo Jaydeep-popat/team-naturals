@@ -126,12 +126,12 @@ export function Header() {
         transition={{ duration: 0.3 }}
       >
         <motion.div
-          className="relative mx-auto flex w-full max-w-[1600px] items-center justify-between px-6 sm:px-8 lg:px-12 xl:px-16"
+          className="relative mx-auto grid w-full max-w-[1600px] grid-cols-2 lg:grid-cols-[1fr_auto_1fr] gap-4 lg:gap-8 xl:gap-12 items-center px-4 sm:px-6 lg:px-8 xl:px-10"
           animate={{ height: scrolled ? 64 : 80 }}
           transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
         >
           {/* Left: Mobile Menu + Logo */}
-          <div className="flex shrink-0 items-center gap-0 sm:gap-3">
+          <div className="flex shrink-0 items-center justify-self-start gap-0 sm:gap-3">
             <button
               type="button"
               onClick={() => setMenuOpen(true)}
@@ -158,7 +158,7 @@ export function Header() {
           </div>
 
           {/* Center: Nav Links */}
-          <nav className="absolute left-1/2 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 items-center justify-center gap-10 lg:flex" aria-label="Primary">
+          <nav className="hidden lg:flex items-center justify-center justify-self-center gap-5 xl:gap-8" aria-label="Primary">
             {navItems.map((item) => {
               const isActive =
                 item.href === '/'
@@ -264,7 +264,7 @@ export function Header() {
           </nav>
 
           {/* Right: Search + Icons */}
-          <div className="flex shrink-0 items-center justify-end gap-1 sm:gap-6">
+          <div className="flex shrink-0 items-center justify-self-end gap-1 sm:gap-3">
 
 
             {/* Inline Search Bar */}
@@ -272,7 +272,7 @@ export function Header() {
               className={
                 isMobileSearchOpen 
                   ? "absolute left-0 right-0 top-[100%] z-40 flex items-center bg-white px-4 pb-3 shadow-soft sm:static sm:z-auto sm:block sm:bg-transparent sm:px-0 sm:pb-0 sm:shadow-none"
-                  : "hidden sm:block relative"
+                  : "hidden sm:block relative w-56 lg:w-64 xl:w-72"
               }
             >
               <div className="flex w-full items-center gap-1 sm:gap-2 rounded-full border border-terracotta/40 bg-white px-3 sm:px-4 py-1.5 sm:py-2.5 transition-all focus-within:border-terracotta focus-within:shadow-soft">
@@ -299,8 +299,8 @@ export function Header() {
                       }
                     }
                   }}
-                  placeholder="Search products & categories..."
-                  className="w-full sm:w-40 bg-transparent text-[14px] font-medium text-forest outline-none focus:outline-none focus:ring-0 placeholder:font-normal placeholder:text-muted/70 transition-all sm:focus:w-56"
+                  placeholder="Search products & category..."
+                  className="w-full bg-transparent text-[14px] font-medium text-forest outline-none focus:outline-none focus:ring-0 placeholder:font-normal placeholder:text-muted/70 transition-all"
                   aria-label="Search products"
                 />
                 {isMobileSearchOpen && (
@@ -475,11 +475,11 @@ export function Header() {
             ) : (
               <Link
                 href="/login"
-                className="group flex items-center gap-2 sm:gap-3.5 rounded-full bg-forest p-2 sm:px-6 sm:py-2 text-cream shadow-soft transition-colors hover:bg-forest/90"
+                className="group flex shrink-0 items-center gap-2 sm:gap-3.5 rounded-full bg-forest p-2 sm:px-6 sm:py-2 text-cream shadow-soft transition-colors hover:bg-forest/90"
                 aria-label="Log In"
               >
                 <UserIcon size={16} strokeWidth={2} className="transition-transform group-hover:scale-110 sm:h-[18px] sm:w-[18px]" />
-                <span className="hidden sm:inline-block text-[13px] font-semibold tracking-wide">
+                <span className="hidden sm:inline-block text-[13px] font-semibold tracking-wide whitespace-nowrap">
                   Log In
                 </span>
               </Link>
@@ -488,7 +488,7 @@ export function Header() {
             {/* Wishlist */}
             <Link
               href="/wishlist"
-              className="group relative ml-1 sm:ml-3 p-1 text-forest transition-colors hover:text-forest/70 hidden sm:block"
+              className="group relative p-1 text-forest transition-colors hover:text-forest/70 hidden sm:block"
               aria-label={`Wishlist, ${wishlist.length} items`}
             >
               <HeartIcon size={24} strokeWidth={1.8} className="transition-transform group-hover:scale-110" />
@@ -511,7 +511,7 @@ export function Header() {
             {/* Cart */}
             <Link
               href="/cart"
-              className="group relative ml-2 p-1 text-forest transition-colors hover:text-forest/70 block"
+              className="group relative p-1 text-forest transition-colors hover:text-forest/70 block"
               aria-label={`Cart, ${itemCount} items`}
             >
               <ShoppingBagIcon size={24} strokeWidth={1.8} className="transition-transform group-hover:scale-110" />
@@ -560,7 +560,7 @@ function MobileMenu({
         <React.Fragment key="mobile-menu-wrapper">
           <motion.div
             key="mobile-overlay"
-            className="fixed inset-0 z-[60] bg-forest/30 backdrop-blur-sm lg:hidden"
+            className="fixed inset-0 z-[120] bg-forest/30 backdrop-blur-sm lg:hidden"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0, pointerEvents: 'none' }}
@@ -568,7 +568,7 @@ function MobileMenu({
           />
           <motion.nav
             key="mobile-nav"
-            className="fixed inset-y-0 left-0 z-[61] flex w-[85%] max-w-sm flex-col bg-cream-soft p-6 shadow-lift lg:hidden"
+            className="fixed inset-y-0 left-0 z-[121] flex w-[85%] max-w-sm flex-col bg-cream-soft p-6 shadow-lift lg:hidden"
             initial={{ x: '-100%' }}
             animate={{ x: 0 }}
             exit={{ x: '-100%', pointerEvents: 'none' }}

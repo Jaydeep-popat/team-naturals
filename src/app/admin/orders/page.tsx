@@ -37,6 +37,7 @@ export default function AdminOrdersPage() {
   const router = useRouter();
   const [orders, setOrders] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isError, setIsError] = useState(false);
   const [activeFilters, setActiveFilters] = useState<Record<string, string>>({});
   const [selectedKeys, setSelectedKeys] = useState(new Set<string>());
   const [bulkAction, setBulkAction] = useState('');
@@ -49,6 +50,7 @@ export default function AdminOrdersPage() {
 
   const fetchOrders = React.useCallback(async () => {
     setIsLoading(true);
+    setIsError(false);
     try {
       const res = await ordersApi.adminList({ ...activeFilters, page: String(page), limit: String(limit) });
       
@@ -68,6 +70,7 @@ export default function AdminOrdersPage() {
       setTotalRecords(res.data.pagination?.total || 0);
     } catch (err) {
       console.error('Failed to fetch orders:', err);
+      setIsError(true);
       toast.error('Failed to load orders');
     } finally {
       setIsLoading(false);
@@ -180,6 +183,8 @@ export default function AdminOrdersPage() {
         totalRecords={totalRecords}
         limit={limit}
         onPageChange={setPage}
+        isError={isError}
+        errorMessage="Failed to load orders."
       />
 
       <ConfirmDialog

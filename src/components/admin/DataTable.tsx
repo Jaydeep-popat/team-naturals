@@ -28,6 +28,7 @@ export interface DataTableProps<T> {
   totalRecords?: number;
   limit?: number;
   onPageChange?: (page: number) => void;
+  onLimitChange?: (limit: number) => void;
   
   // Selection
   selectable?: boolean;
@@ -53,6 +54,7 @@ export function DataTable<T>({
   totalRecords,
   limit,
   onPageChange,
+  onLimitChange,
   selectable = false,
   selectedKeys = new Set(),
   onSelectionChange,
@@ -203,7 +205,7 @@ export function DataTable<T>({
       
       {(totalPages !== undefined || totalRecords !== undefined) && (
         <div className="flex items-center justify-between border-t border-forest/10 px-4 py-3 bg-[#FDFBF9]">
-          <div className="text-sm text-forest/60">
+          <div className="flex items-center gap-4 text-sm text-forest/60">
             {totalRecords !== undefined && limit !== undefined && page !== undefined ? (
               totalRecords > 0 ? (
                 <span>
@@ -216,6 +218,22 @@ export function DataTable<T>({
               <span>
                 Page {page} of {totalPages || 1}
               </span>
+            )}
+            
+            {onLimitChange && (
+              <div className="flex items-center gap-2">
+                <span className="text-forest/60">Rows per page:</span>
+                <select 
+                  value={limit} 
+                  onChange={(e) => onLimitChange(Number(e.target.value))}
+                  className="bg-transparent border border-forest/10 rounded-md text-forest py-0.5 px-1 focus:outline-none focus:ring-1 focus:ring-forest"
+                >
+                  <option value={10}>10</option>
+                  <option value={20}>20</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                </select>
+              </div>
             )}
           </div>
           <div className="flex items-center gap-2">
