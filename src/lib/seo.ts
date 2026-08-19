@@ -1,14 +1,12 @@
-<<<<<<< HEAD
+import type { Metadata } from 'next';
+import { optimizeCloudinaryUrl } from './cloudinary';
+import { absoluteUrl, getSiteUrl } from './site';
 import { getSocialSameAs } from './site-contact';
 
 export const SITE_URL = 'https://teamnaturals.in';
-
 export const SITE_NAME = 'Team Naturals';
-
 export const DEFAULT_OG_IMAGE = '/6ecc3cac-18f0-4044-856c-cc50daf9ac26.webp';
-
-export const DEFAULT_OG_IMAGE_ALT =
-  'Team Naturals handmade soap bars and multani mitti face wash on a natural stone tray';
+export const DEFAULT_OG_IMAGE_ALT = 'Team Naturals handmade soap bars and multani mitti face wash on a natural stone tray';
 
 export const organizationJsonLd = {
   '@context': 'https://schema.org',
@@ -18,10 +16,6 @@ export const organizationJsonLd = {
   logo: `${SITE_URL}/favicon-trimmed.png`,
   sameAs: getSocialSameAs(),
 };
-=======
-import type { Metadata } from 'next';
-import { optimizeCloudinaryUrl } from './cloudinary';
-import { absoluteUrl, getSiteUrl } from './site';
 
 export const REVALIDATE_SECONDS = 3600;
 
@@ -273,4 +267,3 @@ export function isActiveProduct(product: { status?: string | null }): boolean {
   const status = product.status?.toLowerCase();
   return status !== 'draft' && status !== 'archived';
 }
->>>>>>> origin/yugal

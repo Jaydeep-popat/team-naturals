@@ -272,31 +272,7 @@ export default function AddressesPage() {
               </div>
             </div>
 
-<<<<<<< HEAD
-              <div className="p-5">
-                {formError && (
-                  <div className="mb-4 flex items-start gap-2 rounded-xl bg-terracotta/10 px-3.5 py-2.5 text-[13px] text-terracotta">
-                    <AlertCircleIcon size={15} className="mt-0.5 shrink-0" />{formError}
-                  </div>
-                )}
-                <form className="grid gap-3.5 sm:grid-cols-2" onSubmit={handleSubmit}>
-                  <Field id="fullName" label="Full Name" placeholder="Rahul Sharma" {...field('fullName')} required />
-                  <Field id="phoneNo" label="Phone Number" placeholder="+91 93130 10084" {...field('phoneNo')} required />
-                  <div className="sm:col-span-2">
-                    <Field id="line1" label="Address Line 1" placeholder="House No, Building, Street" {...field('line1')} required />
-                  </div>
-                  <div className="sm:col-span-2">
-                    <Field id="line2" label="Address Line 2 (optional)" placeholder="Apartment, landmark" {...field('line2')} />
-                  </div>
-                  <Field id="city" label="City" placeholder="Mumbai" {...field('city')} required />
-                  <Field id="state" label="State" placeholder="Maharashtra" {...field('state')} required />
-                  <Field id="postalCode" label="Postal Code" placeholder="400001" {...field('postalCode')} required />
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold uppercase tracking-wider text-forest/60 pl-0.5">Country</label>
-                    <input type="text" value="India" disabled
-                      className="w-full rounded-xl border border-forest/10 bg-[#FDFBF9] px-3.5 py-2 text-[14px] font-medium text-muted cursor-not-allowed" />
-                  </div>
-=======
+
             <div className="flex items-center gap-2.5 pt-2">
               <input
                 type="checkbox" id="isDefault"
@@ -308,7 +284,7 @@ export default function AddressesPage() {
                 Make this my default shipping address
               </label>
             </div>
->>>>>>> origin/yugal
+
 
             <div className="pt-4 flex flex-col sm:flex-row gap-3 mt-6 border-t border-gray-100 pt-6">
               <button

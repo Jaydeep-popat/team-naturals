@@ -367,7 +367,20 @@ export const products = {
     });
   },
 
-  setPrimaryImage(productId: string, imageId: string | number) {
+  deleteImage(productId: string | number, imageId: string | number) {
+    return apiFetch<{ data: any }>(`/api/admin/products/${productId}/images/${imageId}`, {
+      method: 'DELETE',
+    });
+  },
+
+  updateImage(productId: string | number, imageId: string | number, body: { altText?: string | null; sortOrder?: number; isPrimary?: boolean }) {
+    return apiFetch<{ data: any }>(`/api/admin/products/${productId}/images/${imageId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    });
+  },
+
+  setPrimaryImage(productId: string | number, imageId: string | number) {
     return apiFetch<{ data: any }>(`/api/admin/products/${productId}/images/${imageId}/primary`, {
       method: 'PATCH',
     });

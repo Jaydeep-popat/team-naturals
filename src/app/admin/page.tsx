@@ -203,6 +203,8 @@ export default function AdminDashboard() {
             columns={ORDER_COLUMNS}
             keyExtractor={(o) => o.id}
             onRowClick={(o) => window.location.href = `/admin/orders/${o.id}`}
+            emptyMessage="No recent orders."
+            isLoading={isLoading}
           />
         </div>
 

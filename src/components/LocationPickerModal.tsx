@@ -390,7 +390,7 @@ export function LocationPickerModal({ onClose, onConfirm, onManualEntry }: Locat
   const isGenericAddress = addressData?.resultType === 'street' && addressData?.confidence && addressData.confidence < 0.9;
 
   return (
-    <div className="fixed inset-0 z-[100] flex flex-col bg-white font-sans overflow-hidden">
+    <div className="fixed inset-0 z-[120] flex flex-col bg-white font-sans overflow-hidden">
       {/* ── Global Header ─────────────────────────────────────────────────── */}
       <header className="h-14 shrink-0 flex items-center px-4 md:px-6 bg-white border-b border-gray-200 shadow-sm z-30">
         <button
@@ -407,8 +407,7 @@ export function LocationPickerModal({ onClose, onConfirm, onManualEntry }: Locat
 
         {/* ── MAP SECTION ───────────────────────────────────────────────── */}
         <div
-          className="relative flex-1 bg-gray-200 z-10"
-          style={{ minHeight: '55vh' }}
+          className="relative w-full h-[50vh] lg:h-auto lg:flex-1 bg-gray-200 z-10 lg:shrink-0"
         >
           {/* The map renders here — absolutely fills parent */}
           <div
@@ -528,8 +527,8 @@ export function LocationPickerModal({ onClose, onConfirm, onManualEntry }: Locat
         </div>
 
         {/* ── RIGHT PANEL ───────────────────────────────────────────────── */}
-        <aside className="w-full lg:w-[400px] xl:w-[440px] shrink-0 flex flex-col bg-white border-t lg:border-t-0 lg:border-l border-gray-200 overflow-y-auto z-30 shadow-[0_-8px_24px_rgba(0,0,0,0.07)] lg:shadow-[-8px_0_24px_rgba(0,0,0,0.05)]">
-          <div className="p-6 flex flex-col h-full">
+        <aside className="w-full lg:w-[400px] xl:w-[440px] flex-1 lg:flex-none lg:shrink-0 flex flex-col bg-white border-t lg:border-t-0 lg:border-l border-gray-200 z-30 shadow-[0_-8px_24px_rgba(0,0,0,0.07)] lg:shadow-[-8px_0_24px_rgba(0,0,0,0.05)] overflow-hidden">
+          <div className="flex-1 overflow-y-auto p-5 lg:p-6 pb-2">
 
             {/* Panel Header */}
             <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-3">
@@ -644,9 +643,11 @@ export function LocationPickerModal({ onClose, onConfirm, onManualEntry }: Locat
                 </div>
               )}
             </div>
+          </div>
 
-            {/* Confirm Button */}
-            <div className="pt-5 space-y-3">
+          {/* Fixed Bottom Buttons */}
+          <div className="shrink-0 p-5 lg:p-6 pt-4 bg-white border-t border-gray-100 mt-auto">
+            <div className="space-y-3">
               <button
                 onClick={() => addressData && onConfirm(addressData)}
                 disabled={uiState !== 'success' || !addressData}

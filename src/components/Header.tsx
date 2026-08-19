@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
-import { MenuIcon, SearchIcon, ShoppingBagIcon, UserIcon, XIcon, ArrowRightIcon, HeartIcon, MapPinIcon, BellIcon, LogOutIcon, ChevronDownIcon, PackageIcon, SettingsIcon, ChevronRightIcon, DownloadIcon } from 'lucide-react';
+import { MenuIcon, SearchIcon, ShoppingBagIcon, UserIcon, XIcon, ArrowRightIcon, HeartIcon, MapPinIcon, BellIcon, LogOutIcon, ChevronDownIcon, PackageIcon, SettingsIcon, ChevronRightIcon, DownloadIcon, BookOpenIcon, TruckIcon, RefreshCwIcon, HelpCircleIcon, UsersIcon } from 'lucide-react';
 import { Logo } from './Logo';
 import { useCart } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -17,6 +17,14 @@ const navItems = [
   { label: 'Shop', href: '/shop' },
   { label: 'About', href: '/about' },
   { label: 'Contact', href: '/contact' },
+];
+
+const RESOURCE_LINKS = [
+  { label: 'Blogs', href: '/blog', icon: BookOpenIcon, desc: 'Tips & stories from our workshop' },
+  { label: 'FAQs', href: '/faqs', icon: HelpCircleIcon, desc: 'Quick answers to common questions' },
+  { label: 'Shipping & Delivery', href: '/shipping', icon: TruckIcon, desc: 'Timelines, charges & tracking' },
+  { label: 'Returns & Refunds', href: '/returns', icon: RefreshCwIcon, desc: 'Our fair returns policy' },
+  { label: 'Wholesale / Bulk Orders', href: '/wholesale', icon: UsersIcon, desc: 'Resell our soaps across India' },
 ];
 
 export function Header() {
@@ -118,12 +126,12 @@ export function Header() {
         transition={{ duration: 0.3 }}
       >
         <motion.div
-          className="relative mx-auto flex w-full max-w-[1600px] items-center justify-between px-4 lg:px-6"
+          className="relative mx-auto grid w-full max-w-[1600px] grid-cols-2 lg:grid-cols-[1fr_auto_1fr] gap-4 lg:gap-8 xl:gap-12 items-center px-4 sm:px-6 lg:px-8 xl:px-10"
           animate={{ height: scrolled ? 64 : 80 }}
           transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
         >
           {/* Left: Mobile Menu + Logo */}
-          <div className="flex shrink-0 items-center gap-0 sm:gap-3">
+          <div className="flex shrink-0 items-center justify-self-start gap-0 sm:gap-3">
             <button
               type="button"
               onClick={() => setMenuOpen(true)}
@@ -150,7 +158,7 @@ export function Header() {
           </div>
 
           {/* Center: Nav Links */}
-          <nav className="absolute left-1/2 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 items-center justify-center gap-10 lg:flex" aria-label="Primary">
+          <nav className="hidden lg:flex items-center justify-center justify-self-center gap-5 xl:gap-8" aria-label="Primary">
             {navItems.map((item) => {
               const isActive =
                 item.href === '/'
@@ -162,12 +170,12 @@ export function Header() {
                   <div key={item.href} className="group relative py-2">
                     <Link
                       href={item.href}
-                      className={`relative flex items-center gap-1 text-[14px] font-semibold tracking-wide transition-colors ${
+                      className={`relative flex items-center gap-1 text-[16px] font-semibold tracking-wide transition-colors ${
                         isActive ? 'text-terracotta' : 'text-forest hover:text-terracotta/70'
                       }`}
                     >
                       {item.label}
-                      <ChevronDownIcon size={14} className="transition-transform group-hover:rotate-180" />
+                      <ChevronDownIcon size={16} className="transition-transform group-hover:rotate-180" />
                       {isActive && (
                         <motion.span
                           layoutId="nav-underline"
@@ -201,7 +209,7 @@ export function Header() {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`relative py-2 text-[14px] font-semibold tracking-wide transition-colors ${
+                  className={`relative py-2 text-[16px] font-semibold tracking-wide transition-colors ${
                     isActive ? 'text-terracotta' : 'text-forest hover:text-terracotta/70'
                   }`}
                 >
@@ -216,10 +224,47 @@ export function Header() {
                 </Link>
               );
             })}
+
+            {/* Resources Dropdown */}
+            <div className="group relative py-2">
+              <button
+                type="button"
+                className={`relative flex items-center gap-1 text-[16px] font-semibold tracking-wide transition-colors ${
+                  pathname.startsWith('/blog') || pathname.startsWith('/faqs') || pathname.startsWith('/shipping') || pathname.startsWith('/returns') || pathname.startsWith('/wholesale')
+                    ? 'text-terracotta'
+                    : 'text-forest hover:text-terracotta/70'
+                }`}
+              >
+                Resources
+                <ChevronDownIcon size={16} className="transition-transform group-hover:rotate-180" />
+              </button>
+              <div className="absolute left-1/2 top-full hidden -translate-x-1/2 pt-2 group-hover:block z-50">
+                <div className="flex min-w-[260px] flex-col gap-0.5 rounded-2xl bg-white p-2 shadow-lg ring-1 ring-black/5">
+                  {RESOURCE_LINKS.map((link) => {
+                    const Icon = link.icon;
+                    return (
+                      <Link
+                        key={link.href}
+                        href={link.href}
+                        className="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-forest/5 group/item"
+                      >
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-forest/8 text-forest group-hover/item:bg-forest group-hover/item:text-cream transition-colors">
+                          <Icon size={15} strokeWidth={2} />
+                        </span>
+                        <div>
+                          <p className="text-sm font-semibold text-forest group-hover/item:text-terracotta transition-colors">{link.label}</p>
+                          <p className="text-[11px] text-muted">{link.desc}</p>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
           </nav>
 
           {/* Right: Search + Icons */}
-          <div className="flex shrink-0 items-center justify-end gap-1 sm:gap-6">
+          <div className="flex shrink-0 items-center justify-self-end gap-1 sm:gap-3">
 
 
             {/* Inline Search Bar */}
@@ -227,7 +272,7 @@ export function Header() {
               className={
                 isMobileSearchOpen 
                   ? "absolute left-0 right-0 top-[100%] z-40 flex items-center bg-white px-4 pb-3 shadow-soft sm:static sm:z-auto sm:block sm:bg-transparent sm:px-0 sm:pb-0 sm:shadow-none"
-                  : "hidden sm:block relative"
+                  : "hidden sm:block relative w-56 lg:w-64 xl:w-72"
               }
             >
               <div className="flex w-full items-center gap-1 sm:gap-2 rounded-full border border-terracotta/40 bg-white px-3 sm:px-4 py-1.5 sm:py-2.5 transition-all focus-within:border-terracotta focus-within:shadow-soft">
@@ -254,8 +299,8 @@ export function Header() {
                       }
                     }
                   }}
-                  placeholder="Search products & categories..."
-                  className="w-full sm:w-40 bg-transparent text-[14px] font-medium text-forest outline-none focus:outline-none focus:ring-0 placeholder:font-normal placeholder:text-muted/70 transition-all sm:focus:w-56"
+                  placeholder="Search products & category..."
+                  className="w-full bg-transparent text-[14px] font-medium text-forest outline-none focus:outline-none focus:ring-0 placeholder:font-normal placeholder:text-muted/70 transition-all"
                   aria-label="Search products"
                 />
                 {isMobileSearchOpen && (
@@ -430,11 +475,11 @@ export function Header() {
             ) : (
               <Link
                 href="/login"
-                className="group flex items-center gap-2 sm:gap-3.5 rounded-full bg-forest p-2 sm:px-6 sm:py-2 text-cream shadow-soft transition-colors hover:bg-forest/90"
+                className="group flex shrink-0 items-center gap-2 sm:gap-3.5 rounded-full bg-forest p-2 sm:px-6 sm:py-2 text-cream shadow-soft transition-colors hover:bg-forest/90"
                 aria-label="Log In"
               >
                 <UserIcon size={16} strokeWidth={2} className="transition-transform group-hover:scale-110 sm:h-[18px] sm:w-[18px]" />
-                <span className="hidden sm:inline-block text-[13px] font-semibold tracking-wide">
+                <span className="hidden sm:inline-block text-[13px] font-semibold tracking-wide whitespace-nowrap">
                   Log In
                 </span>
               </Link>
@@ -443,7 +488,7 @@ export function Header() {
             {/* Wishlist */}
             <Link
               href="/wishlist"
-              className="group relative ml-1 sm:ml-3 p-1 text-forest transition-colors hover:text-forest/70 hidden sm:block"
+              className="group relative p-1 text-forest transition-colors hover:text-forest/70 hidden sm:block"
               aria-label={`Wishlist, ${wishlist.length} items`}
             >
               <HeartIcon size={24} strokeWidth={1.8} className="transition-transform group-hover:scale-110" />
@@ -466,7 +511,7 @@ export function Header() {
             {/* Cart */}
             <Link
               href="/cart"
-              className="group relative ml-2 p-1 text-forest transition-colors hover:text-forest/70 block"
+              className="group relative p-1 text-forest transition-colors hover:text-forest/70 block"
               aria-label={`Cart, ${itemCount} items`}
             >
               <ShoppingBagIcon size={24} strokeWidth={1.8} className="transition-transform group-hover:scale-110" />
@@ -506,6 +551,7 @@ function MobileMenu({
   categories: any[];
 }) {
   const [shopOpen, setShopOpen] = React.useState(false);
+  const [resourcesOpen, setResourcesOpen] = React.useState(false);
   const { user, logout } = useAuth();
 
   return (
@@ -514,7 +560,7 @@ function MobileMenu({
         <React.Fragment key="mobile-menu-wrapper">
           <motion.div
             key="mobile-overlay"
-            className="fixed inset-0 z-[60] bg-forest/30 backdrop-blur-sm lg:hidden"
+            className="fixed inset-0 z-[120] bg-forest/30 backdrop-blur-sm lg:hidden"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0, pointerEvents: 'none' }}
@@ -522,7 +568,7 @@ function MobileMenu({
           />
           <motion.nav
             key="mobile-nav"
-            className="fixed inset-y-0 left-0 z-[61] flex w-[85%] max-w-sm flex-col bg-cream-soft p-6 shadow-lift lg:hidden"
+            className="fixed inset-y-0 left-0 z-[121] flex w-[85%] max-w-sm flex-col bg-cream-soft p-6 shadow-lift lg:hidden"
             initial={{ x: '-100%' }}
             animate={{ x: 0 }}
             exit={{ x: '-100%', pointerEvents: 'none' }}
@@ -600,7 +646,39 @@ function MobileMenu({
                   </motion.li>
                 );
               })}
-            </ul>
+
+            {/* Resources mobile dropdown */}
+            <motion.li
+              initial={{ opacity: 0, x: -16 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.06 * navItems.length + 0.1 }}
+            >
+              <div className="flex flex-col">
+                <div className={`flex items-center justify-between rounded-2xl px-4 py-3.5 font-display text-xl transition-colors ${
+                  pathname.startsWith('/blog') || pathname.startsWith('/faqs') || pathname.startsWith('/shipping') || pathname.startsWith('/returns') || pathname.startsWith('/wholesale')
+                    ? 'bg-white text-terracotta shadow-sm' : 'text-forest hover:bg-white/50'
+                }`}>
+                  <span className="flex-1">Resources</span>
+                  <button onClick={() => setResourcesOpen(!resourcesOpen)} className="p-2 -mr-2 text-forest/60" aria-label="Toggle Resources">
+                    <ChevronDownIcon size={20} className={`transition-transform ${resourcesOpen ? 'rotate-180' : ''}`} />
+                  </button>
+                </div>
+                <AnimatePresence>
+                  {resourcesOpen && (
+                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                      <div className="pl-6 pt-2 pb-2 space-y-2 border-l-2 border-forest/10 ml-6 mt-2">
+                        {RESOURCE_LINKS.map((link) => (
+                          <Link key={link.href} href={link.href} onClick={onClose} className="block text-lg font-display text-forest/80 hover:text-terracotta transition-colors py-1">
+                            {link.label}
+                          </Link>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            </motion.li>
+          </ul>
             <div className="mt-auto flex flex-col gap-3">
               {user ? (
                 <div className="rounded-2xl border border-forest/10 bg-white overflow-hidden shadow-xs mt-2">

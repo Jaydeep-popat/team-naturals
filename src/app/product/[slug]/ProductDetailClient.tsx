@@ -23,6 +23,7 @@ import { usePageLoad } from "@/src/hooks/usePageLoad";
 import { OptimizedImage } from '@/src/components/OptimizedImage';
 import { extractProductImageAlt } from '@/src/lib/seo';
 import { useAvailableDiscounts } from '@/src/hooks/useAvailableDiscounts';
+import { triggerFlyToCart } from '@/src/components/FlyToCart';
 
 const GALLERY_AUTOPLAY_MS = 6000;
 
@@ -113,27 +114,39 @@ export default function ProductDetailClient() {
     : undefined;
   const applicableCoupons = getCouponsForProduct(product.productId || product.id, categoryId);
 
-  const buyNow = () => {
+  const buyNow = (e: React.MouseEvent) => {
     if (!isAuthenticated) {
       setShowAuthModal(true);
       return;
     }
+    const rawImages = product.images || [];
+    const images = rawImages.map((img: any) =>
+      typeof img === 'string' ? img : (img?.url || '/placeholder.png')
+    );
+    triggerFlyToCart(e, images[0] || '/placeholder.png');
+    
     addToCart(product, qty);
     router.push('/checkout/address');
   };
 
-  const handleAddToCart = () => {
+  const handleAddToCart = (e: React.MouseEvent) => {
     if (!isAuthenticated) {
       setShowAuthModal(true);
       return;
     }
+    const rawImages = product.images || [];
+    const images = rawImages.map((img: any) =>
+      typeof img === 'string' ? img : (img?.url || '/placeholder.png')
+    );
+    triggerFlyToCart(e, images[0] || '/placeholder.png');
+    
     addToCart(product, qty);
   };
 
   return (
-    <div className="w-full bg-white">
+    <div className="w-full max-w-full overflow-hidden bg-white">
       <div className="border-b border-forest/8 bg-cream-soft">
-        <div className="mx-auto max-w-6xl px-5 py-5 lg:px-8">
+        <div className="mx-auto max-w-6xl px-4 py-4 sm:px-5 sm:py-5 lg:px-8">
           <Breadcrumb
             items={[
               { label: 'Home', to: '/' },
@@ -148,7 +161,7 @@ export default function ProductDetailClient() {
         </div>
       </div>
 
-      <div className="mx-auto grid max-w-6xl gap-10 px-5 py-10 lg:grid-cols-2 lg:gap-14 lg:px-8">
+      <div className="mx-auto grid max-w-6xl w-full gap-8 px-4 py-6 sm:px-5 sm:py-10 lg:grid-cols-2 lg:gap-14 lg:px-8">
         <ProductGallery
           images={displayImages}
           imageAlts={imageAlts}
@@ -156,7 +169,7 @@ export default function ProductDetailClient() {
         />
 
         {/* Info */}
-        <div>
+        <div className="w-full min-w-0 max-w-full overflow-hidden">
           <p className="text-[10px] uppercase tracking-[0.24em] text-muted">
             {categoryLabel}
           </p>
@@ -192,9 +205,8 @@ export default function ProductDetailClient() {
               const mrp = product.compareAtPrice ? Number(product.compareAtPrice) : Number(product.price || 0);
               const productSellingPrice = Number(product.price || 0);
               const productDiscountPercent = mrp > productSellingPrice ? Math.round(((mrp - productSellingPrice) / mrp) * 100) : 0;
-              
+
               let eventPrice = productSellingPrice;
-              
               if (activeDiscount) {
                 if (activeDiscount.type === 'percent') {
                   eventPrice = productSellingPrice - (productSellingPrice * Number(activeDiscount.value) / 100);
@@ -202,29 +214,14 @@ export default function ProductDetailClient() {
                   eventPrice = Math.max(0, productSellingPrice - Number(activeDiscount.value));
                 }
               }
-              
-              let finalPrice = eventPrice;
-              if (selectedCoupon) {
-                if (selectedCoupon.type === 'percent' || selectedCoupon.discountType === 'percent') {
-                  const val = Number(selectedCoupon.value || selectedCoupon.discountValue);
-                  const maxDisc = selectedCoupon.maxDiscount ? Number(selectedCoupon.maxDiscount) : Infinity;
-                  const disc = Math.min((eventPrice * val) / 100, maxDisc);
-                  finalPrice = Math.max(0, eventPrice - disc);
-                } else if (selectedCoupon.type !== 'buy_x') {
-                  const val = Number(selectedCoupon.value || selectedCoupon.discountValue);
-                  finalPrice = Math.max(0, eventPrice - val);
-                }
-              }
 
-              const applicableCoupons = getCouponsForProduct(
-                product.productId,
-                product.categoryId
-              );
+              const applicableCoupons = getCouponsForProduct(product.productId, product.categoryId);
+              const bogoCoupon = applicableCoupons.find((c: any) => c.type === 'buy_x') || null;
 
               return (
                 <div className="flex flex-col gap-3 w-full">
                   <div className="flex items-baseline gap-3">
-                    <span className="font-display text-3xl text-forest">₹{finalPrice.toFixed(2)}</span>
+                    <span className="font-display text-3xl text-forest">₹{eventPrice.toFixed(2)}</span>
                     {productDiscountPercent > 0 && (
                       <>
                         <span className="text-lg text-muted line-through">₹{mrp}</span>
@@ -234,17 +231,18 @@ export default function ProductDetailClient() {
                       </>
                     )}
                   </div>
-                  
-                  {(() => {
-                    const bogoCoupon = applicableCoupons.find(c => c.type === 'buy_x');
-                    if (!bogoCoupon) return null;
-                    return (
-                      <div className="flex items-center text-xs font-bold text-blue-700 bg-blue-50 border border-blue-100/50 px-2 py-1 rounded w-fit uppercase tracking-wide">
-                        <span className="mr-1.5">🎁</span> BUY {bogoCoupon.minQuantity || 1} GET {bogoCoupon.getQuantity || 1} {Number(bogoCoupon.value) === 100 ? 'FREE' : `AT ${Number(bogoCoupon.value)}% OFF`}
-                      </div>
-                    );
-                  })()}
-                  
+
+                  {bogoCoupon && (
+                    <div className="flex items-center text-xs font-bold text-blue-700 bg-blue-50 border border-blue-100/50 px-2.5 py-1.5 rounded-lg w-fit uppercase tracking-wide">
+                      <span className="mr-1.5">🎁</span>
+                      BUY {(bogoCoupon as any).minQuantity || 1} GET {(bogoCoupon as any).getQuantity || 1}{' '}
+                      {Number((bogoCoupon as any).value) === 100 ? 'FREE' : `AT ${Number((bogoCoupon as any).value)}% OFF`}
+                      {(bogoCoupon as any).minOrderAmount && Number((bogoCoupon as any).minOrderAmount) > 0
+                        ? ` · ORDERS ABOVE ₹${Number((bogoCoupon as any).minOrderAmount)}`
+                        : ''}
+                    </div>
+                  )}
+
                   {activeDiscount && (
                     <div className="flex flex-col rounded-lg border border-blue-100 bg-blue-50/40 p-3 mt-1">
                       <div className="flex items-center gap-2">
@@ -258,116 +256,6 @@ export default function ProductDetailClient() {
                       </div>
                     </div>
                   )}
-
-                  {applicableCoupons.length > 0 && (
-                    <div className="mt-4 rounded-xl border-none overflow-hidden transition-all duration-300 bg-[#f4f7f6]">
-                      <button 
-                        type="button" 
-                        onClick={() => setOffersExpanded(!offersExpanded)}
-                        className={`w-full flex items-center justify-between p-3.5 transition-colors ${offersExpanded ? 'bg-forest rounded-t-xl' : 'bg-forest rounded-xl'} text-cream`}
-                      >
-                        <div className="flex items-center gap-2.5 font-semibold text-sm">
-                          <span className="bg-cream text-forest text-[9px] font-black italic px-1.5 py-0.5 rounded uppercase tracking-wider leading-none">Deal</span>
-                          Apply offers for maximum savings
-                        </div>
-                        {offersExpanded ? <ChevronUp size={18} className="text-cream" /> : <ChevronDown size={18} className="text-cream" />}
-                      </button>
-                      
-                      <AnimatePresence>
-                        {offersExpanded && (
-                          <motion.div
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: 'auto', opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            className="overflow-hidden"
-                          >
-                            <div className="p-4 space-y-3.5">
-                              <div className="text-xl font-bold text-forest">
-                                Buy at ₹{finalPrice.toFixed(0)}
-                              </div>
-                              
-                              <div className="space-y-3">
-                                {applicableCoupons.map((coupon) => {
-                                  const isSelected = selectedCoupon?.discountId === coupon.discountId;
-                                  
-                                  const couponVal = Number(coupon.value);
-                                  const maxDisc = coupon.maxDiscount ? Number(coupon.maxDiscount) : Infinity;
-                                  let saveAmt = 0;
-                                  if (coupon.type === 'percent') {
-                                    saveAmt = Math.min((eventPrice * couponVal) / 100, maxDisc);
-                                  } else if (coupon.type === 'flat') {
-                                    saveAmt = couponVal;
-                                  }
-                                  saveAmt = Math.min(saveAmt, eventPrice);
-                                  
-                                  const couponTitle = coupon.type === 'percent'
-                                    ? `${couponVal}% off`
-                                    : coupon.type === 'flat'
-                                    ? `₹${couponVal} off`
-                                    : `Buy ${coupon.minQuantity ?? 1} Get ${coupon.getQuantity ?? 1} ${couponVal === 100 ? 'Free' : `at ${couponVal}% Off`}`;
-                                  
-                                  const couponDesc = coupon.minOrderAmount > 0
-                                    ? `On orders above ₹${coupon.minOrderAmount} >`
-                                    : `Save extra with this coupon >`;
-
-                                  return (
-                                    <div key={coupon.discountId} className={`flex flex-col gap-3 p-3.5 rounded-xl bg-white shadow-sm border transition-colors ${isSelected ? 'border-forest ring-1 ring-forest' : 'border-transparent hover:border-forest/20'}`}>
-                                      <div className="flex justify-between items-center">
-                                        <span className="text-xs font-semibold text-forest/60 uppercase tracking-wider">
-                                          {coupon.minOrderAmount > eventPrice ? 'Buy More Save More' : 'Coupons'}
-                                        </span>
-                                        <button 
-                                          type="button"
-                                          onClick={() => {
-                                            if (isSelected) {
-                                              setSelectedCoupon(null);
-                                            } else {
-                                              setSelectedCoupon(coupon);
-                                              if (coupon.type === 'buy_x') {
-                                                const requiredQty = (coupon.minQuantity || 1) + (coupon.getQuantity || 1);
-                                                if (qty < requiredQty) {
-                                                  setQty(requiredQty);
-                                                }
-                                              }
-                                            }
-                                          }}
-                                          className={`text-sm font-bold transition-colors ${isSelected ? 'text-terracotta' : 'text-blue-600 hover:text-blue-800'}`}
-                                        >
-                                          {isSelected ? 'Remove' : 'Apply'}
-                                        </button>
-                                      </div>
-                                      
-                                      <div className="flex gap-3 items-start">
-                                        <div className="mt-0.5 text-forest/70">
-                                          <TagIcon size={20} className="text-forest" />
-                                        </div>
-                                        <div className="flex flex-col">
-                                          <span className="text-[15px] font-bold text-forest leading-tight">
-                                            {couponTitle} <span className="font-mono text-xs font-normal text-forest/50 ml-1">({coupon.code})</span>
-                                          </span>
-                                          <span className="text-[13px] text-forest/80 mt-1">{couponDesc}</span>
-                                        </div>
-                                      </div>
-                                      
-                                      {isSelected && (saveAmt > 0 || coupon.type === 'buy_x') && (
-                                        <div className="text-[13px] font-medium text-[#388E3C] bg-[#388E3C]/10 px-3 py-1.5 rounded-md self-start">
-                                          {coupon.type === 'buy_x' 
-                                            ? qty >= ((coupon.minQuantity || 1) + (coupon.getQuantity || 1))
-                                              ? `✓ Offer activated! You will get ${coupon.getQuantity || 1} item(s) ${Number(coupon.value) === 100 ? 'free' : `at ${Number(coupon.value)}% off`}`
-                                              : `✓ Add ${((coupon.minQuantity || 1) + (coupon.getQuantity || 1)) - qty} more item(s) to get the offer`
-                                            : `✓ You save ₹${saveAmt.toFixed(2)} with this coupon`}
-                                        </div>
-                                      )}
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </div>
-                  )}
                 </div>
               );
             })()}
@@ -377,27 +265,27 @@ export default function ProductDetailClient() {
 
           <p className="mt-5 text-[15px] leading-relaxed text-muted">{product.shortDescription || product.description || ''}</p>
 
-          <div className="mt-7 flex flex-wrap items-center gap-3">
+          <div className="mt-7 flex flex-wrap items-center gap-2.5 sm:gap-3 w-full max-w-full">
             <QtyStepper value={qty} onChange={(q) => setQty(Math.max(1, q))} label={product.name} />
             {user?.role === 'admin' ? (
-              <div className="flex-1 flex gap-3">
+              <div className="flex-1 min-w-[200px] flex gap-3">
                 <div className="flex-1 flex items-center justify-center rounded-full bg-gray-100 px-6 py-3.5 text-sm font-medium text-gray-500 cursor-not-allowed border border-gray-200">
                   Admins cannot purchase
                 </div>
               </div>
             ) : product.stockQty === 0 ? (
-              <div className="flex-1 flex gap-3">
+              <div className="flex-1 min-w-[200px] flex gap-3">
                 <div className="flex-1 flex items-center justify-center rounded-full bg-gray-50 px-6 py-3.5 text-sm font-medium text-forest/50 cursor-not-allowed border border-forest/15">
                   Out of Stock
                 </div>
               </div>
             ) : (
-              <>
+              <div className="flex flex-1 min-w-[240px] items-center gap-2">
                 <motion.button
                   type="button"
                   whileTap={{ scale: 0.96 }}
                   onClick={handleAddToCart}
-                  className="flex-1 rounded-full bg-forest px-6 py-3.5 text-sm text-cream transition-colors hover:bg-forest-deep sm:flex-none sm:px-8"
+                  className="flex-1 rounded-full bg-forest px-4 py-3.5 text-xs sm:text-sm font-bold text-cream transition-colors hover:bg-forest-deep"
                 >
                   Add to Cart
                 </motion.button>
@@ -405,18 +293,18 @@ export default function ProductDetailClient() {
                   type="button"
                   whileTap={{ scale: 0.96 }}
                   onClick={buyNow}
-                  className="flex-1 rounded-full bg-gold px-6 py-3.5 text-sm text-forest-deep transition-colors hover:bg-gold/90 sm:flex-none sm:px-8"
+                  className="flex-1 rounded-full bg-gold px-4 py-3.5 text-xs sm:text-sm font-bold text-forest-deep transition-colors hover:bg-gold/90"
                 >
                   Buy Now
                 </motion.button>
-              </>
+              </div>
             )}
             <button
               type="button"
               onClick={() => toggleWishlist(String(product.productId || product.id))}
               aria-label="Save to wishlist"
               aria-pressed={wished}
-              className="rounded-full border border-forest/15 p-3.5 text-forest transition-colors hover:bg-cream"
+              className="rounded-full border border-forest/15 p-3.5 text-forest transition-colors hover:bg-cream shrink-0"
             >
               <HeartIcon
                 size={17}
@@ -646,9 +534,9 @@ function ProductGallery({
 
   return (
     <>
-      <div>
+      <div className="w-full max-w-full overflow-hidden">
         <div
-          className="group relative aspect-square overflow-hidden rounded-3xl border border-forest/8 bg-cream"
+          className="group relative aspect-[4/3] sm:aspect-square w-full max-w-full overflow-hidden rounded-2xl sm:rounded-3xl border border-forest/8 bg-cream"
           onMouseEnter={() => setIsPaused(true)}
           onMouseLeave={() => setIsPaused(false)}
         >
