@@ -60,8 +60,10 @@ const withPWA = withPWAInit({
 });
 
 const nextConfig: NextConfig = {
+  output: 'standalone',
   transpilePackages: ['maplibre-gl'],
   images: {
+    unoptimized: true,
     remotePatterns: [
       {
         protocol: 'https',
