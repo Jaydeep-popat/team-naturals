@@ -5,7 +5,24 @@
  */
 
 const isServer = typeof window === 'undefined';
-const BASE_URL = isServer ? (process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://127.0.0.1:8000') : '';
+const LIVE_API_BASE_URL = 'https://api.teamnaturals.in';
+const LOCAL_API_BASE_URL = 'http://127.0.0.1:8000';
+
+function getApiBaseUrl() {
+  const configuredUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+
+  if (!isServer && window.location.hostname.endsWith('teamnaturals.in')) {
+    if (!configuredUrl || /^https?:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?$/i.test(configuredUrl)) {
+      return LIVE_API_BASE_URL;
+    }
+  }
+
+  if (configuredUrl) return configuredUrl;
+  if (process.env.NODE_ENV === 'production') return LIVE_API_BASE_URL;
+  return isServer ? LOCAL_API_BASE_URL : '';
+}
+
+const BASE_URL = getApiBaseUrl();
 
 // ─── Core fetch wrapper ───────────────────────────────────────────────────────
 

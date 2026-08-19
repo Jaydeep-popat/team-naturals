@@ -44,6 +44,10 @@ const withPWA = withPWAInit({
         handler: 'NetworkOnly',
       },
       {
+        urlPattern: /^https:\/\/api\.teamnaturals\.in\/api\/.*/i,
+        handler: 'NetworkOnly',
+      },
+      {
         urlPattern: /^https?.*/,
         handler: 'NetworkFirst',
         options: {
@@ -60,7 +64,6 @@ const withPWA = withPWAInit({
 });
 
 const nextConfig: NextConfig = {
-  output: 'standalone',
   transpilePackages: ['maplibre-gl'],
   images: {
     unoptimized: true,
@@ -78,7 +81,11 @@ const nextConfig: NextConfig = {
   async rewrites() {
     // In production, Next.js will use the LIVE backend URL if you provide one in your environment variables.
     // If not, it defaults to your local backend for local testing.
-    const apiUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://127.0.0.1:8000';
+    const configuredApiUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+    const isLocalApiUrl = configuredApiUrl && /^https?:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?$/i.test(configuredApiUrl);
+    const apiUrl = process.env.NODE_ENV === 'production' && (!configuredApiUrl || isLocalApiUrl)
+      ? 'https://api.teamnaturals.in'
+      : (configuredApiUrl || 'http://127.0.0.1:8000');
     
     return [
       {
