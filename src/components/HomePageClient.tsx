@@ -91,7 +91,7 @@ export default function HomePageClient() {
     }
 
     productsApi
-      .list({ limit: '12' })
+      .list({ limit: '10' })
       .then((res) => setLiveProducts(res.data.products.map(normalizeProductImages)))
       .catch((err) => {
         console.error(err);
@@ -369,8 +369,8 @@ function BestSellersSection({
   return (
     <div className="mt-6 px-4 sm:px-6 lg:px-8 max-w-[1400px] mx-auto">
       {loading ? (
-        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 sm:gap-3 lg:gap-4">
-          {Array.from({ length: 12 }).map((_, i) => (
+        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 sm:gap-3 lg:gap-4">
+          {Array.from({ length: 10 }).map((_, i) => (
             <ProductCardSkeleton key={`skel-${i}`} />
           ))}
         </div>
@@ -385,7 +385,7 @@ function BestSellersSection({
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: '0px' }}
-          className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 sm:gap-3 lg:gap-4"
+          className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 sm:gap-3 lg:gap-4"
         >
           {bestSellers.map((p) => (
             <motion.div key={(p as any).productId || p.id} variants={staggerItem} className="h-full">
