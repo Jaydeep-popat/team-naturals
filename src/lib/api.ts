@@ -519,18 +519,97 @@ export const cart = {
 // ─── Orders endpoints ──────────────────────────────────────────────────────────
 
 export const orders = {
-  checkout(addressId: number, paymentMethod: 'razorpay' | 'cod', notes?: string) {
-    return apiFetch<{ data: { order: any; razorpay?: any; paymentMethod: 'razorpay' | 'cod' } }>('/api/orders/checkout', {
-      method: 'POST',
-      body: JSON.stringify({ addressId, paymentMethod, notes }),
-    });
+  async checkout(addressId: number, paymentMethod: 'razorpay' | 'cod', notes?: string) {
+    const payload = { addressId, paymentMethod, notes };
+    try {
+      return await apiFetch<{
+        statusCode?: number;
+        data: {
+          order: any;
+          paymentDetails?: {
+            keyId: string;
+            razorpayOrderId: string;
+            amountPaise: number;
+            currency: string;
+          };
+          razorpay?: any;
+          paymentMethod: 'razorpay' | 'cod';
+        };
+      }>('/api/v1/orders/checkout', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+    } catch (err: any) {
+      if (err?.statusCode === 404) {
+        return await apiFetch<{
+          statusCode?: number;
+          data: {
+            order: any;
+            paymentDetails?: any;
+            razorpay?: any;
+            paymentMethod: 'razorpay' | 'cod';
+          };
+        }>('/api/orders/checkout', {
+          method: 'POST',
+          body: JSON.stringify(payload),
+        });
+      }
+      throw err;
+    }
   },
 
-  verifyPayment(body: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) {
-    return apiFetch<{ data: { order: any; alreadyProcessed: boolean } }>('/api/orders/verify-payment', {
-      method: 'POST',
-      body: JSON.stringify(body),
-    });
+  async verifyPayment(body: {
+    orderId: number | string;
+    razorpayOrderId: string;
+    razorpayPaymentId: string;
+    razorpaySignature: string;
+    razorpay_order_id?: string;
+    razorpay_payment_id?: string;
+    razorpay_signature?: string;
+  }) {
+    const payload = {
+      orderId: body.orderId,
+      razorpayOrderId: body.razorpayOrderId,
+      razorpayPaymentId: body.razorpayPaymentId,
+      razorpaySignature: body.razorpaySignature,
+      razorpay_order_id: body.razorpayOrderId || body.razorpay_order_id,
+      razorpay_payment_id: body.razorpayPaymentId || body.razorpay_payment_id,
+      razorpay_signature: body.razorpaySignature || body.razorpay_signature,
+    };
+    try {
+      return await apiFetch<{
+        statusCode?: number;
+        data: {
+          orderId?: number;
+          status?: string;
+          paymentStatus?: string;
+          order?: any;
+          alreadyProcessed?: boolean;
+        };
+        message?: string;
+      }>('/api/v1/orders/verify-payment', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+    } catch (err: any) {
+      if (err?.statusCode === 404) {
+        return await apiFetch<{
+          statusCode?: number;
+          data: {
+            orderId?: number;
+            status?: string;
+            paymentStatus?: string;
+            order?: any;
+            alreadyProcessed?: boolean;
+          };
+          message?: string;
+        }>('/api/orders/verify-payment', {
+          method: 'POST',
+          body: JSON.stringify(payload),
+        });
+      }
+      throw err;
+    }
   },
 
   list(query: Record<string, string> = {}) {

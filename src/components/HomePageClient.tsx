@@ -6,8 +6,6 @@ import Image from 'next/image';
 import { motion } from 'framer-motion';
 import {
   ArrowRightIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
   ClockIcon,
   LeafIcon,
   PackageX,
@@ -368,190 +366,34 @@ function BestSellersSection({
   loading: boolean;
   bestSellers: any[];
 }) {
-  const mobileProducts = bestSellers.slice(0, 4);
-
   return (
-    <>
-      {/* Mobile: 2×2 compact grid */}
-      <div className="mt-4 grid grid-cols-2 gap-2 px-5 sm:hidden">
-        {loading
-          ? Array.from({ length: 4 }).map((_, i) => (
-              <div key={`mobile-skel-${i}`}>
-                <ProductCardSkeleton />
-              </div>
-            ))
-          : mobileProducts.length === 0
-            ? (
-                <div className="col-span-2 flex flex-col items-center justify-center py-8 text-forest/40">
-                  <PackageX size={40} className="mb-3 opacity-50" />
-                  <p className="text-sm font-medium">No products available right now.</p>
-                </div>
-              )
-            : mobileProducts.map((p) => (
-                <ProductCard key={(p as any).productId || p.id} product={p} compact />
-              ))}
-      </div>
-
-      {/* Desktop: horizontal carousel */}
-      <div className="hidden sm:block">
-        <BestSellersCarousel loading={loading} bestSellers={bestSellers} />
-      </div>
-    </>
-  );
-}
-
-function BestSellersCarousel({
-  loading,
-  bestSellers,
-}: {
-  loading: boolean;
-  bestSellers: any[];
-}) {
-  const trackRef = React.useRef<HTMLDivElement>(null);
-  const [canPrev, setCanPrev] = React.useState(false);
-  const [canNext, setCanNext] = React.useState(true);
-  const [activeIdx, setActiveIdx] = React.useState(0);
-
-  function updateState() {
-    const el = trackRef.current;
-    if (!el) return;
-    setCanPrev(el.scrollLeft > 8);
-    setCanNext(el.scrollLeft < el.scrollWidth - el.clientWidth - 8);
-    const cardEls = el.querySelectorAll('[data-card]');
-    if (cardEls.length === 0) return;
-    let closestIdx = 0;
-    let closestDist = Infinity;
-    cardEls.forEach((card, i) => {
-      const dist = Math.abs(
-        (card as HTMLElement).getBoundingClientRect().left - el.getBoundingClientRect().left
-      );
-      if (dist < closestDist) {
-        closestDist = dist;
-        closestIdx = i;
-      }
-    });
-    setActiveIdx(closestIdx);
-  }
-
-  function scroll(dir: 'prev' | 'next') {
-    const el = trackRef.current;
-    if (!el) return;
-    const firstCard = el.querySelector('[data-card]') as HTMLElement | null;
-    const cardW = firstCard ? firstCard.clientWidth + 12 : 300;
-    el.scrollBy({ left: dir === 'next' ? cardW : -cardW, behavior: 'smooth' });
-  }
-
-  function scrollToCard(i: number) {
-    const el = trackRef.current;
-    if (!el) return;
-    const cards = el.querySelectorAll('[data-card]');
-    (cards[i] as HTMLElement)?.scrollIntoView({
-      behavior: 'smooth',
-      block: 'nearest',
-      inline: 'start',
-    });
-  }
-
-  const cardCount = loading ? 6 : bestSellers.length;
-
-  return (
-    <div className="relative mt-6">
-      <motion.button
-        type="button"
-        aria-label="Previous products"
-        onClick={() => scroll('prev')}
-        animate={{ opacity: canPrev ? 1 : 0, scale: canPrev ? 1 : 0.8 }}
-        transition={{ duration: 0.2 }}
-        className="absolute -left-5 top-[45%] z-10 hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-forest/12 bg-white text-forest shadow-lift transition-colors hover:bg-forest hover:text-cream sm:flex lg:-left-6"
-        style={{ pointerEvents: canPrev ? 'auto' : 'none' }}
-      >
-        <ChevronLeftIcon className="h-5 w-5" strokeWidth={1.8} />
-      </motion.button>
-
-      <motion.button
-        type="button"
-        aria-label="Next products"
-        onClick={() => scroll('next')}
-        animate={{ opacity: canNext ? 1 : 0, scale: canNext ? 1 : 0.8 }}
-        transition={{ duration: 0.2 }}
-        className="absolute -right-5 top-[45%] z-10 hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-forest/12 bg-white text-forest shadow-lift transition-colors hover:bg-forest hover:text-cream sm:flex lg:-right-6"
-        style={{ pointerEvents: canNext ? 'auto' : 'none' }}
-      >
-        <ChevronRightIcon className="h-5 w-5" strokeWidth={1.8} />
-      </motion.button>
-
-      <div
-        ref={trackRef}
-        onScroll={updateState}
-        className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-4 scrollbar-none"
-        style={
-          {
-            paddingLeft: 'max(20px, calc((100vw - min(1280px, 100vw)) / 2 + 20px))',
-            paddingRight: 20,
-            WebkitOverflowScrolling: 'touch',
-          } as React.CSSProperties
-        }
-      >
-        {loading
-          ? Array.from({ length: 6 }).map((_, i) => (
-              <div
-                key={`skel-${i}`}
-                data-card=""
-                className="w-[260px] flex-none snap-start lg:w-[calc((100%-48px)/4)]"
-              >
-                <ProductCardSkeleton />
-              </div>
-            ))
-          : bestSellers.length === 0
-            ? (
-                <div className="flex w-full flex-col items-center justify-center py-12 text-forest/40">
-                  <PackageX size={48} className="mb-4 opacity-50" />
-                  <p className="font-medium">No products available at the moment.</p>
-                </div>
-              )
-            : bestSellers.map((p, i) => {
-                const productId = (p as any).productId || p.id;
-                return (
-                  <motion.div
-                    key={productId}
-                    data-card=""
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.5, delay: i * 0.07, ease: [0.22, 1, 0.36, 1] }}
-                    className="w-[260px] flex-none snap-start lg:w-[calc((100%-48px)/4)]"
-                  >
-                    <ProductCard product={p} />
-                  </motion.div>
-                );
-              })}
-
-        <div className="w-[1px] flex-none" aria-hidden="true" />
-      </div>
-
-      {cardCount > 1 && (
-        <div className="mt-3 flex justify-center gap-1.5 sm:hidden">
-          {Array.from({ length: cardCount }).map((_, i) => (
-            <button
-              key={i}
-              onClick={() => scrollToCard(i)}
-              aria-label={`Go to product ${i + 1}`}
-              className={`h-1.5 rounded-full transition-all duration-300 ${
-                i === activeIdx ? 'w-5 bg-forest' : 'w-1.5 bg-forest/20'
-              }`}
-            />
+    <div className="mt-6 px-5 lg:px-10">
+      {loading ? (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 sm:gap-4 lg:gap-5">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <ProductCardSkeleton key={`skel-${i}`} />
           ))}
         </div>
+      ) : bestSellers.length === 0 ? (
+        <div className="flex w-full flex-col items-center justify-center py-12 text-forest/40">
+          <PackageX size={40} className="mb-3 opacity-50" />
+          <p className="text-sm font-medium">No products available right now.</p>
+        </div>
+      ) : (
+        <motion.div
+          variants={staggerContainer}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: '0px' }}
+          className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 sm:gap-4 lg:gap-5"
+        >
+          {bestSellers.map((p) => (
+            <motion.div key={(p as any).productId || p.id} variants={staggerItem} className="h-full">
+              <ProductCard product={p} compact />
+            </motion.div>
+          ))}
+        </motion.div>
       )}
-
-      <div
-        className="pointer-events-none absolute inset-y-0 left-0 hidden w-8 bg-gradient-to-r from-white to-transparent sm:block"
-        aria-hidden="true"
-      />
-      <div
-        className="pointer-events-none absolute inset-y-0 right-0 hidden w-8 bg-gradient-to-l from-white to-transparent sm:block"
-        aria-hidden="true"
-      />
     </div>
   );
 }

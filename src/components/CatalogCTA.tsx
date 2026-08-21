@@ -53,14 +53,17 @@ export function CatalogCTA() {
 
             <div className="mt-7 flex flex-wrap items-center gap-3">
               <motion.div whileTap={{ scale: 0.96 }}>
-                <Link
-                  href="#"
+                <a
+                  href="/team_naturals%20catalog.pdf"
+                  download="team_naturals_catalog.pdf"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   aria-label="Download Team Naturals product catalog PDF"
                   className="inline-flex items-center gap-2.5 rounded-full bg-cream px-7 py-3.5 text-sm font-medium text-forest transition-colors hover:bg-cream/90"
                 >
                   <ArrowDownToLineIcon size={16} strokeWidth={2} />
                   Download Catalog
-                </Link>
+                </a>
               </motion.div>
               <Link
                 href="/contact"
